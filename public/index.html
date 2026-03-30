@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>산업안전 위험 등록</title>
+<link href="/first.css" rel="stylesheet" type="text/css">
+</head>
+
+<body>
+<header>
+<h2>위험상황 등록</h2>
+</header>
+
+<div class="container">
+
+<form action="/upload" method="post" enctype="multipart/form-data">
+
+<label>위험구역</label>
+<select name="riskLevel">
+<option>A구역</option>
+<option>B구역</option>
+<option>C구역</option>
+</select>
+
+<label>위험 사진</label>
+<input type="file" name="image" accept="image/*">
+
+<label>위험 상황 설명</label>
+<textarea name="description" placeholder="위험 상황을 입력하세요"></textarea>
+
+<button type="submit">등록</button>
+</form>
+<button onclick="location.href='/record.html'">기록 조회</button>
+
+</div>
+</body>
+</html>
