@@ -28,8 +28,18 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage: storage });
 
+app.post("/login", (req, res) => {
+  const { userid, pwd } = req.body;
+
+  if (userid === "admin" && pwd === "1234") {
+    res.redirect("/index.html");
+  } else {
+    res.send("<script>alert('로그인 실패'); location.href='/login.html'</script>");
+  }
+});
+
 app.post("/upload", upload.single("image"), (req, res) => {
-  res.send("ok");
+  res.redirect("/index.html");
 });
 
 app.listen(PORT, () => {
