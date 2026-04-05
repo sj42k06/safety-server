@@ -4,13 +4,14 @@ const multer = require("multer");
 const path = require("path");
 const mysql = require("mysql2");
 const fs = require("fs");
+const { exec } = require("child_process");
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-if (!fs.existsSync("uploads")) {
-  fs.mkdirSync("uploads");
-}
+if (!fs.existsSync("uploads")) fs.mkdirSync("uploads");
+if (!fs.existsSync("uploads/videos")) fs.mkdirSync("uploads/videos", { recursive: true });
+if (!fs.existsSync("frames")) fs.mkdirSync("frames");
 
 app.use(cors());
 app.use(express.json());
@@ -18,6 +19,7 @@ app.use(express.urlencoded({ extended: true }));
 
 app.use(express.static(path.join(__dirname, "public")));
 app.use("/uploads", express.static("uploads"));
+app.use("/frames", express.static("frames"));
 
 app.get("/", (req, res) => {
   res.redirect("/login.html");
@@ -32,11 +34,8 @@ const db = mysql.createConnection({
 });
 
 db.connect(err => {
-  if (err) {
-    console.error("DB 연결 실패:", err);
-  } else {
-    console.log("DB 연결 성공");
-  }
+  if (err) console.error(err);
+  else console.log("DB connected");
 });
 
 app.post("/login", (req, res) => {
@@ -46,47 +45,59 @@ app.post("/login", (req, res) => {
     "SELECT * FROM users WHERE username=? AND password=?",
     [userid, pwd],
     (err, results) => {
-      if (err) {
-        console.error(err);
-        return res.send("DB 오류");
-      }
-
-      if (results.length > 0) {
-        res.redirect("/index.html");
-      } else {
-        res.send("로그인 실패");
-      }
+      if (err) return res.send("DB error");
+      if (results.length > 0) res.redirect("/index.html");
+      else res.send("login fail");
     }
   );
 });
 
 const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, "uploads/"),
+  destination: (req, file, cb) => {
+    if (file.mimetype.startsWith("image")) cb(null, "uploads/");
+    else if (file.mimetype.startsWith("video")) cb(null, "uploads/videos/");
+  },
   filename: (req, file, cb) => {
     const ext = path.extname(file.originalname);
-    cb(null, Date.now() + ext);
+    cb(null, Date.now() + "-" + Math.round(Math.random() * 1e9) + ext);
   }
 });
 
 const upload = multer({ storage: storage });
 
-app.post("/upload", upload.single("image"), (req, res) => {
-  console.log("업로드 요청 들어옴");
+app.post("/upload", upload.fields([
+  { name: "images", maxCount: 5 },
+  { name: "videos", maxCount: 2 }
+]), (req, res) => {
 
   const description = req.body.description || "";
-  const imagePath = req.file ? req.file.filename : "";
+
+  const imageFiles = req.files["images"] || [];
+  const videoFiles = req.files["videos"] || [];
+
+  const imagePaths = imageFiles.map(f => f.filename).join(",");
+  const videoPaths = videoFiles.map(f => "uploads/videos/" + f.filename);
 
   db.query(
     "INSERT INTO risks (zone_id, user_id, title, description, image_path, risk_level, status) VALUES (?, ?, ?, ?, ?, ?, ?)",
-    [1, 1, "위험", description, imagePath, 1, "미조치"],
+    [1, 1, "위험", description, imagePaths, 1, "미조치"],
     (err, result) => {
       if (err) {
-        console.error("DB 에러:", err);
-        return res.send("DB 저장 실패");
+        console.error(err);
+        return res.send("DB fail");
       }
 
-      console.log("DB 저장 성공");
-      res.send("등록 완료");
+      videoPaths.forEach(videoPath => {
+        exec(`python frame_extractor.py ${videoPath}`, (err, stdout, stderr) => {
+          if (err) {
+            console.error(err);
+          } else {
+            console.log(stdout);
+          }
+        });
+      });
+
+      res.send("ok");
     }
   );
 });
