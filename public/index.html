@@ -23,10 +23,13 @@
 <option>C구역</option>
 </select>
 
-<label>위험 사진</label>
-<input type="file" name="image" accept="image/*">
+<label>사진 등록</label>
+<input type="file" name="images" accept="image/*" multiple>
 
-<label>위험 상황 설명</label>
+<label>동영상 등록</label>
+<input type="file" name="videos" accept="video/*" multiple>
+
+<label>추가 상황 설명</label>
 <textarea name="description" placeholder="위험 상황을 입력하세요"></textarea>
 
 <button type="submit">등록</button>
