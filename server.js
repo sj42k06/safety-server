@@ -16,7 +16,7 @@ app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "login.html"));
 });
 
-app.use(express.static("public"));
+app.use(express.static("public", { index: false }));
 app.use("/frames", express.static("frames"));
 app.use("/uploads", express.static("uploads"));
 
