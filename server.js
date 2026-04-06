@@ -13,7 +13,7 @@ const PORT = process.env.PORT || 8080;
 app.use(express.urlencoded({ extended: true }));
 
 app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "login.html"));
+  return res.redirect("/login.html");
 });
 
 app.use(express.static("public", { index: false }));
@@ -88,8 +88,7 @@ app.post("/upload", upload.fields([
       })
       .run();
 
-  } else if (imageFiles.length > 0) {
-
+  } else {
     const imagePath = "/" + imageFiles[0].path;
 
     const result = "이미지 등록 완료";
