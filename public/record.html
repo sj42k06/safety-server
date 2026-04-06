@@ -2,41 +2,53 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>인수인계 기록</title>
-<link href="/first.css" rel="stylesheet" type="text/css">
+<link href="/first.css" rel="stylesheet">
 </head>
 
 <body>
-<header>
+
 <h2>인수인계 기록</h2>
-</header>
 
-<div class="container">
+<button onclick="loadRisks()">조회</button>
 
-<div id="list"></div>
+<table id="riskTable" border="1" style="display:none;">
+<thead>
+<tr>
+<th>시간</th>
+<th>파일</th>
+<th>결과</th>
+</tr>
+</thead>
+
+<tbody id="riskBody"></tbody>
+</table>
 
 <script>
-fetch("/records")
-  .then(res => res.json())
-  .then(data => {
-    let html = "";
-    data.reverse().forEach(item => {
-      html += `
-        <div>
-          <p>${item.time}</p>
-          <img src="${item.image}" width="200"/>
-          <p>${item.result}</p>
-        </div>
-        <hr/>
-      `;
-    });
-    document.getElementById("list").innerHTML = html;
-  });
+const tbody = document.getElementById("riskBody");
+
+async function loadRisks() {
+  const res = await fetch('/records');
+  const risks = await res.json();
+
+  tbody.innerHTML = risks.map(item => `
+    <tr>
+      <td>${item.time}</td>
+      <td>
+        ${item.type === "video"
+          ? `<video src="${item.file}" width="200" controls></video>`
+          : `<img src="${item.file}" width="200">`}
+      </td>
+      <td>${item.result}</td>
+    </tr>
+  `).join('');
+
+  document.getElementById('riskTable').style.display = 'table';
+}
 </script>
 
+<br>
 <button onclick="location.href='/index.html'">등록 페이지</button>
 
-</div>
 </body>
 </html>
