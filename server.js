@@ -31,13 +31,10 @@ const storage = multer.diskStorage({
 const upload = multer({ storage });
 
 app.post("/login", (req, res) => {
-  const id = req.body.userid;
-  const pw = req.body.pwd;
-
-  if (id === "admin" && pw === "1234") {
+  const { userid, pwd } = req.body;
+  if (userid === "admin" && pwd === "1234") {
     return res.redirect("/index.html");
   }
-
   res.send("아이디 또는 비밀번호 틀림");
 });
 
@@ -48,7 +45,6 @@ app.post("/upload", upload.single("image"), async (req, res) => {
     const form = new FormData();
     form.append("file", fs.createReadStream(req.file.path));
 
-    // 👉 여기가 핵심 (Railway 주소)
     const response = await axios.post(
       "https://web-production-ab3b.up.railway.app/process",
       form,
@@ -64,8 +60,8 @@ app.post("/upload", upload.single("image"), async (req, res) => {
     `);
 
   } catch (err) {
-    console.log(err);
-    res.send("Railway 연결 실패");
+    console.log(err.response?.data || err.message);
+    res.send("서버 오류");
   }
 });
 
