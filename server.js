@@ -11,12 +11,12 @@ app.use(express.urlencoded({ extended: true }));
 
 app.use((req, res, next) => {
   if (req.path === "/") {
-    return res.sendFile(path.join(__dirname, "public", "login.html"));
+    return res.redirect("/login.html");
   }
   next();
 });
 
-app.use(express.static("public", { index: false }));
+app.use(express.static("public"));
 app.use("/uploads", express.static("uploads"));
 app.use("/frames", express.static("frames"));
 
@@ -24,12 +24,8 @@ if (!fs.existsSync("uploads")) fs.mkdirSync("uploads");
 if (!fs.existsSync("frames")) fs.mkdirSync("frames");
 
 const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, "uploads/");
-  },
-  filename: function (req, file, cb) {
-    cb(null, Date.now() + path.extname(file.originalname));
-  }
+  destination: (req, file, cb) => cb(null, "uploads/"),
+  filename: (req, file, cb) => cb(null, Date.now() + path.extname(file.originalname))
 });
 
 const upload = multer({ storage });
@@ -48,9 +44,7 @@ app.post("/upload", upload.single("video"), (req, res) => {
   const videoName = path.parse(req.file.filename).name;
 
   exec(`python3 frame_extractor.py ${videoPath}`, (err) => {
-    if (err) {
-      return res.send("python 실행 오류");
-    }
+    if (err) return res.send("python 실행 오류");
 
     res.send(`<a href="/frames/${videoName}/frame_0.jpg">프레임 보기</a>`);
   });
