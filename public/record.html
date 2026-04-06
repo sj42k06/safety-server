@@ -3,68 +3,38 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>과거 위험 목록</title>
+<title>인수인계 기록</title>
 <link href="/first.css" rel="stylesheet" type="text/css">
 </head>
 
 <body>
 <header>
-<h2>위험 목록 조회</h2>
+<h2>인수인계 기록</h2>
 </header>
 
 <div class="container">
 
-<!-- 위험조회 폼 -->
-<form id="riskForm">
-<input type="hidden" id="riskId">
-구역:
-<select id="name" required>
-<option value="">구역 선택</option>
-<option value="A구역">A구역</option>
-<option value="B구역">B구역</option>
-<option value="C구역">C구역</option>
-</select>
-<button id="displayBtn" type="button" onclick="loadRisks()">조회</button>
-
-</form>
-<hr>
-
-<!-- 위험 테이블 -->
-<table id="riskTable" border="1" style="display:none;">
-<thead>
-<tr>
-<th>구역</th>
-<th>위험유형</th>
-<th>위험도</th>
-<th>산업안전법규 준수</th>
-</tr>
-</thead>
-
-<tbody id="riskBody"></tbody>
-</table>
+<div id="list"></div>
 
 <script>
-const tbody = document.querySelector('riskTable tbody');
-
-// 위험 목록 불러오기
-async function loadRisks() {
-  const area = document.getElementById("name").value;
-  const res = await fetch('/risks');
-  const risks = await res.json();
-  tbody.innerHTML = risks
-  .filter(risk => area === "" || risk.area === area)
-  .map(risk => `
-    <tr>
-      <td>${risk.area}</td>
-      <td>${risk.type}</td>
-      <td>${risk.stage}</td>
-      <td>${risk.safety}</td>
-    </tr>
-  `).join('');
-  document.getElementById('riskTable').style.display = 'table';
-}
-
+fetch("/records")
+  .then(res => res.json())
+  .then(data => {
+    let html = "";
+    data.reverse().forEach(item => {
+      html += `
+        <div>
+          <p>${item.time}</p>
+          <img src="${item.image}" width="200"/>
+          <p>${item.result}</p>
+        </div>
+        <hr/>
+      `;
+    });
+    document.getElementById("list").innerHTML = html;
+  });
 </script>
+
 <button onclick="location.href='/index.html'">등록 페이지</button>
 
 </div>
