@@ -2,21 +2,21 @@ const express = require("express");
 const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
-const { exec } = require("child_process");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static("public"));
-app.use("/frames", express.static("frames"));
 app.use("/uploads", express.static("uploads"));
+
+if (!fs.existsSync("uploads")) {
+  fs.mkdirSync("uploads");
+}
 
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    const dir = "uploads";
-    if (!fs.existsSync(dir)) fs.mkdirSync(dir);
-    cb(null, dir);
+    cb(null, "uploads/");
   },
   filename: function (req, file, cb) {
     cb(null, Date.now() + path.extname(file.originalname));
@@ -40,20 +40,13 @@ app.post("/login", (req, res) => {
 });
 
 app.post("/upload", upload.single("video"), (req, res) => {
-  const videoPath = req.file.path;
-  const videoName = path.parse(req.file.filename).name;
+  const filePath = req.file.path;
 
-  exec(`python3 frame_extractor.py ${videoPath}`, (err) => {
-    if (err) {
-      console.error(err);
-      return res.send("python 실행 오류");
-    }
-
-    res.send(`
-      <h2>완료</h2>
-      <a href="/frames/${videoName}/frame_0.jpg">프레임 보기</a>
-    `);
-  });
+  res.send(`
+    <h2>업로드 완료</h2>
+    <p>서버 정상 작동 중</p>
+    <p>${filePath}</p>
+  `);
 });
 
 app.listen(PORT, () => {
