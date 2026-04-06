@@ -6,9 +6,8 @@ const fs = require("fs");
 const { exec } = require("child_process");
 
 const app = express();
-const PORT = process.env.PORT || 10000;
+const PORT = process.env.PORT || 3000;
 
-// 폴더 생성
 if (!fs.existsSync("uploads")) fs.mkdirSync("uploads");
 if (!fs.existsSync("uploads/videos")) fs.mkdirSync("uploads/videos", { recursive: true });
 if (!fs.existsSync("frames")) fs.mkdirSync("frames");
@@ -21,7 +20,6 @@ app.use(express.static(path.join(__dirname, "public")));
 app.use("/uploads", express.static("uploads"));
 app.use("/frames", express.static("frames"));
 
-// 파일 저장 설정
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     if (file.mimetype.startsWith("video")) cb(null, "uploads/videos/");
@@ -35,7 +33,6 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage });
 
-// 업로드 API
 app.post("/upload", upload.fields([
   { name: "videos", maxCount: 10 },
   { name: "images", maxCount: 10 }
@@ -46,11 +43,9 @@ app.post("/upload", upload.fields([
   videoFiles.forEach(file => {
     const videoPath = file.path;
 
-    console.log("영상 경로:", videoPath);
-
-    exec(`pip install opencv-python-headless && python frame_extractor.py ${videoPath}`, (err, stdout, stderr) => {
+    exec(`python frame_extractor.py ${videoPath}`, (err, stdout, stderr) => {
       if (err) {
-        console.error("Python 에러:", err);
+        console.error(err);
       } else {
         console.log(stdout);
       }
