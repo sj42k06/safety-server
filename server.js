@@ -7,7 +7,7 @@ const fs = require("fs");
 const { exec } = require("child_process");
 
 const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 10000;
 
 if (!fs.existsSync("uploads")) fs.mkdirSync("uploads");
 if (!fs.existsSync("uploads/videos")) fs.mkdirSync("uploads/videos", { recursive: true });
@@ -28,78 +28,51 @@ app.get("/", (req, res) => {
 const db = mysql.createConnection({
   host: "junction.proxy.rlwy.net",
   user: "root",
-  password: "uXLlzlUcfWYHaSXqVihQFxzhGnjcxbZR",
+  password: "여기너비밀번호",
   database: "railway",
   port: 50160
 });
 
 db.connect(err => {
-  if (err) console.error(err);
-  else console.log("DB connected");
-});
-
-app.post("/login", (req, res) => {
-  const { userid, pwd } = req.body;
-
-  db.query(
-    "SELECT * FROM users WHERE username=? AND password=?",
-    [userid, pwd],
-    (err, results) => {
-      if (err) return res.send("DB error");
-      if (results.length > 0) res.redirect("/index.html");
-      else res.send("login fail");
-    }
-  );
+  if (err) console.error("DB 연결 실패:", err);
+  else console.log("DB 연결 성공");
 });
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    if (file.mimetype.startsWith("image")) cb(null, "uploads/");
-    else if (file.mimetype.startsWith("video")) cb(null, "uploads/videos/");
+    if (file.mimetype.startsWith("video")) cb(null, "uploads/videos/");
+    else cb(null, "uploads/");
   },
   filename: (req, file, cb) => {
     const ext = path.extname(file.originalname);
-    cb(null, Date.now() + "-" + Math.round(Math.random() * 1e9) + ext);
+    cb(null, Date.now() + ext);
   }
 });
 
-const upload = multer({ storage: storage });
+const upload = multer({ storage });
 
 app.post("/upload", upload.fields([
-  { name: "images", maxCount: 5 },
-  { name: "videos", maxCount: 2 }
+  { name: "videos", maxCount: 10 },
+  { name: "images", maxCount: 10 }
 ]), (req, res) => {
 
-  const description = req.body.description || "";
-
-  const imageFiles = req.files["images"] || [];
   const videoFiles = req.files["videos"] || [];
 
-  const imagePaths = imageFiles.map(f => f.filename).join(",");
-  const videoPaths = videoFiles.map(f => "uploads/videos/" + f.filename);
+  videoFiles.forEach(file => {
+    const videoPath = file.path;
 
-  db.query(
-    "INSERT INTO risks (zone_id, user_id, title, description, image_path, risk_level, status) VALUES (?, ?, ?, ?, ?, ?, ?)",
-    [1, 1, "위험", description, imagePaths, 1, "미조치"],
-    (err, result) => {
+    console.log("영상 경로:", videoPath);
+
+    exec(`python frame_extractor.py ${videoPath}`, (err, stdout, stderr) => {
       if (err) {
-        console.error(err);
-        return res.send("DB fail");
+        console.error("Python 에러:", err);
+      } else {
+        console.log(stdout);
       }
+    });
+  });
 
-      videoPaths.forEach(videoPath => {
-        exec(`python frame_extractor.py ${videoPath}`, (err, stdout, stderr) => {
-          if (err) {
-            console.error(err);
-          } else {
-            console.log(stdout);
-          }
-        });
-      });
-
-      res.send("ok");
-    }
-  );
+  res.send("OK");
 });
 
 app.listen(PORT, () => {
