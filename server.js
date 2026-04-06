@@ -76,25 +76,17 @@ app.post("/upload", upload.fields([
         const sql = "INSERT INTO records (time, file, type, result, area) VALUES (NOW(), ?, 'video', ?, ?)";
         db.query(sql, [filePath, description || "분석 완료", area], (err) => {
           if (err) console.error(err);
-          res.send(`
-            <h2>분석 성공</h2>
-            <video src="${filePath}" controls width="400"></video>
-            <br><p>구역: ${area}</p>
-            <a href="/record.html" style="display:inline-block; margin-top:10px; padding:10px; background:#007bff; color:white; text-decoration:none; border-radius:5px;">기록 확인</a>
-          `);
+          res.send(`<h2>Success</h2><video src="${filePath}" controls width="300"></video><br><a href="/record.html">Record</a>`);
         });
       })
-      .on("error", (err) => {
-        console.error(err);
-        res.send("Error");
-      })
+      .on("error", (err) => res.send("Error"))
       .run();
   } else {
     const filePath = "/" + imageFiles[0].path;
     const sql = "INSERT INTO records (time, file, type, result, area) VALUES (NOW(), ?, 'image', ?, ?)";
     db.query(sql, [filePath, description || "등록 완료", area], (err) => {
       if (err) console.error(err);
-      res.send(`<h2>등록 성공</h2><img src="${filePath}" width="300"/><br><a href="/record.html">기록 확인</a>`);
+      res.send(`<h2>Success</h2><img src="${filePath}" width="300"/><br><a href="/record.html">Record</a>`);
     });
   }
 });
