@@ -1,15 +1,9 @@
 const express = require("express");
+const mysql = require("mysql2");
 const multer = require("multer");
 const path = require("path");
-const fs = require("fs");
-const ffmpeg = require("fluent-ffmpeg");
-const ffmpegPath = require("ffmpeg-static");
-const mysql = require("mysql2");
-
-ffmpeg.setFfmpegPath(ffmpegPath);
-
 const app = express();
-const PORT = process.env.PORT || 8080;
+const port = process.env.PORT || 8080;
 
 const db = mysql.createPool({
   host: process.env.MYSQLHOST,
@@ -19,85 +13,30 @@ const db = mysql.createPool({
   port: process.env.MYSQLPORT,
   waitForConnections: true,
   connectionLimit: 10,
+  queueLimit: 0
 });
 
-app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
-app.use(express.static("public", { index: false }));
-app.use("/frames", express.static("frames"));
-app.use("/uploads", express.static("uploads"));
+app.use(express.static("public"));
 
-if (!fs.existsSync("uploads")) fs.mkdirSync("uploads");
-if (!fs.existsSync("frames")) fs.mkdirSync("frames");
+const upload = multer({ dest: "uploads/" });
 
-const storage = multer.diskStorage({
-  destination: "uploads/",
-  filename: (req, file, cb) => {
-    cb(null, Date.now() + path.extname(file.originalname));
-  }
-});
+app.post("/upload", upload.single("video"), (req, res) => {
+  const { type, result, area } = req.body;
+  const fileName = req.file ? req.file.filename : null;
 
-const upload = multer({ storage });
+  const sql = "INSERT INTO records (time, file, type, result, area) VALUES (NOW(), ?, ?, ?, ?)";
+  const values = [fileName, type, result, area];
 
-app.get("/", (req, res) => {
-  res.redirect("/login.html");
-});
-
-app.post("/login", (req, res) => {
-  const { userid, pwd } = req.body;
-  if (userid === "admin" && pwd === "1234") {
-    return res.redirect("/index.html");
-  }
-  res.send("<script>alert('Fail'); history.back();</script>");
-});
-
-app.post("/upload", upload.fields([
-  { name: "video", maxCount: 1 },
-  { name: "images", maxCount: 5 }
-]), (req, res) => {
-  const { area, description } = req.body;
-  const videoFile = req.files["video"]?.[0];
-  const imageFiles = req.files["images"] || [];
-
-  if (!videoFile && imageFiles.length === 0) return res.send("No File");
-
-  if (videoFile) {
-    const videoPath = path.join(__dirname, videoFile.path);
-    const videoName = path.parse(videoPath).name;
-    const outputFolder = path.join(__dirname, "frames", videoName);
-
-    if (!fs.existsSync(outputFolder)) fs.mkdirSync(outputFolder, { recursive: true });
-
-    ffmpeg(videoPath)
-      .outputOptions(["-vf fps=1,scale=640:480", "-q:v 2"])
-      .output(path.join(outputFolder, "frame_%04d.jpg"))
-      .on("end", () => {
-        const filePath = `/${videoFile.path}`;
-        const sql = "INSERT INTO records (time, file, type, result, area) VALUES (NOW(), ?, 'video', ?, ?)";
-        db.query(sql, [filePath, description || "분석 완료", area], (err) => {
-          if (err) console.error(err);
-          res.send(`<h2>Success</h2><video src="${filePath}" controls width="300"></video><br><a href="/record.html">Record</a>`);
-        });
-      })
-      .on("error", (err) => res.send("Error"))
-      .run();
-  } else {
-    const filePath = "/" + imageFiles[0].path;
-    const sql = "INSERT INTO records (time, file, type, result, area) VALUES (NOW(), ?, 'image', ?, ?)";
-    db.query(sql, [filePath, description || "등록 완료", area], (err) => {
-      if (err) console.error(err);
-      res.send(`<h2>Success</h2><img src="${filePath}" width="300"/><br><a href="/record.html">Record</a>`);
-    });
-  }
-});
-
-app.get("/records", (req, res) => {
-  db.query("SELECT * FROM records ORDER BY time DESC", (err, results) => {
-    if (err) return res.json([]);
-    res.json(results);
+  db.query(sql, values, (err, data) => {
+    if (err) {
+      console.error(err);
+      return res.status(500).send("DB Error");
+    }
+    res.send({ success: true });
   });
 });
 
-app.listen(PORT, () => {
-  console.log("Server running on " + PORT);
+app.listen(port, () => {
+  console.log(`Server running on port ${port}`);
 });
