@@ -1,5 +1,4 @@
 const express = require("express");
-const cors = require("cors");
 const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
@@ -8,53 +7,34 @@ const { exec } = require("child_process");
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-if (!fs.existsSync("uploads")) fs.mkdirSync("uploads");
-if (!fs.existsSync("uploads/videos")) fs.mkdirSync("uploads/videos", { recursive: true });
-if (!fs.existsSync("frames")) fs.mkdirSync("frames");
-
-app.use(cors());
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-
-app.use(express.static(path.join(__dirname, "public")));
-app.use("/uploads", express.static("uploads"));
-app.use("/frames", express.static("frames"));
+app.use("/frames", express.static(path.join(__dirname, "frames")));
 
 const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    if (file.mimetype.startsWith("video")) cb(null, "uploads/videos/");
-    else cb(null, "uploads/");
+  destination: function (req, file, cb) {
+    const dir = "uploads/videos";
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    cb(null, dir);
   },
-  filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname);
-    cb(null, Date.now() + ext);
+  filename: function (req, file, cb) {
+    cb(null, file.originalname);
   }
 });
 
-const upload = multer({ storage });
+const upload = multer({ storage: storage });
 
-app.post("/upload", upload.fields([
-  { name: "videos", maxCount: 10 },
-  { name: "images", maxCount: 10 }
-]), (req, res) => {
+app.post("/upload", upload.single("video"), (req, res) => {
+  const videoPath = req.file.path;
+  const videoName = path.parse(req.file.filename).name;
 
-  const videoFiles = req.files["videos"] || [];
-
-  videoFiles.forEach(file => {
-    const videoPath = file.path;
-
-    exec(`python frame_extractor.py ${videoPath}`, (err, stdout, stderr) => {
-      if (err) {
-        console.error(err);
-      } else {
-        console.log(stdout);
-      }
-    });
+  exec(`python3 frame_extractor.py ${videoPath}`, (err, stdout, stderr) => {
+    if (err) {
+      console.error(err);
+      return res.send("Python 실행 실패");
+    }
+    res.send(`완료: /frames/${videoName}/frame_0.jpg`);
   });
-
-  res.send("OK");
 });
 
 app.listen(PORT, () => {
-  console.log(`server running on port ${PORT}`);
+  console.log("server running on port " + PORT);
 });
