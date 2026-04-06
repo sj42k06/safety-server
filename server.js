@@ -2,69 +2,100 @@ const express = require("express");
 const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
-const axios = require("axios");
-const FormData = require("form-data");
+const ffmpeg = require("fluent-ffmpeg");
+const ffmpegPath = require("ffmpeg-static");
+
+ffmpeg.setFfmpegPath(ffmpegPath);
 
 const app = express();
 const PORT = process.env.PORT || 8080;
 
 app.use(express.urlencoded({ extended: true }));
-
-app.use((req, res, next) => {
-  if (req.path === "/") {
-    return res.redirect("/login.html");
-  }
-  next();
-});
-
 app.use(express.static("public"));
-app.use("/uploads", express.static("uploads"));
+app.use("/frames", express.static("frames"));
 
 if (!fs.existsSync("uploads")) fs.mkdirSync("uploads");
+if (!fs.existsSync("frames")) fs.mkdirSync("frames");
 
 const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, "uploads/"),
-  filename: (req, file, cb) =>
-    cb(null, Date.now() + path.extname(file.originalname))
+  destination: "uploads/",
+  filename: (req, file, cb) => {
+    cb(null, Date.now() + path.extname(file.originalname));
+  }
 });
 
 const upload = multer({ storage });
+
+app.get("/", (req, res) => {
+  res.redirect("/login.html");
+});
 
 app.post("/login", (req, res) => {
   const { userid, pwd } = req.body;
   if (userid === "admin" && pwd === "1234") {
     return res.redirect("/index.html");
   }
-  res.send("아이디 또는 비밀번호 틀림");
+  res.send("로그인 실패");
 });
 
-app.post("/upload", upload.single("image"), async (req, res) => {
+app.post("/upload", upload.single("video"), (req, res) => {
   if (!req.file) return res.send("파일 없음");
 
-  try {
-    const form = new FormData();
-    form.append("file", fs.createReadStream(req.file.path));
+  const videoPath = path.join(__dirname, req.file.path);
+  const videoName = path.parse(videoPath).name;
+  const outputFolder = path.join(__dirname, "frames", videoName);
 
-    const response = await axios.post(
-      "https://web-production-ab3b.up.railway.app/process",
-      form,
-      { headers: form.getHeaders() }
-    );
-
-    res.send(`
-      <h2>등록 완료</h2>
-      <p>${response.data.message}</p>
-      <img src="https://web-production-ab3b.up.railway.app/${response.data.frame}" width="300"/>
-      <br><br>
-      <a href="/index.html">돌아가기</a>
-    `);
-
-  } catch (err) {
-    console.log(err.response?.data || err.message);
-    res.send("서버 오류");
+  if (!fs.existsSync(outputFolder)) {
+    fs.mkdirSync(outputFolder, { recursive: true });
   }
+
+  const outputPattern = path.join(outputFolder, "frame_%04d.jpg");
+
+  ffmpeg(videoPath)
+    .outputOptions([
+      "-vf fps=1,scale=640:480",
+      "-q:v 2"
+    ])
+    .output(outputPattern)
+    .on("end", () => {
+      const files = fs.readdirSync(outputFolder).length;
+      const result = "위험 요소 감지 (안전모 미착용)";
+
+      const dataPath = "data.json";
+      let data = [];
+
+      if (fs.existsSync(dataPath)) {
+        data = JSON.parse(fs.readFileSync(dataPath));
+      }
+
+      data.push({
+        time: new Date().toLocaleString(),
+        image: `/frames/${videoName}/frame_0001.jpg`,
+        result: result
+      });
+
+      fs.writeFileSync(dataPath, JSON.stringify(data, null, 2));
+
+      res.send(`
+        <h2>${result}</h2>
+        <img src="/frames/${videoName}/frame_0001.jpg" width="300"/>
+        <p>${files} frames 생성</p>
+        <a href="/record.html">기록 보기</a>
+      `);
+    })
+    .on("error", (err) => {
+      console.log(err);
+      res.send("ffmpeg 오류");
+    })
+    .run();
+});
+
+app.get("/records", (req, res) => {
+  if (!fs.existsSync("data.json")) return res.json([]);
+  const data = JSON.parse(fs.readFileSync("data.json"));
+  res.json(data);
 });
 
 app.listen(PORT, () => {
-  console.log("server running on port " + PORT);
+  console.log("server running");
 });
