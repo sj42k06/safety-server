@@ -9,11 +9,14 @@ const PORT = process.env.PORT || 8080;
 
 app.use(express.urlencoded({ extended: true }));
 
-app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "login.html"));
+app.use((req, res, next) => {
+  if (req.path === "/") {
+    return res.sendFile(path.join(__dirname, "public", "login.html"));
+  }
+  next();
 });
 
-app.use(express.static("public"));
+app.use(express.static("public", { index: false }));
 app.use("/uploads", express.static("uploads"));
 app.use("/frames", express.static("frames"));
 
