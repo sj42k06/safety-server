@@ -6,7 +6,6 @@ app = Flask(__name__)
 
 @app.route("/process", methods=["POST"])
 def process():
-    
     if "file" not in request.files:
         return jsonify({"error": "파일 없음"}), 400
 
@@ -15,6 +14,9 @@ def process():
     os.makedirs("uploads", exist_ok=True)
     filepath = os.path.join("uploads", file.filename)
     file.save(filepath)
+
+    if not filepath.lower().endswith((".mp4", ".avi", ".mov")):
+        return jsonify({"error": "영상만 가능"}), 400
 
     cap = cv2.VideoCapture(filepath)
 
@@ -26,7 +28,7 @@ def process():
 
     ret, frame = cap.read()
     if not ret:
-        return jsonify({"error": "프레임 추출 실패"}), 500
+        return jsonify({"error": "프레임 실패"}), 500
 
     cv2.imwrite(frame_path, frame)
 
