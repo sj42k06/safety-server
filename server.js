@@ -73,11 +73,11 @@ app.post("/upload", upload.fields([
 
         const result = "영상 분석 완료";
 
-        saveData(`/frames/${videoName}/frame_0001.jpg`, result);
+        saveData(`/${videoFile.path}`, result);
 
         res.send(`
           <h2>${result}</h2>
-          <img src="/frames/${videoName}/frame_0001.jpg" width="300"/>
+          <video src="/${videoFile.path}" controls width="300"></video>
           <br><br>
           <a href="/record.html">기록 보기</a>
         `);
@@ -104,7 +104,7 @@ app.post("/upload", upload.fields([
   }
 });
 
-function saveData(image, result) {
+function saveData(file, result) {
   const dataPath = "data.json";
   let data = [];
 
@@ -112,9 +112,12 @@ function saveData(image, result) {
     data = JSON.parse(fs.readFileSync(dataPath));
   }
 
+  const isVideo = file.includes(".mp4") || file.includes(".webm");
+
   data.push({
     time: new Date().toLocaleString(),
-    image: image,
+    file: file,
+    type: isVideo ? "video" : "image",
     result: result
   });
 
