@@ -8,17 +8,17 @@ const app = express();
 const PORT = process.env.PORT || 8080;
 
 app.use(express.urlencoded({ extended: true }));
+
+app.get("/", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "login.html"));
+});
+
 app.use(express.static("public"));
 app.use("/uploads", express.static("uploads"));
 app.use("/frames", express.static("frames"));
 
-if (!fs.existsSync("uploads")) {
-  fs.mkdirSync("uploads");
-}
-
-if (!fs.existsSync("frames")) {
-  fs.mkdirSync("frames");
-}
+if (!fs.existsSync("uploads")) fs.mkdirSync("uploads");
+if (!fs.existsSync("frames")) fs.mkdirSync("frames");
 
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
@@ -31,13 +31,8 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage });
 
-app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "login.html"));
-});
-
 app.post("/login", (req, res) => {
   const { id, pw } = req.body;
-
   if (id === "admin" && pw === "1234") {
     res.redirect("/upload.html");
   } else {
@@ -51,14 +46,10 @@ app.post("/upload", upload.single("video"), (req, res) => {
 
   exec(`python3 frame_extractor.py ${videoPath}`, (err) => {
     if (err) {
-      console.error(err);
       return res.send("python 실행 오류");
     }
 
-    res.send(`
-      <h2>완료</h2>
-      <a href="/frames/${videoName}/frame_0.jpg">프레임 보기</a>
-    `);
+    res.send(`<a href="/frames/${videoName}/frame_0.jpg">프레임 보기</a>`);
   });
 });
 
