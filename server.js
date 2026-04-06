@@ -25,28 +25,43 @@ if (!fs.existsSync("frames")) fs.mkdirSync("frames");
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, "uploads/"),
-  filename: (req, file, cb) => cb(null, Date.now() + path.extname(file.originalname))
+  filename: (req, file, cb) =>
+    cb(null, Date.now() + path.extname(file.originalname))
 });
 
 const upload = multer({ storage });
 
 app.post("/login", (req, res) => {
-  const { id, pw } = req.body;
+  const id = req.body.userid;
+  const pw = req.body.pwd;
+
   if (id === "admin" && pw === "1234") {
-    res.redirect("/upload.html");
-  } else {
-    res.send("아이디 또는 비밀번호 틀림");
+    return res.redirect("/index.html");
   }
+
+  res.send("아이디 또는 비밀번호 틀림");
 });
 
-app.post("/upload", upload.single("video"), (req, res) => {
+app.post("/upload", upload.single("image"), (req, res) => {
+  if (!req.file) {
+    return res.send("파일 없음");
+  }
+
   const videoPath = req.file.path;
   const videoName = path.parse(req.file.filename).name;
 
-  exec(`python3 frame_extractor.py ${videoPath}`, (err) => {
-    if (err) return res.send("python 실행 오류");
+  exec(`python3 frame_extractor.py "${videoPath}"`, (err, stdout, stderr) => {
+    if (err) {
+      console.log(stderr);
+      return res.send("python 실행 오류: " + stderr);
+    }
 
-    res.send(`<a href="/frames/${videoName}/frame_0.jpg">프레임 보기</a>`);
+    res.send(`
+      <h2>등록 완료</h2>
+      <a href="/frames/${videoName}/frame_0.jpg">프레임 보기</a>
+      <br><br>
+      <a href="/index.html">돌아가기</a>
+    `);
   });
 });
 
