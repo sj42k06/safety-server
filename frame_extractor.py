@@ -2,39 +2,26 @@ import cv2
 import os
 import sys
 
-if len(sys.argv) < 2:
-    exit()
-
 video_path = sys.argv[1]
-
-if not os.path.exists(video_path):
-    exit()
-
 video_name = os.path.splitext(os.path.basename(video_path))[0]
-output_folder = f"frames/{video_name}"
-os.makedirs(output_folder, exist_ok=True)
+
+output_dir = os.path.join("frames", video_name)
+os.makedirs(output_dir, exist_ok=True)
 
 cap = cv2.VideoCapture(video_path)
 
-if not cap.isOpened():
-    exit()
-
-fps = int(cap.get(cv2.CAP_PROP_FPS))
-if fps == 0:
-    fps = 30
-
-frame_interval = fps
-frame_count = 0
+count = 0
+frame_rate = 30
 
 while True:
     ret, frame = cap.read()
     if not ret:
         break
 
-    if frame_count % frame_interval == 0:
-        filename = f"{output_folder}/frame_{frame_count}.jpg"
-        cv2.imwrite(filename, frame)
+    if count % frame_rate == 0:
+        file_path = os.path.join(output_dir, f"frame_{count}.jpg")
+        cv2.imwrite(file_path, frame)
 
-    frame_count += 1
+    count += 1
 
 cap.release()
