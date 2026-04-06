@@ -4,18 +4,25 @@ const path = require("path");
 const fs = require("fs");
 const ffmpeg = require("fluent-ffmpeg");
 const ffmpegPath = require("ffmpeg-static");
+const mysql = require("mysql2");
 
 ffmpeg.setFfmpegPath(ffmpegPath);
 
 const app = express();
 const PORT = process.env.PORT || 8080;
 
-app.use(express.urlencoded({ extended: true }));
-
-app.get("/", (req, res) => {
-  return res.redirect("/login.html");
+const db = mysql.createPool({
+  host: process.env.MYSQLHOST,
+  user: process.env.MYSQLUSER,
+  password: process.env.MYSQLPASSWORD,
+  database: process.env.MYSQLDATABASE,
+  port: process.env.MYSQLPORT,
+  waitForConnections: true,
+  connectionLimit: 10,
 });
 
+app.use(express.urlencoded({ extended: true }));
+app.use(express.json());
 app.use(express.static("public", { index: false }));
 app.use("/frames", express.static("frames"));
 app.use("/uploads", express.static("uploads"));
@@ -32,104 +39,65 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage });
 
+app.get("/", (req, res) => {
+  res.redirect("/login.html");
+});
+
 app.post("/login", (req, res) => {
   const { userid, pwd } = req.body;
   if (userid === "admin" && pwd === "1234") {
     return res.redirect("/index.html");
   }
-  res.send("로그인 실패");
+  res.send("<script>alert('Fail'); history.back();</script>");
 });
 
 app.post("/upload", upload.fields([
   { name: "video", maxCount: 1 },
   { name: "images", maxCount: 5 }
 ]), (req, res) => {
-
+  const { area, description } = req.body;
   const videoFile = req.files["video"]?.[0];
   const imageFiles = req.files["images"] || [];
 
-  if (!videoFile && imageFiles.length === 0) {
-    return res.send("파일 없음");
-  }
+  if (!videoFile && imageFiles.length === 0) return res.send("No File");
 
   if (videoFile) {
     const videoPath = path.join(__dirname, videoFile.path);
     const videoName = path.parse(videoPath).name;
     const outputFolder = path.join(__dirname, "frames", videoName);
 
-    if (!fs.existsSync(outputFolder)) {
-      fs.mkdirSync(outputFolder, { recursive: true });
-    }
-
-    const outputPattern = path.join(outputFolder, "frame_%04d.jpg");
+    if (!fs.existsSync(outputFolder)) fs.mkdirSync(outputFolder, { recursive: true });
 
     ffmpeg(videoPath)
-      .outputOptions([
-        "-vf fps=1,scale=640:480",
-        "-q:v 2"
-      ])
-      .output(outputPattern)
+      .outputOptions(["-vf fps=1,scale=640:480", "-q:v 2"])
+      .output(path.join(outputFolder, "frame_%04d.jpg"))
       .on("end", () => {
-
-        const result = "영상 분석 완료";
-
-        saveData(`/${videoFile.path}`, result);
-
-        res.send(`
-          <h2>${result}</h2>
-          <video src="/${videoFile.path}" controls width="300"></video>
-          <br><br>
-          <a href="/record.html">기록 보기</a>
-        `);
+        const filePath = `/${videoFile.path}`;
+        const sql = "INSERT INTO records (time, file, type, result, area) VALUES (NOW(), ?, 'video', ?, ?)";
+        db.query(sql, [filePath, description || "분석 완료", area], (err) => {
+          if (err) console.error(err);
+          res.send(`<h2>Success</h2><video src="${filePath}" controls width="300"></video><br><a href="/record.html">Record</a>`);
+        });
       })
-      .on("error", (err) => {
-        console.log(err);
-        res.send("ffmpeg 오류");
-      })
+      .on("error", (err) => res.send("Error"))
       .run();
-
   } else {
-    const imagePath = "/" + imageFiles[0].path;
-
-    const result = "이미지 등록 완료";
-
-    saveData(imagePath, result);
-
-    res.send(`
-      <h2>${result}</h2>
-      <img src="${imagePath}" width="300"/>
-      <br><br>
-      <a href="/record.html">기록 보기</a>
-    `);
+    const filePath = "/" + imageFiles[0].path;
+    const sql = "INSERT INTO records (time, file, type, result, area) VALUES (NOW(), ?, 'image', ?, ?)";
+    db.query(sql, [filePath, description || "등록 완료", area], (err) => {
+      if (err) console.error(err);
+      res.send(`<h2>Success</h2><img src="${filePath}" width="300"/><br><a href="/record.html">Record</a>`);
+    });
   }
 });
 
-function saveData(file, result) {
-  const dataPath = "data.json";
-  let data = [];
-
-  if (fs.existsSync(dataPath)) {
-    data = JSON.parse(fs.readFileSync(dataPath));
-  }
-
-  const isVideo = file.includes(".mp4") || file.includes(".webm");
-
-  data.push({
-    time: new Date().toLocaleString(),
-    file: file,
-    type: isVideo ? "video" : "image",
-    result: result
-  });
-
-  fs.writeFileSync(dataPath, JSON.stringify(data, null, 2));
-}
-
 app.get("/records", (req, res) => {
-  if (!fs.existsSync("data.json")) return res.json([]);
-  const data = JSON.parse(fs.readFileSync("data.json"));
-  res.json(data);
+  db.query("SELECT * FROM records ORDER BY time DESC", (err, results) => {
+    if (err) return res.json([]);
+    res.json(results);
+  });
 });
 
 app.listen(PORT, () => {
-  console.log("server running");
+  console.log("Server running on " + PORT);
 });
