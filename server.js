@@ -40,7 +40,7 @@ const storage = multer.diskStorage({
 const upload = multer({ storage });
 
 app.get("/", (req, res) => {
-  res.redirect("/login.html");
+  res.sendFile(path.join(__dirname, "public", "login.html"));
 });
 
 app.post("/login", (req, res) => {
@@ -48,7 +48,7 @@ app.post("/login", (req, res) => {
   if (userid === "admin" && pwd === "1234") {
     return res.redirect("/index.html");
   }
-  res.send("<script>alert('Fail'); history.back();</script>");
+  res.send("<script>alert('로그인 실패'); history.back();</script>");
 });
 
 app.post("/upload", upload.fields([
@@ -74,19 +74,33 @@ app.post("/upload", upload.fields([
       .on("end", () => {
         const filePath = `/${videoFile.path}`;
         const sql = "INSERT INTO records (time, file, type, result, area) VALUES (NOW(), ?, 'video', ?, ?)";
-        db.query(sql, [filePath, description || "분석 완료", area], (err) => {
+        
+        db.query(sql, [filePath, description || "분석 완료", area || "undefined"], (err) => {
           if (err) console.error(err);
-          res.send(`<h2>Success</h2><video src="${filePath}" controls width="300"></video><br><a href="/record.html">Record</a>`);
+          
+          res.send(`
+            <style>
+              body { font-family: sans-serif; padding: 20px; }
+              .btn { background: #007bff; color: white; padding: 10px 15px; text-decoration: none; border-radius: 5px; display: inline-block; margin-top: 10px; border: none; cursor: pointer; }
+            </style>
+            <h2>분석 성공</h2>
+            <video src="${filePath}" controls width="400"></video>
+            <p>구역: ${area || "undefined"}</p>
+            <a href="/record.html" class="btn">기록 확인</a>
+          `);
         });
       })
-      .on("error", (err) => res.send("Error"))
+      .on("error", (err) => {
+        console.error(err);
+        res.send("Error");
+      })
       .run();
   } else {
     const filePath = "/" + imageFiles[0].path;
     const sql = "INSERT INTO records (time, file, type, result, area) VALUES (NOW(), ?, 'image', ?, ?)";
     db.query(sql, [filePath, description || "등록 완료", area], (err) => {
       if (err) console.error(err);
-      res.send(`<h2>Success</h2><img src="${filePath}" width="300"/><br><a href="/record.html">Record</a>`);
+      res.send(`<h2>등록 성공</h2><img src="${filePath}" width="300"/><br><p>구역: ${area}</p><a href="/record.html" class="btn">기록 확인</a>`);
     });
   }
 });
