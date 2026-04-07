@@ -57,37 +57,6 @@ async function runAI(filePath) {
   return result;
 }
 
-async function generateAI(classes) {
-  const res = await fetch("https://api.openai.com/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      "Authorization": "Bearer " + process.env.OPENAI_API_KEY,
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({
-      model: "gpt-5.3",
-      messages: [
-        {
-          role: "system",
-          content: "너는 산업현장 안전관리 AI다."
-        },
-        {
-          role: "user",
-          content: `
-감지된 객체: ${classes.join(",")}
-
-이 상황을 분석해서
-위험 여부, 위험 요소, 대응 방안, 인수인계 내용을 작성해라.
-          `
-        }
-      ]
-    })
-  });
-
-  const data = await res.json();
-  return data.choices[0].message.content;
-}
-
 app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "login.html"));
 });
@@ -143,18 +112,22 @@ app.post("/upload", upload.fields([
         }
 
         const unique = [...new Set(allClasses)];
-        const report = await generateAI(unique);
+        let risk = "정상";
+
+        if (unique.includes("person") && !unique.includes("helmet")) {
+          risk = "안전모 미착용 위험";
+        }
 
         const filePath = `/${videoFile.path}`;
 
         db.query(
           "INSERT INTO records (time, file, type, result, area) VALUES (NOW(), ?, 'video', ?, ?)",
-          [filePath, report, area || "undefined"],
+          [filePath, risk, area || "undefined"],
           () => {
             res.send(`
               <h2>AI 분석 완료 (영상)</h2>
               <video src="${filePath}" controls width="400"></video>
-              <pre>${report}</pre>
+              <p>위험 결과: ${risk}</p>
               <a href="/record.html">기록 확인</a>
             `);
           }
@@ -168,30 +141,28 @@ app.post("/upload", upload.fields([
     const filePath = "/" + imageFiles[0].path;
     const fullPath = path.join(__dirname, imageFiles[0].path);
 
-    let allClasses = [];
+    let risk = "정상";
 
     try {
       const result = await runAI(fullPath);
       if (result.predictions) {
-        result.predictions.forEach(p => {
-          allClasses.push(p.class);
-        });
+        const classes = result.predictions.map(p => p.class);
+        if (classes.includes("person") && !classes.includes("helmet")) {
+          risk = "안전모 미착용 위험";
+        }
       }
     } catch (e) {
       console.error(e);
     }
 
-    const unique = [...new Set(allClasses)];
-    const report = await generateAI(unique);
-
     db.query(
       "INSERT INTO records (time, file, type, result, area) VALUES (NOW(), ?, 'image', ?, ?)",
-      [filePath, report, area],
+      [filePath, risk, area],
       () => {
         res.send(`
           <h2>AI 분석 완료 (이미지)</h2>
           <img src="${filePath}" width="300"/>
-          <pre>${report}</pre>
+          <p>위험 결과: ${risk}</p>
           <a href="/record.html">기록 확인</a>
         `);
       }
