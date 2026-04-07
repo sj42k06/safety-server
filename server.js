@@ -5,6 +5,8 @@ const fs = require("fs");
 const ffmpeg = require("fluent-ffmpeg");
 const ffmpegPath = require("ffmpeg-static");
 const mysql = require("mysql2");
+const FormData = require("form-data");
+const fetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch(...args));
 
 ffmpeg.setFfmpegPath(ffmpegPath);
 
@@ -39,6 +41,22 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage });
 
+async function runAI(filePath) {
+  const formData = new FormData();
+  formData.append("file", fs.createReadStream(filePath));
+
+  const response = await fetch(
+    "https://detect.roboflow.com/모델이름/버전?api_key=9iLrFxUNzKGhY0DKM9bz",
+    {
+      method: "POST",
+      body: formData
+    }
+  );
+
+  const result = await response.json();
+  return result;
+}
+
 app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "login.html"));
 });
@@ -54,14 +72,16 @@ app.post("/login", (req, res) => {
 app.post("/upload", upload.fields([
   { name: "video", maxCount: 1 },
   { name: "images", maxCount: 5 }
-]), (req, res) => {
-  const { area, description } = req.body;
+]), async (req, res) => {
+
+  const { area } = req.body;
   const videoFile = req.files["video"]?.[0];
   const imageFiles = req.files["images"] || [];
 
   if (!videoFile && imageFiles.length === 0) return res.send("No File");
 
   if (videoFile) {
+
     const videoPath = path.join(__dirname, videoFile.path);
     const videoName = path.parse(videoPath).name;
     const outputFolder = path.join(__dirname, "frames", videoName);
@@ -71,38 +91,85 @@ app.post("/upload", upload.fields([
     ffmpeg(videoPath)
       .outputOptions(["-vf fps=1,scale=640:480", "-q:v 2"])
       .output(path.join(outputFolder, "frame_%04d.jpg"))
-      .on("end", () => {
+      .on("end", async () => {
+
+        const files = fs.readdirSync(outputFolder);
+        let allClasses = [];
+
+        for (let f of files.slice(0, 5)) {
+          const framePath = path.join(outputFolder, f);
+
+          try {
+            const result = await runAI(framePath);
+            if (result.predictions) {
+              result.predictions.forEach(p => {
+                allClasses.push(p.class);
+              });
+            }
+          } catch (e) {
+            console.error(e);
+          }
+        }
+
+        const unique = [...new Set(allClasses)];
+        let risk = "정상";
+
+        if (unique.includes("person") && !unique.includes("helmet")) {
+          risk = "안전모 미착용 위험";
+        }
+
         const filePath = `/${videoFile.path}`;
-        const sql = "INSERT INTO records (time, file, type, result, area) VALUES (NOW(), ?, 'video', ?, ?)";
-        
-        db.query(sql, [filePath, description || "분석 완료", area || "undefined"], (err) => {
-          if (err) console.error(err);
-          
-          res.send(`
-            <style>
-              body { font-family: sans-serif; padding: 20px; }
-              .btn { background: #007bff; color: white; padding: 10px 15px; text-decoration: none; border-radius: 5px; display: inline-block; margin-top: 10px; border: none; cursor: pointer; }
-            </style>
-            <h2>분석 성공</h2>
-            <video src="${filePath}" controls width="400"></video>
-            <p>구역: ${area || "undefined"}</p>
-            <a href="/record.html" class="btn">기록 확인</a>
-          `);
-        });
-      })
-      .on("error", (err) => {
-        console.error(err);
-        res.send("Error");
+
+        db.query(
+          "INSERT INTO records (time, file, type, result, area) VALUES (NOW(), ?, 'video', ?, ?)",
+          [filePath, risk, area || "undefined"],
+          () => {
+            res.send(`
+              <h2>AI 분석 완료 (영상)</h2>
+              <video src="${filePath}" controls width="400"></video>
+              <p>위험 결과: ${risk}</p>
+              <a href="/record.html">기록 확인</a>
+            `);
+          }
+        );
+
       })
       .run();
+
   } else {
+
     const filePath = "/" + imageFiles[0].path;
-    const sql = "INSERT INTO records (time, file, type, result, area) VALUES (NOW(), ?, 'image', ?, ?)";
-    db.query(sql, [filePath, description || "등록 완료", area], (err) => {
-      if (err) console.error(err);
-      res.send(`<h2>등록 성공</h2><img src="${filePath}" width="300"/><br><p>구역: ${area}</p><a href="/record.html" class="btn">기록 확인</a>`);
-    });
+    const fullPath = path.join(__dirname, imageFiles[0].path);
+
+    let risk = "정상";
+
+    try {
+      const result = await runAI(fullPath);
+      if (result.predictions) {
+        const classes = result.predictions.map(p => p.class);
+        if (classes.includes("person") && !classes.includes("helmet")) {
+          risk = "안전모 미착용 위험";
+        }
+      }
+    } catch (e) {
+      console.error(e);
+    }
+
+    db.query(
+      "INSERT INTO records (time, file, type, result, area) VALUES (NOW(), ?, 'image', ?, ?)",
+      [filePath, risk, area],
+      () => {
+        res.send(`
+          <h2>AI 분석 완료 (이미지)</h2>
+          <img src="${filePath}" width="300"/>
+          <p>위험 결과: ${risk}</p>
+          <a href="/record.html">기록 확인</a>
+        `);
+      }
+    );
+
   }
+
 });
 
 app.get("/records", (req, res) => {
