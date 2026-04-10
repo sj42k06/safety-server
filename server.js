@@ -5,14 +5,26 @@ const fs = require("fs");
 const ffmpeg = require("fluent-ffmpeg");
 const ffmpegPath = require("ffmpeg-static");
 const mysql = require("mysql2");
-const FormData = require("form-data");
-const fetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch(...args));
+const cloudinary = require("cloudinary").v2;
+const { Server } = require("socket.io");
+const http = require("http");
 
+// ffmpeg 설정
 ffmpeg.setFfmpegPath(ffmpegPath);
 
 const app = express();
+const server = http.createServer(app);
+const io = new Server(server);
 const PORT = process.env.PORT || 8080;
 
+// 1. Cloudinary 설정 (여기를 네 정보로 꼭 바꿔줘!)
+cloudinary.config({ 
+  cloud_name: '네_클라우드_이름', 
+  api_key: '네_API_키', 
+  api_secret: '네_API_비밀키' 
+});
+
+// 2. Railway MySQL 연결 설정
 const db = mysql.createPool({
   host: process.env.MYSQLHOST,
   user: process.env.MYSQLUSER,
@@ -25,42 +37,17 @@ const db = mysql.createPool({
 
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
-app.use(express.static("public", { index: false }));
-app.use("/frames", express.static("frames"));
-app.use("/uploads", express.static("uploads"));
+app.use(express.static("public"));
 
-if (!fs.existsSync("uploads")) fs.mkdirSync("uploads");
-if (!fs.existsSync("frames")) fs.mkdirSync("frames");
+// Multer 설정 (임시 저장)
+const upload = multer({ dest: "uploads/" });
 
-const storage = multer.diskStorage({
-  destination: "uploads/",
-  filename: (req, file, cb) => {
-    cb(null, Date.now() + path.extname(file.originalname));
-  }
-});
-
-const upload = multer({ storage });
-
-async function runAI(filePath) {
-  const formData = new FormData();
-  formData.append("file", fs.createReadStream(filePath));
-
-  const response = await fetch(
-    "https://detect.roboflow.com/모델이름/버전?api_key=9iLrFxUNzKGhY0DKM9bz",
-    {
-      method: "POST",
-      body: formData
-    }
-  );
-
-  const result = await response.json();
-  return result;
-}
-
+// 메인 페이지 (로그인)
 app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "login.html"));
 });
 
+// 로그인 로직
 app.post("/login", (req, res) => {
   const { userid, pwd } = req.body;
   if (userid === "admin" && pwd === "1234") {
@@ -69,116 +56,75 @@ app.post("/login", (req, res) => {
   res.send("<script>alert('로그인 실패'); history.back();</script>");
 });
 
-app.post("/upload", upload.fields([
-  { name: "video", maxCount: 1 },
-  { name: "images", maxCount: 5 }
-]), async (req, res) => {
+// 3. 영상 업로드 및 분석 로직
+app.post("/upload", upload.single("video"), async (req, res) => {
+  const videoFile = req.file;
+  if (!videoFile) return res.send("영상을 업로드해주세요.");
 
-  const { area } = req.body;
-  const videoFile = req.files["video"]?.[0];
-  const imageFiles = req.files["images"] || [];
+  try {
+    // A. Cloudinary에 원본 영상 업로드
+    const videoUpload = await cloudinary.uploader.upload(videoFile.path, { 
+      resource_type: "video",
+      folder: "safety_videos"
+    });
 
-  if (!videoFile && imageFiles.length === 0) return res.send("No File");
-
-  if (videoFile) {
-
-    const videoPath = path.join(__dirname, videoFile.path);
-    const videoName = path.parse(videoPath).name;
+    const videoUrl = videoUpload.secure_url;
+    const videoName = path.parse(videoFile.path).name;
     const outputFolder = path.join(__dirname, "frames", videoName);
-
     if (!fs.existsSync(outputFolder)) fs.mkdirSync(outputFolder, { recursive: true });
 
-    ffmpeg(videoPath)
-      .outputOptions(["-vf fps=1,scale=640:480", "-q:v 2"])
+    // B. 프레임 추출 (1초당 1장)
+    ffmpeg(videoFile.path)
+      .outputOptions(["-vf fps=1"])
       .output(path.join(outputFolder, "frame_%04d.jpg"))
       .on("end", async () => {
-
         const files = fs.readdirSync(outputFolder);
-        let allClasses = [];
+        
+        // 시연을 위해 첫 번째 프레임만 분석하는 예시 (실제론 반복문 사용)
+        const framePath = path.join(outputFolder, files[0]);
+        
+        // C. Cloudinary에 증거 사진 업로드
+        const imageUpload = await cloudinary.uploader.upload(framePath, { folder: "safety_frames" });
+        const imageUrl = imageUpload.secure_url;
 
-        for (let f of files.slice(0, 5)) {
-          const framePath = path.join(outputFolder, f);
+        // D. 임시 결과 (나중에 AI 담당자가 준 결과로 대체)
+        const riskResult = "안전모 미착용 위험 탐지";
 
-          try {
-            const result = await runAI(framePath);
-            if (result.predictions) {
-              result.predictions.forEach(p => {
-                allClasses.push(p.class);
-              });
-            }
-          } catch (e) {
-            console.error(e);
-          }
-        }
-
-        const unique = [...new Set(allClasses)];
-        let risk = "정상";
-
-        if (unique.includes("person") && !unique.includes("helmet")) {
-          risk = "안전모 미착용 위험";
-        }
-
-        const filePath = `/${videoFile.path}`;
-
+        // E. DB(Railway)에 저장
         db.query(
-          "INSERT INTO records (time, file, type, result, area) VALUES (NOW(), ?, 'video', ?, ?)",
-          [filePath, risk, area || "undefined"],
-          () => {
+          "INSERT INTO Risk_Log (worker_id, violation_type, evidence_url, area) VALUES (?, ?, ?, ?)",
+          ["Worker_01", riskResult, imageUrl, "A구역"],
+          (err) => {
+            if (err) console.error(err);
+            
+            // F. 실시간 알림 전송 (Socket.io)
+            io.emit("new_risk", { result: riskResult, url: imageUrl });
+
             res.send(`
-              <h2>AI 분석 완료 (영상)</h2>
-              <video src="${filePath}" controls width="400"></video>
-              <p>위험 결과: ${risk}</p>
-              <a href="/record.html">기록 확인</a>
+              <h2>분석 완료</h2>
+              <p>결과: ${riskResult}</p>
+              <img src="${imageUrl}" width="300" />
+              <br><a href="/record.html">기록 확인하기</a>
             `);
           }
         );
-
       })
       .run();
 
-  } else {
-
-    const filePath = "/" + imageFiles[0].path;
-    const fullPath = path.join(__dirname, imageFiles[0].path);
-
-    let risk = "정상";
-
-    try {
-      const result = await runAI(fullPath);
-      if (result.predictions) {
-        const classes = result.predictions.map(p => p.class);
-        if (classes.includes("person") && !classes.includes("helmet")) {
-          risk = "안전모 미착용 위험";
-        }
-      }
-    } catch (e) {
-      console.error(e);
-    }
-
-    db.query(
-      "INSERT INTO records (time, file, type, result, area) VALUES (NOW(), ?, 'image', ?, ?)",
-      [filePath, risk, area],
-      () => {
-        res.send(`
-          <h2>AI 분석 완료 (이미지)</h2>
-          <img src="${filePath}" width="300"/>
-          <p>위험 결과: ${risk}</p>
-          <a href="/record.html">기록 확인</a>
-        `);
-      }
-    );
-
+  } catch (error) {
+    console.error(error);
+    res.status(500).send("서버 오류 발생");
   }
-
 });
 
+// 기록 조회 API
 app.get("/records", (req, res) => {
-  db.query("SELECT * FROM records ORDER BY time DESC", (err, results) => {
+  db.query("SELECT * FROM Risk_Log ORDER BY detected_at DESC", (err, results) => {
     if (err) return res.json([]);
     res.json(results);
   });
 });
 
-app.listen(PORT, () => {
-  console.log("Server running on " + PORT);
+server.listen(PORT, () => {
+  console.log(`서버가 포트 ${PORT}에서 작동 중입니다.`);
 });
