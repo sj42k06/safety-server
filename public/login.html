@@ -125,7 +125,7 @@
       }
       await new Promise(r => setTimeout(r, 600));
       if (userId === "admin" && password === "1234") {
-        window.location.href = "/dashboard";
+        window.location.href = '/upload';
       } else {
         showError("아이디 또는 비밀번호가 올바르지 않습니다.");
         btn.disabled = false;
