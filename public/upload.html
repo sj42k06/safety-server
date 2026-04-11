@@ -5,99 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>영상 분석 - 스마트 현장 안전관제 시스템</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/remixicon/4.2.0/remixicon.min.css" />
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f8fafc; display: flex; min-height: 100vh; }
-    aside { width: 240px; height: 100vh; background: #0f172a; color: white; position: fixed; left: 0; top: 0; display: flex; flex-direction: column; z-index: 40; }
-    .logo { display: flex; align-items: center; gap: 12px; padding: 20px 16px; border-bottom: 1px solid rgba(255,255,255,0.08); }
-    .logo img { width: 32px; height: 32px; object-fit: contain; }
-    .logo-text .title { font-size: 12px; font-weight: 700; color: white; }
-    .logo-text .sub { font-size: 11px; color: #94a3b8; }
-    nav { flex: 1; padding: 16px 8px; display: flex; flex-direction: column; gap: 4px; }
-    nav a { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 8px; color: #94a3b8; text-decoration: none; font-size: 14px; font-weight: 500; transition: all 0.2s; }
-    nav a:hover { background: #1e293b; color: white; }
-    nav a.active { background: #334155; color: white; }
-    nav a i { font-size: 18px; width: 20px; text-align: center; }
-    .user-section { border-top: 1px solid rgba(255,255,255,0.08); padding: 12px; }
-    .user-info { display: flex; align-items: center; gap: 12px; padding: 8px 12px; }
-    .user-avatar { width: 32px; height: 32px; border-radius: 50%; background: #475569; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-    .user-avatar i { font-size: 14px; color: #cbd5e1; }
-    .user-name { font-size: 12px; font-weight: 600; color: white; }
-    .user-role { font-size: 11px; color: #94a3b8; }
-    .logout-btn { display: flex; align-items: center; gap: 12px; padding: 8px 12px; border-radius: 8px; color: #94a3b8; background: none; border: none; cursor: pointer; font-size: 14px; width: 100%; margin-top: 4px; transition: all 0.2s; }
-    .logout-btn:hover { background: #1e293b; color: white; }
-    .logout-btn i { font-size: 18px; width: 20px; text-align: center; }
-    main { margin-left: 240px; flex: 1; padding: 32px; }
-    .inner { max-width: 720px; margin: 0 auto; }
-    .page-tag { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
-    .page-tag i { color: #94a3b8; font-size: 14px; }
-    .page-tag span { font-size: 11px; font-weight: 600; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em; }
-    h2 { font-size: 22px; font-weight: 700; color: #1e293b; margin-bottom: 6px; }
-    .page-desc { font-size: 13px; color: #94a3b8; line-height: 1.6; margin-bottom: 24px; }
-    .card { background: white; border-radius: 12px; border: 1px solid #f1f5f9; padding: 20px; margin-bottom: 16px; }
-    .card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
-    .card-title { font-size: 13px; font-weight: 700; color: #334155; }
-    .card-count { font-size: 12px; color: #94a3b8; font-weight: 600; }
-    .scenario-btn { display: inline-flex; align-items: center; gap: 8px; padding: 8px 12px; border-radius: 8px; border: none; font-size: 12px; font-weight: 600; cursor: pointer; background: #1e293b; color: white; }
-    .scenario-num { width: 20px; height: 20px; border-radius: 50%; background: rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; }
-    .upload-zone { border: 2px dashed #e2e8f0; border-radius: 16px; background: white; min-height: 200px; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s; margin-bottom: 16px; padding: 48px 24px; }
-    .upload-zone:hover { border-color: #94a3b8; background: #f8fafc; }
-    .upload-zone.dragover { border-color: #64748b; background: #f1f5f9; }
-    .upload-zone.has-file { border-color: #86efac; background: #f0fdf4; cursor: default; padding: 16px; }
-    .upload-icon { width: 56px; height: 56px; background: #f1f5f9; border-radius: 16px; display: flex; align-items: center; justify-content: center; margin-bottom: 12px; }
-    .upload-icon i { font-size: 24px; color: #94a3b8; }
-    .upload-title { font-size: 15px; font-weight: 600; color: #334155; margin-bottom: 4px; }
-    .upload-sub { font-size: 13px; color: #94a3b8; }
-    .file-icon { width: 32px; height: 32px; background: #dcfce7; border-radius: 8px; display: flex; align-items: center; justify-content: center; }
-    .file-icon i { color: #16a34a; font-size: 14px; }
-    .file-name { font-size: 13px; font-weight: 700; color: #1e293b; }
-    .file-size { font-size: 11px; color: #94a3b8; }
-    .file-change { font-size: 12px; color: #94a3b8; cursor: pointer; text-decoration: underline; background: none; border: none; }
-    .file-change:hover { color: #ef4444; }
-    .input-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-    .input-label { font-size: 11px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px; display: block; }
-    .input-field { width: 100%; padding: 10px 14px; font-size: 13px; border: 1px solid #e2e8f0; border-radius: 8px; background: #f8fafc; color: #334155; outline: none; transition: border 0.2s; }
-    .input-field:focus { border-color: #94a3b8; }
-    .input-field::placeholder { color: #cbd5e1; }
-    .analyze-btn { width: 100%; padding: 16px; border-radius: 12px; border: none; font-size: 13px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; cursor: pointer; transition: all 0.2s; margin-bottom: 16px; }
-    .analyze-btn.active { background: #1e293b; color: white; }
-    .analyze-btn.active:hover { background: #334155; }
-    .analyze-btn.disabled { background: #f1f5f9; color: #cbd5e1; cursor: not-allowed; }
-    .info-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
-    .info-card { background: white; border: 1px solid #f1f5f9; border-radius: 12px; padding: 16px; display: flex; align-items: flex-start; gap: 12px; }
-    .info-icon { width: 32px; height: 32px; background: #f8fafc; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-    .info-icon i { color: #64748b; font-size: 14px; }
-    .info-title { font-size: 12px; font-weight: 700; color: #334155; }
-    .info-desc { font-size: 11px; color: #94a3b8; margin-top: 2px; }
-  <style>
-    .analyzing-card { background: white; border-radius: 16px; border: 1px solid #f1f5f9; overflow: hidden; }
-    .video-analyzing { position: relative; background: black; }
-    .video-analyzing video { width: 100%; max-height: 240px; object-fit: contain; opacity: 0.6; display: block; }
-    .ai-badge { position: absolute; top: 12px; right: 12px; display: flex; align-items: center; gap: 6px; background: rgba(0,0,0,0.7); color: #4ade80; font-size: 11px; font-weight: 700; padding: 6px 12px; border-radius: 999px; }
-    .ai-dot { width: 8px; height: 8px; background: #4ade80; border-radius: 50%; animation: pulse 1.5s infinite; }
-    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
-    .analyzing-body { padding: 32px; display: flex; flex-direction: column; align-items: center; }
-    .spinner-wrap { position: relative; width: 80px; height: 80px; margin-bottom: 20px; }
-    .spinner-wrap svg { animation: spin 2s linear infinite; }
-    @keyframes spin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
-    .spinner-icon { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
-    .spinner-icon i { font-size: 24px; color: #334155; }
-    .analyzing-title { font-size: 17px; font-weight: 700; color: #1e293b; margin-bottom: 4px; }
-    .analyzing-sub { font-size: 13px; color: #94a3b8; margin-bottom: 24px; text-align: center; }
-    .steps-list { width: 100%; max-width: 360px; display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
-    .step-item { display: flex; align-items: center; gap: 12px; padding: 10px 16px; border-radius: 12px; transition: all 0.3s; }
-    .step-item.done { background: #f0fdf4; color: #16a34a; }
-    .step-item.active { background: #1e293b; color: white; }
-    .step-item.pending { background: #f8fafc; color: #cbd5e1; }
-    .step-icon { width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-    .step-icon i { font-size: 14px; }
-    .step-label { font-size: 13px; font-weight: 500; flex: 1; }
-    .step-loader { margin-left: auto; }
-    .step-loader i { font-size: 14px; animation: spin 1s linear infinite; }
-    .progress-bar-bg { width: 100%; max-width: 360px; background: #f1f5f9; border-radius: 999px; height: 8px; margin-bottom: 8px; }
-    .progress-bar { height: 8px; border-radius: 999px; background: #1e293b; transition: width 0.7s ease; }
-    .progress-text { font-size: 12px; color: #94a3b8; }
-  </style>
+  <link rel="stylesheet" href="upload.css" />
 </head>
 <body>
   <aside>
@@ -141,7 +49,7 @@
           <span class="card-title">영상 업로드</span>
           <span class="card-count" id="progressCount">0 / 1 완료</span>
         </div>
-        <button class="scenario-btn" id="scenarioBtnEl">
+        <button class="scenario-btn">
           <span class="scenario-num">1</span> 시나리오 1
         </button>
       </div>
@@ -157,11 +65,11 @@
           <div class="input-grid">
             <div>
               <label class="input-label">촬영 위치</label>
-              <input type="text" class="input-field" placeholder="예: OO시 OO구 공사구간" />
+              <input type="text" class="input-field" id="locationInput" placeholder="예: OO시 OO구 공사구간" />
             </div>
             <div>
               <label class="input-label">분석 목적</label>
-              <input type="text" class="input-field" placeholder="예: 중장비 협착 위험 판단" />
+              <input type="text" class="input-field" id="purposeInput" placeholder="예: 중장비 협착 위험 판단" />
             </div>
           </div>
         </div>
@@ -185,7 +93,7 @@
       </div>
       <div id="analyzingSection" style="display:none">
         <div class="analyzing-card">
-          <div class="video-analyzing" id="videoAnalyzingWrap" style="display:none">
+          <div class="video-wrap" id="videoWrap" style="display:none">
             <video id="analyzingVideo" autoplay muted loop playsinline></video>
             <div class="ai-badge"><div class="ai-dot"></div> AI 분석 중</div>
           </div>
@@ -210,3 +118,156 @@
       </div>
     </div>
   </main>
+  <script>
+    const steps = [
+      { icon: 'ri-video-line', label: '영상 프레임 추출 중...' },
+      { icon: 'ri-scan-line', label: 'AI 객체 감지 실행 중...' },
+      { icon: 'ri-shield-flash-line', label: '위험 요소 분류 중...' },
+      { icon: 'ri-bar-chart-2-line', label: '정량 지수 산출 중...' },
+      { icon: 'ri-file-text-line', label: '보고서 생성 중...' },
+    ];
+    let uploadedFile = null;
+    let currentStep = 0;
+    const uploadZone = document.getElementById('uploadZone');
+    const fileInput = document.getElementById('fileInput');
+    const analyzeBtn = document.getElementById('analyzeBtn');
+    const uploadSection = document.getElementById('uploadSection');
+    const analyzingSection = document.getElementById('analyzingSection');
+    const stepsList = document.getElementById('stepsList');
+    const progressBar = document.getElementById('progressBar');
+    const progressText = document.getElementById('progressText');
+    const videoWrap = document.getElementById('videoWrap');
+    const analyzingVideo = document.getElementById('analyzingVideo');
+    // 업로드존 클릭
+    uploadZone.addEventListener('click', () => {
+      if (!uploadedFile) fileInput.click();
+    });
+    // 파일 선택
+    fileInput.addEventListener('change', (e) => {
+      if (e.target.files[0]) handleFile(e.target.files[0]);
+    });
+    // 드래그앤드롭
+    uploadZone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      uploadZone.classList.add('dragover');
+    });
+    uploadZone.addEventListener('dragleave', () => {
+      uploadZone.classList.remove('dragover');
+    });
+    uploadZone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      uploadZone.classList.remove('dragover');
+      if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
+    });
+    function formatSize(bytes) {
+      if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+      return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+    }
+    function handleFile(file) {
+      if (!file.type.startsWith('video/')) return;
+      uploadedFile = file;
+      const url = URL.createObjectURL(file);
+      uploadZone.classList.add('has-file');
+      uploadZone.innerHTML = `
+        <div class="file-preview">
+          <div class="file-info">
+            <div class="file-icon"><i class="ri-video-fill"></i></div>
+            <div>
+              <div class="file-name">${file.name}</div>
+              <div class="file-size">${formatSize(file.size)}</div>
+            </div>
+          </div>
+          <button class="file-change" onclick="resetFile(event)">다른 파일 선택</button>
+        </div>
+      `;
+      analyzingVideo.src = url;
+      videoWrap.style.display = 'block';
+      analyzeBtn.classList.remove('disabled');
+      analyzeBtn.classList.add('active');
+      analyzeBtn.disabled = false;
+    }
+    function resetFile(e) {
+      e.stopPropagation();
+      uploadedFile = null;
+      uploadZone.classList.remove('has-file');
+      uploadZone.innerHTML = `
+        <input type="file" id="fileInput" accept="video/*" style="display:none" />
+        <div class="upload-icon"><i class="ri-upload-cloud-2-line"></i></div>
+        <div class="upload-title">영상 파일을 드래그하거나 클릭하여 업로드</div>
+        <div class="upload-sub">MP4, MOV, AVI, MKV 지원</div>
+      `;
+      document.getElementById('fileInput').addEventListener('change', (e) => {
+        if (e.target.files[0]) handleFile(e.target.files[0]);
+      });
+      uploadZone.addEventListener('click', () => {
+        if (!uploadedFile) document.getElementById('fileInput').click();
+      });
+      analyzeBtn.classList.add('disabled');
+      analyzeBtn.classList.remove('active');
+      analyzeBtn.disabled = true;
+    }
+    function renderSteps(activeIdx) {
+      stepsList.innerHTML = steps.map((s, i) => {
+        let cls = 'pending';
+        if (i < activeIdx) cls = 'done';
+        if (i === activeIdx) cls = 'active';
+        return `
+          <div class="step-item ${cls}">
+            <div class="step-icon">
+              ${i < activeIdx
+                ? '<i class="ri-checkbox-circle-fill"></i>'
+                : `<i class="${s.icon}"></i>`}
+            </div>
+            <span class="step-label">${s.label}</span>
+            ${i === activeIdx ? '<i class="ri-loader-4-line" style="animation:spin 1s linear infinite;margin-left:auto"></i>' : ''}
+          </div>
+        `;
+      }).join('');
+    }
+    function updateProgress(step) {
+      const pct = Math.round(((step + 1) / steps.length) * 100);
+      progressBar.style.width = pct + '%';
+      progressText.textContent = pct + '% 완료';
+      renderSteps(step);
+    }
+    analyzeBtn.addEventListener('click', async () => {
+      if (!uploadedFile) return;
+      uploadSection.style.display = 'none';
+      analyzingSection.style.display = 'block';
+      renderSteps(0);
+      updateProgress(0);
+      const formData = new FormData();
+      formData.append('video', uploadedFile);
+      formData.append('location', document.getElementById('locationInput').value);
+      formData.append('purpose', document.getElementById('purposeInput').value);
+      let step = 0;
+      const interval = setInterval(() => {
+        if (step < steps.length - 2) {
+          step++;
+          updateProgress(step);
+        }
+      }, 2000);
+      try {
+        const res = await fetch('/analyze', { method: 'POST', body: formData });
+        const data = await res.json();
+        clearInterval(interval);
+        updateProgress(steps.length - 1);
+        setTimeout(() => {
+          if (data.report_id) {
+            window.location.href = '/reports/' + data.report_id;
+          } else {
+            window.location.href = '/reports';
+          }
+        }, 800);
+      } catch {
+        clearInterval(interval);
+        // 서버 오류시 mock으로 reports 이동
+        updateProgress(steps.length - 1);
+        setTimeout(() => {
+          window.location.href = '/reports';
+        }, 800);
+      }
+    });
+  </script>
+  </body>
+</html>
