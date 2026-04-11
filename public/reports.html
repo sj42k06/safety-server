@@ -1,21 +1,88 @@
 <!DOCTYPE html>
-<html>
+<html lang="ko">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>인수인계</title>
-<link href="/first.css" rel="stylesheet" type="text/css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI 보고서 - 스마트 현장 안전관제 시스템</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/remixicon/4.2.0/remixicon.min.css" />
+  <link rel="stylesheet" href="reports.css" />
 </head>
-
 <body>
-<header>
-<h2>인수인계 보고서</h2>
-</header>
-
-<div class="container">
-
-
-
-</div>
-</body>
-</html>
+  <aside>
+    <div class="logo">
+      <img src="https://public.readdy.ai/ai/img_res/f3ccc83c-cf23-4ebf-b376-21d351a806b7.png" alt="로고" />
+      <div class="logo-text">
+        <div class="title">스마트 현장</div>
+        <div class="sub">안전관제 시스템</div>
+      </div>
+    </div>
+    <nav>
+      <a href="/upload"><i class="ri-upload-cloud-2-line"></i> 영상 분석</a>
+      <a href="/reports" class="active"><i class="ri-file-chart-line"></i> AI 보고서</a>
+    </nav>
+    <div class="user-section">
+      <div class="user-info">
+        <div class="user-avatar"><i class="ri-user-line"></i></div>
+        <div>
+          <div class="user-name">관리자 (admin)</div>
+          <div class="user-role">현장 관리자</div>
+        </div>
+      </div>
+      <button class="logout-btn" onclick="window.location.href='/'">
+        <i class="ri-logout-box-r-line"></i> 로그아웃
+      </button>
+    </div>
+  </aside>
+  <main>
+    <div class="page-header">
+      <div>
+        <div class="page-tag">
+          <i class="ri-file-chart-line"></i>
+          <span>AI 분석 보고서</span>
+        </div>
+        <h2>보고서 목록</h2>
+        <p class="page-desc">업로드된 영상의 AI 안전 분석 결과 · 총 <span id="totalCount">0</span>건</p>
+      </div>
+      <div class="header-btns">
+        <button class="btn-reset" id="resetBtn" style="display:none" onclick="showResetModal()">
+          <i class="ri-refresh-line"></i> 전체 초기화
+        </button>
+        <a href="/upload" class="btn-new">
+          <i class="ri-add-line"></i> 새 영상 분석
+        </a>
+      </div>
+    </div>
+    <div id="emptyState" class="empty-state">
+      <div class="empty-icon"><i class="ri-file-chart-line"></i></div>
+      <div class="empty-title">아직 분석된 보고서가 없습니다</div>
+      <p class="empty-desc">현장 영상을 업로드하면 AI가 자동으로 위험 요소를 분석하고 보고서를 생성합니다</p>
+      <a href="/upload" class="empty-btn">
+        <i class="ri-upload-cloud-2-line"></i> 첫 번째 영상 업로드하기
+      </a>
+    </div>
+    <div id="reportsGrid" class="reports-grid" style="display:none"></div>
+  </main>
+  <!-- 개별 삭제 모달 -->
+  <div class="modal-bg" id="deleteModal" style="display:none">
+    <div class="modal">
+      <div class="modal-icon red"><i class="ri-delete-bin-line"></i></div>
+      <h3>보고서를 삭제할까요?</h3>
+      <p>삭제된 보고서는 복구할 수 없습니다.</p>
+      <div class="modal-btns">
+        <button class="btn-cancel" onclick="closeDeleteModal()">취소</button>
+        <button class="btn-confirm-red" onclick="confirmDelete()">삭제</button>
+      </div>
+    </div>
+  </div>
+  <!-- 전체 초기화 모달 -->
+  <div class="modal-bg" id="resetModal" style="display:none">
+    <div class="modal">
+      <div class="modal-icon amber"><i class="ri-refresh-line"></i></div>
+      <h3>전체 초기화할까요?</h3>
+      <p>모든 보고서가 삭제되고 처음 상태로 돌아갑니다. 이 작업은 되돌릴 수 없습니다.</p>
+      <div class="modal-btns">
+        <button class="btn-cancel" onclick="closeResetModal()">취소</button>
+        <button class="btn-confirm-amber" onclick="confirmReset()">초기화</button>
+      </div>
+    </div>
+  </div>
