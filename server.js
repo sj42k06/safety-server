@@ -41,12 +41,15 @@ app.get("/health", (req, res) => {
 app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "login.html"));
 });
-// ── 페이지 라우트 ─────────────────────
-app.get("/record", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "record.html"));
+/// ── 페이지 라우트 ─────────────────────
+app.get("/upload", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "upload.html"));
 });
-app.get("/report", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "report.html"));
+app.get("/dashboard", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "dashboard.html"));
+});
+app.get("/reports", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "reports.html"));
 });
 // ── 로그인 (login.html용) ─────────────
 app.post("/login", (req, res) => {
