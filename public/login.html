@@ -7,6 +7,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
   <link href="/login.css" rel="stylesheet">
+  <script src="https://unpkg.com/@dotlottie/player-component@2.7.12/dist/dotlottie-player.mjs" type="module"></script>
 </head>
 <body>
 <div class="left-panel">
@@ -29,16 +30,14 @@
     </dotlottie-player>
   </div>
   <div class="badges">
-    <div class="badge"><div class="badge-dot" style="background:#22c55e"></div>실시간 모니터링</div>
-    <div class="badge"><div class="badge-dot" style="background:#f59e0b"></div>AI 위험 감지</div>
-    <div class="badge"><div class="badge-dot" style="background:#38bdf8"></div>CCTV 통합 관리</div>
+    <div class="badge"><div class="badge-dot" style="background:#22c55e"></div>CCTV 모니터링</div>
+    <div class="badge"><div class="badge-dot" style="background:#ef4444"></div>위험 감지</div>
   </div>
 </div>
 <div class="right-panel">
   <div class="login-card">
-    <p class="subtitle">Smart Safety System</p>
     <h1>스마트 현장<br>안전관제 시스템</h1>
-    <p class="desc">현장 관리자 전용 로그인</p>
+    <p class="desc">관리자 로그인</p>
     <form id="loginForm" action="/login" method="post">
       <div class="form-group">
         <label>아이디 (ID)</label>
@@ -106,4 +105,4 @@
   });
 </script>
 </body>
-</html
+</html>
