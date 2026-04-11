@@ -19,9 +19,9 @@ const PORT = process.env.PORT || 8080;
 
 // 1. Cloudinary 설정 (여기를 네 정보로 꼭 바꿔줘!)
 cloudinary.config({ 
-  cloud_name: '네_클라우드_이름', 
-  api_key: '네_API_키', 
-  api_secret: '네_API_비밀키' 
+  cloud_name: 'dxxaiv5ii', 
+  api_key: '771944593733371', 
+  api_secret: 'AUVfLy-K6Q4CjRo9zno2P7kOoa8' 
 });
 
 // 2. Railway MySQL 연결 설정
