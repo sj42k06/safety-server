@@ -6,244 +6,7 @@
   <title>스마트 현장 안전관제 시스템</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body {
-      font-family: 'Inter', sans-serif;
-      min-height: 100vh;
-      display: flex;
-      background: linear-gradient(135deg, #e8edf5 0%, #dce4f0 50%, #e4eaf5 100%);
-    }
-    /* 왼쪽 패널 */
-    .left-panel {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      padding: 48px;
-      position: relative;
-    }
-    .logo {
-      position: absolute;
-      top: 24px;
-      left: 32px;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-    .logo-icon {
-      width: 40px;
-      height: 40px;
-      background: #334155;
-      border-radius: 10px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: white;
-      font-size: 20px;
-    }
-    .logo-text { font-size: 12px; font-weight: 700; color: #334155; line-height: 1.4; }
-    .time-display {
-      position: absolute;
-      top: 24px;
-      right: 32px;
-      text-align: right;
-    }
-    .time-display .time { font-size: 28px; font-weight: 700; color: #334155; font-family: monospace; }
-    .time-display .date { font-size: 12px; color: #64748b; margin-top: 4px; }
-    .hero-image {
-      width: 100%;
-      max-width: 600px;
-      border-radius: 20px;
-      overflow: hidden;
-    }
-    .hero-image img { width: 100%; height: auto; object-fit: cover; }
-    .badges {
-      display: flex;
-      gap: 12px;
-      margin-top: 24px;
-      flex-wrap: wrap;
-      justify-content: center;
-    }
-    .badge {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      background: rgba(255,255,255,0.6);
-      backdrop-filter: blur(8px);
-      border-radius: 999px;
-      padding: 8px 16px;
-      font-size: 12px;
-      font-weight: 500;
-      color: #475569;
-    }
-    .badge-dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-    }
-    /* 오른쪽 패널 */
-    .right-panel {
-      width: 460px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 48px 32px;
-    }
-    .login-card {
-      width: 100%;
-      background: white;
-      border-radius: 20px;
-      padding: 40px;
-    }
-    .login-card .subtitle {
-      font-size: 11px;
-      font-weight: 600;
-      letter-spacing: 3px;
-      color: #94a3b8;
-      text-transform: uppercase;
-      margin-bottom: 12px;
-    }
-    .login-card h1 {
-      font-size: 28px;
-      font-weight: 800;
-      color: #1e293b;
-      line-height: 1.3;
-      margin-bottom: 8px;
-    }
-    .login-card .desc {
-      font-size: 13px;
-      color: #94a3b8;
-      margin-bottom: 32px;
-    }
-    .form-group { margin-bottom: 20px; }
-    .form-group label {
-      display: block;
-      font-size: 11px;
-      font-weight: 600;
-      color: #64748b;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      margin-bottom: 8px;
-    }
-    .input-wrap {
-      position: relative;
-    }
-    .input-wrap i {
-      position: absolute;
-      left: 12px;
-      top: 50%;
-      transform: translateY(-50%);
-      color: #94a3b8;
-      font-size: 16px;
-    }
-    .input-wrap input {
-      width: 100%;
-      padding: 12px 16px 12px 40px;
-      font-size: 14px;
-      border: 1.5px solid #e2e8f0;
-      border-radius: 10px;
-      background: #f8fafc;
-      color: #1e293b;
-      outline: none;
-      transition: all 0.2s;
-      font-family: 'Inter', sans-serif;
-    }
-    .input-wrap input:focus {
-      border-color: #334155;
-      background: white;
-      box-shadow: 0 0 0 3px rgba(51,65,85,0.08);
-    }
-    .input-wrap input::placeholder { color: #cbd5e1; }
-    .save-id {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      margin-bottom: 20px;
-      cursor: pointer;
-    }
-    .save-id input[type="checkbox"] { display: none; }
-    .checkbox-custom {
-      width: 18px;
-      height: 18px;
-      border: 2px solid #cbd5e1;
-      border-radius: 4px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      transition: all 0.2s;
-      flex-shrink: 0;
-    }
-    .checkbox-custom.checked {
-      background: #334155;
-      border-color: #334155;
-    }
-    .checkbox-custom i { color: white; font-size: 11px; display: none; }
-    .checkbox-custom.checked i { display: block; }
-    .save-id span { font-size: 13px; color: #64748b; }
-    .error-msg {
-      display: none;
-      align-items: center;
-      gap: 8px;
-      background: #fef2f2;
-      border: 1px solid #fecaca;
-      border-radius: 8px;
-      padding: 10px 14px;
-      margin-bottom: 16px;
-      font-size: 12px;
-      color: #ef4444;
-    }
-    .error-msg.show { display: flex; }
-    .btn-login {
-      width: 100%;
-      padding: 14px;
-      background: linear-gradient(135deg, #334155 0%, #1e293b 100%);
-      color: white;
-      border: none;
-      border-radius: 10px;
-      font-size: 13px;
-      font-weight: 700;
-      letter-spacing: 3px;
-      text-transform: uppercase;
-      cursor: pointer;
-      transition: all 0.2s;
-      font-family: 'Inter', sans-serif;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-    }
-    .btn-login:hover { opacity: 0.9; transform: translateY(-1px); }
-    .btn-login:disabled { background: #94a3b8; cursor: not-allowed; transform: none; }
-    .demo-hint {
-      margin-top: 20px;
-      padding: 12px;
-      background: #f8fafc;
-      border: 1px solid #e2e8f0;
-      border-radius: 8px;
-      text-align: center;
-      font-size: 12px;
-      color: #94a3b8;
-    }
-    .demo-hint code {
-      font-weight: 600;
-      color: #475569;
-      background: #e2e8f0;
-      padding: 1px 6px;
-      border-radius: 4px;
-    }
-    .footer-text {
-      margin-top: 20px;
-      text-align: center;
-      font-size: 11px;
-      color: #cbd5e1;
-    }
-    @keyframes spin {
-      to { transform: rotate(360deg); }
-    }
-    .spin { animation: spin 1s linear infinite; display: inline-block; }
-  </style>
+  <link href="/login.css" rel="stylesheet">
 </head>
 <body>
 <div class="left-panel">
@@ -259,18 +22,9 @@
     <img src="https://readdy.ai/api/search-image?query=isometric construction site safety monitoring system with cranes workers equipment CCTV cameras aerial view colorful flat design illustration light blue background&width=800&height=500&seq=login-hero-01&orientation=landscape" alt="현장 안전 관제 시스템" />
   </div>
   <div class="badges">
-    <div class="badge">
-      <div class="badge-dot" style="background:#22c55e"></div>
-      실시간 모니터링
-    </div>
-    <div class="badge">
-      <div class="badge-dot" style="background:#f59e0b"></div>
-      AI 위험 감지
-    </div>
-    <div class="badge">
-      <div class="badge-dot" style="background:#38bdf8"></div>
-      CCTV 통합 관리
-    </div>
+    <div class="badge"><div class="badge-dot" style="background:#22c55e"></div>실시간 모니터링</div>
+    <div class="badge"><div class="badge-dot" style="background:#f59e0b"></div>AI 위험 감지</div>
+    <div class="badge"><div class="badge-dot" style="background:#38bdf8"></div>CCTV 통합 관리</div>
   </div>
 </div>
 <div class="right-panel">
@@ -283,29 +37,25 @@
         <label>아이디 (ID)</label>
         <div class="input-wrap">
           <i class="ri-user-line"></i>
-          <input type="text" name="userid" id="userid" placeholder="아이디를 입력하세요" autocomplete="username" />
+          <input type="text" name="userid" id="userid" placeholder="아이디를 입력하세요" />
         </div>
       </div>
       <div class="form-group">
         <label>비밀번호 (Password)</label>
         <div class="input-wrap">
           <i class="ri-lock-line"></i>
-          <input type="password" name="pwd" id="pwd" placeholder="비밀번호를 입력하세요" autocomplete="current-password" />
+          <input type="password" name="pwd" id="pwd" placeholder="비밀번호를 입력하세요" />
         </div>
       </div>
       <div class="save-id" onclick="toggleSaveId()">
-        <div class="checkbox-custom" id="checkbox">
-          <i class="ri-check-line"></i>
-        </div>
+        <div class="checkbox-custom" id="checkbox"><i class="ri-check-line"></i></div>
         <span>아이디 저장</span>
       </div>
       <div class="error-msg" id="errorMsg">
         <i class="ri-error-warning-line"></i>
-        <span id="errorText">아이디 또는 비밀번호가 올바르지 않습니다.</span>
+        <span id="errorText">아이디와 비밀번호를 입력해주세요.</span>
       </div>
-      <button type="submit" class="btn-login" id="loginBtn">
-        LOG IN
-      </button>
+      <button type="submit" class="btn-login" id="loginBtn">LOG IN</button>
     </form>
     <div class="demo-hint">
       데모 계정: <code>admin</code> / <code>1234</code>
@@ -314,33 +64,24 @@
   </div>
 </div>
 <script>
-  // 시계
   function updateClock() {
     const now = new Date();
-    document.getElementById('clock').textContent = now.toLocaleTimeString('ko-KR', {
-      hour: '2-digit', minute: '2-digit', second: '2-digit'
-    });
-    document.getElementById('dateDisplay').textContent = now.toLocaleDateString('ko-KR', {
-      year: 'numeric', month: 'long', day: 'numeric', weekday: 'long'
-    });
+    document.getElementById('clock').textContent = now.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    document.getElementById('dateDisplay').textContent = now.toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' });
   }
   updateClock();
   setInterval(updateClock, 1000);
-  // 아이디 저장
   let saveId = false;
   function toggleSaveId() {
     saveId = !saveId;
-    const cb = document.getElementById('checkbox');
-    cb.classList.toggle('checked', saveId);
+    document.getElementById('checkbox').classList.toggle('checked', saveId);
   }
-  // 저장된 아이디 불러오기
   const savedId = localStorage.getItem('savedUserId');
   if (savedId) {
     document.getElementById('userid').value = savedId;
     saveId = true;
     document.getElementById('checkbox').classList.add('checked');
   }
-  // 로그인 폼
   document.getElementById('loginForm').addEventListener('submit', function(e) {
     const userid = document.getElementById('userid').value.trim();
     const pwd = document.getElementById('pwd').value.trim();
@@ -348,17 +89,13 @@
     const btn = document.getElementById('loginBtn');
     if (!userid || !pwd) {
       e.preventDefault();
-      errorMsg.querySelector('#errorText').textContent = '아이디와 비밀번호를 입력해주세요.';
       errorMsg.classList.add('show');
       return;
     }
-    if (saveId) {
-      localStorage.setItem('savedUserId', userid);
-    } else {
-      localStorage.removeItem('savedUserId');
-    }
+    if (saveId) localStorage.setItem('savedUserId', userid);
+    else localStorage.removeItem('savedUserId');
     btn.disabled = true;
-    btn.innerHTML = '<span class="spin"><i class="ri-loader-4-line"></i></span> 로그인 중...';
+    btn.innerHTML = '로그인 중...';
   });
 </script>
 </body>
