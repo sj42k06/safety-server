@@ -9,7 +9,7 @@ const cloudinary = require("cloudinary").v2;
 const { Server } = require("socket.io");
 const http = require("http");
 
-// ffmpeg 설정
+// ffmpeg 경로 설정
 ffmpeg.setFfmpegPath(ffmpegPath);
 
 const app = express();
@@ -17,14 +17,14 @@ const server = http.createServer(app);
 const io = new Server(server);
 const PORT = process.env.PORT || 8080;
 
-// 1. Cloudinary 설정 (여기를 네 정보로 꼭 바꿔줘!)
+// [Step 1] Cloudinary 설정 (네 정보로 교체!)
 cloudinary.config({ 
   cloud_name: 'dxxaiv5ii', 
   api_key: '771944593733371', 
   api_secret: 'AUVfLy-K6Q4CjRo9zno2P7kOoa8' 
 });
 
-// 2. Railway MySQL 연결 설정
+// [Step 4] Railway MySQL 연결
 const db = mysql.createPool({
   host: process.env.MYSQLHOST,
   user: process.env.MYSQLUSER,
@@ -37,17 +37,20 @@ const db = mysql.createPool({
 
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
-app.use(express.static("public"));
 
-// Multer 설정 (임시 저장)
+// static 폴더 설정 (index: false로 해야 로그인창이 먼저 뜸)
+app.use(express.static("public", { index: false }));
+
 const upload = multer({ dest: "uploads/" });
 
-// 메인 페이지 (로그인)
+// --- 라우팅 설정 ---
+
+// 메인 접속 시 로그인 페이지로 유도
 app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "login.html"));
 });
 
-// 로그인 로직
+// 로그인 처리
 app.post("/login", (req, res) => {
   const { userid, pwd } = req.body;
   if (userid === "admin" && pwd === "1234") {
@@ -56,55 +59,56 @@ app.post("/login", (req, res) => {
   res.send("<script>alert('로그인 실패'); history.back();</script>");
 });
 
-// 3. 영상 업로드 및 분석 로직
+// [Step 2 & 3] 영상 업로드 및 분석
 app.post("/upload", upload.single("video"), async (req, res) => {
   const videoFile = req.file;
   if (!videoFile) return res.send("영상을 업로드해주세요.");
 
   try {
-    // A. Cloudinary에 원본 영상 업로드
+    // 1. 영상을 Cloudinary에 업로드
     const videoUpload = await cloudinary.uploader.upload(videoFile.path, { 
       resource_type: "video",
       folder: "safety_videos"
     });
 
-    const videoUrl = videoUpload.secure_url;
-    const videoName = path.parse(videoFile.path).name;
-    const outputFolder = path.join(__dirname, "frames", videoName);
+    const outputFolder = path.join(__dirname, "frames", path.parse(videoFile.path).name);
     if (!fs.existsSync(outputFolder)) fs.mkdirSync(outputFolder, { recursive: true });
 
-    // B. 프레임 추출 (1초당 1장)
+    // 2. 프레임 추출 (1초당 1장)
     ffmpeg(videoFile.path)
       .outputOptions(["-vf fps=1"])
       .output(path.join(outputFolder, "frame_%04d.jpg"))
       .on("end", async () => {
         const files = fs.readdirSync(outputFolder);
-        
-        // 시연을 위해 첫 번째 프레임만 분석하는 예시 (실제론 반복문 사용)
+        if (files.length === 0) return res.send("프레임 추출 실패");
+
+        // 3. 추출된 첫 번째 사진을 Cloudinary에 업로드 (증거용)
         const framePath = path.join(outputFolder, files[0]);
-        
-        // C. Cloudinary에 증거 사진 업로드
         const imageUpload = await cloudinary.uploader.upload(framePath, { folder: "safety_frames" });
         const imageUrl = imageUpload.secure_url;
 
-        // D. 임시 결과 (나중에 AI 담당자가 준 결과로 대체)
+        // 4. 위험 판단 로직 (임시)
         const riskResult = "안전모 미착용 위험 탐지";
 
-        // E. DB(Railway)에 저장
+        // 5. DB 저장 (Risk_Log 테이블)
         db.query(
           "INSERT INTO Risk_Log (worker_id, violation_type, evidence_url, area) VALUES (?, ?, ?, ?)",
-          ["Worker_01", riskResult, imageUrl, "A구역"],
+          ["Worker_01", riskResult, imageUrl, req.body.riskLevel || "A구역"],
           (err) => {
-            if (err) console.error(err);
+            if (err) console.error("DB 저장 에러:", err);
             
-            // F. 실시간 알림 전송 (Socket.io)
+            // 실시간 알림 (Socket.io)
             io.emit("new_risk", { result: riskResult, url: imageUrl });
 
+            // 결과 화면 응답
             res.send(`
-              <h2>분석 완료</h2>
-              <p>결과: ${riskResult}</p>
-              <img src="${imageUrl}" width="300" />
-              <br><a href="/record.html">기록 확인하기</a>
+              <div style="text-align:center; padding:50px;">
+                <h2>분석 완료</h2>
+                <p>위험 결과: <b>${riskResult}</b></p>
+                <img src="${imageUrl}" width="400" style="border-radius:10px;"/>
+                <br><br>
+                <button onclick="location.href='/record.html'">기록 확인하기</button>
+              </div>
             `);
           }
         );
@@ -112,8 +116,8 @@ app.post("/upload", upload.single("video"), async (req, res) => {
       .run();
 
   } catch (error) {
-    console.error(error);
-    res.status(500).send("서버 오류 발생");
+    console.error("업로드 에러:", error);
+    res.status(500).send("서버 처리 중 오류가 발생했습니다.");
   }
 });
 
@@ -126,5 +130,5 @@ app.get("/records", (req, res) => {
 });
 
 server.listen(PORT, () => {
-  console.log(`서버가 포트 ${PORT}에서 작동 중입니다.`);
+  console.log(`Server running on port ${PORT}`);
 });
