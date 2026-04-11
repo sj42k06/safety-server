@@ -1,108 +1,151 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>스마트 현장 안전관제 시스템</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
-  <link href="/login.css" rel="stylesheet">
-  <script src="https://unpkg.com/@dotlottie/player-component@2.7.12/dist/dotlottie-player.mjs" type="module"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>산업현장 스마트 안전관리 보고서 시스템</title>
+  <link rel="stylesheet" href="login.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet" />
+  <script type="module" src="https://unpkg.com/@dotlottie/player-component@2.7.12/dist/dotlottie-player.mjs"></script>
 </head>
 <body>
-<div class="left-panel">
-  <div class="logo">
-    <div class="logo-icon"><i class="ri-shield-check-line"></i></div>
-    <div class="logo-text">스마트 현장<br>안전관제</div>
-  </div>
-  <div class="time-display">
-    <div class="time" id="clock">00:00:00</div>
-    <div class="date" id="dateDisplay"></div>
-  </div>
-  <div class="hero-image">
-    <dotlottie-player
-      src="https://lottie.host/35709285-a7ce-4841-9789-ac4fabe2cb91/0WNUiQc08G.lottie"
-      background="transparent"
-      speed="1"
-      style="width: 100%; height: 400px;"
-      loop
-      autoplay>
-    </dotlottie-player>
-  </div>
-  <div class="badges">
-    <div class="badge"><div class="badge-dot" style="background:#22c55e"></div>CCTV 모니터링</div>
-    <div class="badge"><div class="badge-dot" style="background:#ef4444"></div>위험 감지</div>
-  </div>
-</div>
-<div class="right-panel">
-  <div class="login-card">
-    <h1>스마트 현장<br>안전관제 시스템</h1>
-    <p class="desc">관리자 로그인</p>
-    <form id="loginForm" action="/login" method="post">
-      <div class="form-group">
-        <label>아이디 (ID)</label>
-        <div class="input-wrap">
-          <i class="ri-user-line"></i>
-          <input type="text" name="userid" id="userid" placeholder="아이디를 입력하세요" />
+  <div class="login-wrapper">
+    <!-- 왼쪽 패널 -->
+    <div class="left-panel">
+      <!-- 로고 -->
+      <div class="logo">
+        <div class="logo-icon">
+          <i class="ri-shield-check-line"></i>
+        </div>
+        <div class="logo-text">
+          <span>스마트 현장</span>
+          <span>안전관제</span>
         </div>
       </div>
-      <div class="form-group">
-        <label>비밀번호 (Password)</label>
-        <div class="input-wrap">
-          <i class="ri-lock-line"></i>
-          <input type="password" name="pwd" id="pwd" placeholder="비밀번호를 입력하세요" />
+      <!-- 시계 -->
+      <div class="clock-box">
+        <div class="clock-time" id="clock-time">00:00:00</div>
+        <div class="clock-date" id="clock-date"></div>
+      </div>
+      <!-- Lottie 애니메이션 -->
+      <div class="lottie-wrap">
+        <dotlottie-player
+          src="https://lottie.host/35709285-a7ce-4841-9789-ac4fabe2cb91/0WNUiQc08G.lottie"
+          background="transparent"
+          speed="1"
+          style="width:100%;height:420px;"
+          loop
+          autoplay>
+        </dotlottie-player>
+      </div>
+      <!-- 상태 뱃지 -->
+      <div class="badges">
+        <div class="badge">
+          <span class="dot green"></span>
+          CCTV 모니터링
+        </div>
+        <div class="badge">
+          <span class="dot red"></span>
+          위험 감지
         </div>
       </div>
-      <div class="save-id" onclick="toggleSaveId()">
-        <div class="checkbox-custom" id="checkbox"><i class="ri-check-line"></i></div>
-        <span>아이디 저장</span>
-      </div>
-      <div class="error-msg" id="errorMsg">
-        <i class="ri-error-warning-line"></i>
-        <span id="errorText">아이디와 비밀번호를 입력해주세요.</span>
-      </div>
-      <button type="submit" class="btn-login" id="loginBtn">LOG IN</button>
-    </form>
-    <div class="demo-hint">
-      데모 계정: <code>admin</code> / <code>1234</code>
     </div>
-    <p class="footer-text">© 2026 스마트 현장 안전관제 시스템. All rights reserved.</p>
+    <!-- 오른쪽 패널 -->
+    <div class="right-panel">
+      <div class="login-card">
+        <div class="login-header">
+          <h1>산업현장 스마트<br />안전관리 보고서 시스템</h1>
+          <p>관리자 로그인</p>
+        </div>
+        <form id="loginForm" onsubmit="handleLogin(event)">
+          <div class="form-group">
+            <label>아이디 (ID)</label>
+            <div class="input-wrap">
+              <i class="ri-user-line input-icon"></i>
+              <input type="text" id="userId" placeholder="아이디를 입력하세요" />
+            </div>
+          </div>
+          <div class="form-group">
+            <label>비밀번호 (Password)</label>
+            <div class="input-wrap">
+              <i class="ri-lock-line input-icon"></i>
+              <input type="password" id="password" placeholder="비밀번호를 입력하세요" />
+            </div>
+          </div>
+          <div class="save-id-row">
+            <div class="checkbox" id="saveIdBox" onclick="toggleSaveId()"></div>
+            <span onclick="toggleSaveId()">아이디 저장</span>
+          </div>
+          <div class="error-box" id="errorBox" style="display:none;">
+            <i class="ri-error-warning-line"></i>
+            <span id="errorMsg"></span>
+          </div>
+          <button type="submit" id="loginBtn" class="login-btn">LOG IN</button>
+        </form>
+      </div>
+    </div>
   </div>
-</div>
-<script>
-  function updateClock() {
-    const now = new Date();
-    document.getElementById('clock').textContent = now.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-    document.getElementById('dateDisplay').textContent = now.toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' });
-  }
-  updateClock();
-  setInterval(updateClock, 1000);
-  let saveId = false;
-  function toggleSaveId() {
-    saveId = !saveId;
-    document.getElementById('checkbox').classList.toggle('checked', saveId);
-  }
-  const savedId = localStorage.getItem('savedUserId');
-  if (savedId) {
-    document.getElementById('userid').value = savedId;
-    saveId = true;
-    document.getElementById('checkbox').classList.add('checked');
-  }
-  document.getElementById('loginForm').addEventListener('submit', function(e) {
-    const userid = document.getElementById('userid').value.trim();
-    const pwd = document.getElementById('pwd').value.trim();
-    const errorMsg = document.getElementById('errorMsg');
-    const btn = document.getElementById('loginBtn');
-    if (!userid || !pwd) {
-      e.preventDefault();
-      errorMsg.classList.add('show');
-      return;
+  <script>
+    let saveId = false;
+    // 저장된 아이디 불러오기
+    window.onload = () => {
+      const saved = localStorage.getItem("savedUserId");
+      if (saved) {
+        document.getElementById("userId").value = saved;
+        saveId = true;
+        document.getElementById("saveIdBox").classList.add("checked");
+      }
+      updateClock();
+      setInterval(updateClock, 1000);
+    };
+    function updateClock() {
+      const now = new Date();
+      document.getElementById("clock-time").textContent =
+        now.toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+      document.getElementById("clock-date").textContent =
+        now.toLocaleDateString("ko-KR", { year: "numeric", month: "long", day: "numeric", weekday: "long" });
     }
-    if (saveId) localStorage.setItem('savedUserId', userid);
-    else localStorage.removeItem('savedUserId');
-    btn.disabled = true;
-    btn.innerHTML = '로그인 중...';
-  });
-</script>
+    function toggleSaveId() {
+      saveId = !saveId;
+      document.getElementById("saveIdBox").classList.toggle("checked", saveId);
+    }
+    function showError(msg) {
+      const box = document.getElementById("errorBox");
+      document.getElementById("errorMsg").textContent = msg;
+      box.style.display = "flex";
+    }
+    function hideError() {
+      document.getElementById("errorBox").style.display = "none";
+    }
+    async function handleLogin(e) {
+      e.preventDefault();
+      hideError();
+      const userId = document.getElementById("userId").value.trim();
+      const password = document.getElementById("password").value;
+      if (!userId || !password) {
+        showError("아이디와 비밀번호를 입력해주세요.");
+        return;
+      }
+      const btn = document.getElementById("loginBtn");
+      btn.disabled = true;
+      btn.innerHTML = '<i class="ri-loader-4-line spin"></i> 로그인 중...';
+      if (saveId) {
+        localStorage.setItem("savedUserId", userId);
+      } else {
+        localStorage.removeItem("savedUserId");
+      }
+      // 로그인 체크 (admin / 1234)
+      await new Promise(r => setTimeout(r, 600));
+      if (userId === "admin" && password === "1234") {
+        window.location.href = "/dashboard";
+      } else {
+        showError("아이디 또는 비밀번호가 올바르지 않습니다.");
+        btn.disabled = false;
+        btn.innerHTML = "LOGIN";
+      }
+    }
+  </script>
 </body>
 </html>
