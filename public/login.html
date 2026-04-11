@@ -12,47 +12,34 @@
 </head>
 <body>
   <div class="login-wrapper">
-    <!-- 왼쪽 패널 -->
-    <div class="left-panel">
-      <!-- 로고 -->
-      <div class="logo">
-        <div class="logo-icon">
-          <i class="ri-shield-check-line"></i>
-        </div>
-        <div class="logo-text">
-          <span>스마트 현장</span>
-          <span>안전관제</span>
-        </div>
+    <div class="logo">
+      <div class="logo-icon"><i class="ri-shield-check-line"></i></div>
+      <div class="logo-text">
+        <span>스마트 현장</span>
+        <span>안전관제</span>
       </div>
-      <!-- 시계 -->
+    </div>
+
+    <div class="left-panel">
       <div class="clock-box">
         <div class="clock-time" id="clock-time">00:00:00</div>
         <div class="clock-date" id="clock-date"></div>
       </div>
-      <!-- Lottie 애니메이션 -->
       <div class="lottie-wrap">
         <dotlottie-player
           src="https://lottie.host/35709285-a7ce-4841-9789-ac4fabe2cb91/0WNUiQc08G.lottie"
           background="transparent"
           speed="1"
-          style="width:100%;height:420px;"
           loop
           autoplay>
         </dotlottie-player>
       </div>
-      <!-- 상태 뱃지 -->
       <div class="badges">
-        <div class="badge">
-          <span class="dot green"></span>
-          CCTV 모니터링
-        </div>
-        <div class="badge">
-          <span class="dot red"></span>
-          위험 감지
-        </div>
+        <div class="badge"><span class="dot green"></span>CCTV 모니터링</div>
+        <div class="badge"><span class="dot red"></span>위험 감지</div>
       </div>
     </div>
-    <!-- 오른쪽 패널 -->
+
     <div class="right-panel">
       <div class="login-card">
         <div class="login-header">
@@ -87,6 +74,7 @@
       </div>
     </div>
   </div>
+
   <script>
     let saveId = false;
     window.onload = () => {
@@ -141,7 +129,7 @@
       } else {
         showError("아이디 또는 비밀번호가 올바르지 않습니다.");
         btn.disabled = false;
-        btn.innerHTML = "LOG IN";
+        btn.innerHTML = "LOGIN";
       }
     }
   </script>
