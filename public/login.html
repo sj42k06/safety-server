@@ -89,7 +89,6 @@
   </div>
   <script>
     let saveId = false;
-    // 저장된 아이디 불러오기
     window.onload = () => {
       const saved = localStorage.getItem("savedUserId");
       if (saved) {
@@ -136,14 +135,13 @@
       } else {
         localStorage.removeItem("savedUserId");
       }
-      // 로그인 체크 (admin / 1234)
       await new Promise(r => setTimeout(r, 600));
       if (userId === "admin" && password === "1234") {
         window.location.href = "/dashboard";
       } else {
         showError("아이디 또는 비밀번호가 올바르지 않습니다.");
         btn.disabled = false;
-        btn.innerHTML = "LOGIN";
+        btn.innerHTML = "LOG IN";
       }
     }
   </script>
