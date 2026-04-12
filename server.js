@@ -33,7 +33,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(express.static("public", { index: false }));
 const upload = multer({ dest: "uploads/" });
-// authMiddleware는 유지하되 사용 안 함 (혹시 나중에 필요할 수도 있으니)
+// authMiddleware는 유지하되 사용 안 함
 function authMiddleware(req, res, next) {
   const authHeader = req.headers["authorization"];
   const token = authHeader && authHeader.split(" ")[1];
@@ -183,8 +183,7 @@ app.post("/api/reports/generate", async (req, res) => {
         [frame.frame_id]
       );
       totalRisks.push(...events);
-    }
-    const criticalCount = totalRisks.filter(r => r.risk_level === "CRITICAL").length;
+    }const criticalCount = totalRisks.filter(r => r.risk_level === "CRITICAL").length;
     const highCount = totalRisks.filter(r => r.risk_level === "HIGH").length;
     const mediumCount = totalRisks.filter(r => r.risk_level === "MEDIUM").length;
     const summary = `총 ${totalRisks.length}건 위험 감지 / CRITICAL: ${criticalCount}건 / HIGH: ${highCount}건 / MEDIUM: ${mediumCount}건`;
@@ -264,4 +263,4 @@ app.get("/api/videos", async (req, res) => {
     const [videos] = await db.query(
       "SELECT * FROM videos ORDER BY uploaded_at DESC LIMIT 50"
     );
-    re
+    res.json({ vi
