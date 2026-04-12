@@ -114,19 +114,34 @@
       reportsGrid.style.display = 'grid';
       resetBtn.style.display = 'inline-flex';
       reportsGrid.innerHTML = reports.map(r => {
-        return '<div class="report-card" onclick="goDetail(' + r.report_id + ')">'
-          + '<div class="card-top">'
-          + '<span class="card-id">보고서 #' + r.report_id + '</span>'
-          + '<button class="card-delete" onclick="event.stopPropagation();showDeleteModal(' + r.report_id + ')">'
-          + '<i class="ri-delete-bin-line"></i></button>'
-          + '</div>'
-          + '<p class="card-summary">' + (r.summary || '요약 없음') + '</p>'
-          + '<div class="card-footer">'
-          + '<span><i class="ri-time-line"></i> ' + formatDate(r.created_at) + '</span>'
-          + '<span class="card-link">상세 보기 →</span>'
-          + '</div>'
-          + '</div>';
-      }).join('');
+  // 위험 건수 계산 (서버가 danger_count 또는 items 배열 제공 시)
+  const dangerCount = r.danger_count || 0;
+  const workerCount = r.worker_count || 0;
+  const lawRef = r.law_reference || '';
+  const riskLevel = dangerCount > 3 ? 'high' : dangerCount > 0 ? 'mid' : 'low';
+  const riskLabel = riskLevel === 'high' ? '고위험' : riskLevel === 'mid' ? '주의' : '정상';
+  const riskColor = riskLevel === 'high' ? '#dc2626' : riskLevel === 'mid' ? '#d97706' : '#16a34a';
+  const riskBg = riskLevel === 'high' ? '#fee2e2' : riskLevel === 'mid' ? '#fef3c7' : '#dcfce7';
+  return '<div class="report-card" onclick="goDetail(' + r.report_id + ')">'
+    + '<div class="card-top">'
+    + '<span class="card-id">보고서 #' + r.report_id + '</span>'
+    + '<span style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;background:' + riskBg + ';color:' + riskColor + '">' + riskLabel + '</span>'
+    + '<button class="card-delete" onclick="event.stopPropagation();showDeleteModal(' + r.report_id + ')">'
+    + '<i class="ri-delete-bin-line"></i></button>'
+    + '</div>'
+    // 스냅샷 이미지 (있을 경우)
+    + (r.thumbnail ? '<div style="width:100%;height:140px;overflow:hidden;border-radius:8px;margin-bottom:12px;"><img src="' + r.thumbnail + '" style="width:100%;height:100%;object-fit:cover;object-position:top" alt="스냅샷"/></div>' : '')
+    + '<p class="card-summary">' + (r.summary || '요약 없음') + '</p>'
+    // 작업자 ID / 위반 내역
+    + (workerCount > 0 ? '<div style="font-size:12px;color:#475569;margin:8px 0 4px;"><i class="ri-user-follow-line"></i> 추적 작업자 <strong>' + workerCount + '명</strong> · 위험 감지 <strong style="color:' + riskColor + '">' + dangerCount + '건</strong></div>' : '')
+    // 법규 조항
+    + (lawRef ? '<div style="font-size:11px;color:#64748b;background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;padding:6px 10px;margin-top:6px;"><i class="ri-scales-3-line"></i> ' + lawRef + '</div>' : '')
+    + '<div class="card-footer">'
+    + '<span><i class="ri-time-line"></i> ' + formatDate(r.created_at) + '</span>'
+    + '<span class="card-link">상세 보기 →</span>'
+    + '</div>'
+    + '</div>';
+}).join('');
     } catch (err) {
       emptyState.style.display = 'flex';
       reportsGrid.style.display = 'none';
