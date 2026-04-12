@@ -97,7 +97,7 @@ function runPipeline(videoPath) {
   });
 }
 // 영상 분석 API
-app.post("/api/analyze", authMiddleware, upload.single("video"), async (req, res) => {
+app.post("/analyze", authMiddleware, upload.single("video"), async (req, res) => {
   const videoFile = req.file;
   if (!videoFile) return res.status(400).json({ error: "영상이 없습니다." });
   try {
