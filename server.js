@@ -63,6 +63,9 @@ app.get("/dashboard", (req, res) => {
 app.get("/reports", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "reports.html"));
 });
+app.get("/reports/:id", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "report-detail.html"));
+});
 // 로그인
 app.post("/api/login", (req, res) => {
   const { userid, pwd } = req.body;
