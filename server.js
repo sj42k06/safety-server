@@ -33,6 +33,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(express.static("public", { index: false }));
 const upload = multer({ dest: "uploads/" });
+// authMiddleware는 유지하되 사용 안 함 (혹시 나중에 필요할 수도 있으니)
 function authMiddleware(req, res, next) {
   const authHeader = req.headers["authorization"];
   const token = authHeader && authHeader.split(" ")[1];
@@ -96,8 +97,8 @@ function runPipeline(videoPath) {
     });
   });
 }
-// 영상 분석 API
-app.post("/analyze", authMiddleware, upload.single("video"), async (req, res) => {
+// 영상 분석 API - authMiddleware 제거!
+app.post("/analyze", upload.single("video"), async (req, res) => {
   const videoFile = req.file;
   if (!videoFile) return res.status(400).json({ error: "영상이 없습니다." });
   try {
@@ -121,82 +122,60 @@ app.post("/analyze", authMiddleware, upload.single("video"), async (req, res) =>
     for (let i = 0; i < frameFiles.length; i++) {
       const frameFile = frameFiles[i];
       const framePath = path.join(frames_folder, frameFile);
-      // 프레임 Cloudinary 업로드
       const frameUpload = await cloudinary.uploader.upload(framePath, {
         folder: "safety_analysis/frames",
       });
-      // frames 테이블 저장
       const [frameRow] = await db.query(
         "INSERT INTO frames (video_id, frame_path, captured_at) VALUES (?, ?, NOW())",
         [videoId, frameUpload.secure_url]
       );
       const frameId = frameRow.insertId;
-      // fall_risks에서 해당 프레임 위험도 찾기
       const fallFrame = fall_risks.find(f => f.frame === frameFile);
-      const ppeFrame  = ppe_risks.find(f => f.frame === frameFile);
-      // risk_events 저장 (낙하 위험)
+      const ppeFrame = ppe_risks.find(f => f.frame === frameFile);
       if (fallFrame && fallFrame.risks.length > 0) {
         for (const risk of fallFrame.risks) {
           await db.query(
-            `INSERT INTO risk_events
-              (frame_id, risk_type, risk_level, description, created_at)
-             VALUES (?, ?, ?, ?, NOW())`,
-            [
-              frameId,
-              "낙하위험",
-              risk.risk,
-              `객체: ${risk.object} / 가장자리: ${risk.edge_risk} / 사람아래: ${risk.person_below}`
-            ]
+            `INSERT INTO risk_events (frame_id, risk_type, risk_level, description, created_at) VALUES (?, ?, ?, ?, NOW())`,
+            [frameId, "낙하위험", risk.risk, `객체: ${risk.object} / 가장자리: ${risk.edge_risk} / 사람아래: ${risk.person_below}`]
           );
         }
       }
-      // risk_events 저장 (PPE 위반)
       if (ppeFrame && ppeFrame.workers.length > 0) {
         for (const worker of ppeFrame.workers) {
           if (worker.risk !== "LOW") {
             await db.query(
-              `INSERT INTO risk_events
-                (frame_id, risk_type, risk_level, description, created_at)
-               VALUES (?, ?, ?, ?, NOW())`,
-              [
-                frameId,
-                "PPE위반",
-                worker.risk,
-                `헬멧: ${worker.helmet} / 조끼: ${worker.vest}`
-              ]
+              `INSERT INTO risk_events (frame_id, risk_type, risk_level, description, created_at) VALUES (?, ?, ?, ?, NOW())`,
+              [frameId, "PPE위반", worker.risk, `헬멧: ${worker.helmet} / 조끼: ${worker.vest}`]
             );
           }
         }
       }
     }
-    // 임시 파일 삭제
     fs.unlink(videoFile.path, () => {});
     res.json({
-  success: true,
-  video_id: videoId,
-  video_url: videoUpload.secure_url,
-  total_frames: frameFiles.length,
-  fall_risks: fall_risks,
-  ppe_risks: ppe_risks,
-});
+      success: true,
+      video_id: videoId,
+      video_url: videoUpload.secure_url,
+      total_frames: frameFiles.length,
+      fall_risks: fall_risks,
+      ppe_risks: ppe_risks,
+    });
   } catch (error) {
     console.error("분석 오류:", error);
     res.status(500).json({ error: "분석 실패: " + error.message });
   }
 });
-// 보고서 자동 생성 API
-app.post("/api/reports/generate", authMiddleware, async (req, res) => {
+// 보고서 자동 생성 API - authMiddleware 제거!
+app.post("/api/reports/generate", async (req, res) => {
   const { video_id } = req.body;
   if (!video_id) return res.status(400).json({ error: "video_id 없음" });
   try {
-    // 해당 영상의 모든 프레임 조회
     const [frames] = await db.query(
       "SELECT * FROM frames WHERE video_id = ? ORDER BY frame_id ASC",
       [video_id]
     );
     if (frames.length === 0)
       return res.status(404).json({ error: "프레임 없음" });
-    // 전체 위험 이벤트 수집
     let totalRisks = [];
     for (const frame of frames) {
       const [events] = await db.query(
@@ -205,24 +184,20 @@ app.post("/api/reports/generate", authMiddleware, async (req, res) => {
       );
       totalRisks.push(...events);
     }
-    // 요약 생성
     const criticalCount = totalRisks.filter(r => r.risk_level === "CRITICAL").length;
-    const highCount     = totalRisks.filter(r => r.risk_level === "HIGH").length;
-    const mediumCount   = totalRisks.filter(r => r.risk_level === "MEDIUM").length;
+    const highCount = totalRisks.filter(r => r.risk_level === "HIGH").length;
+    const mediumCount = totalRisks.filter(r => r.risk_level === "MEDIUM").length;
     const summary = `총 ${totalRisks.length}건 위험 감지 / CRITICAL: ${criticalCount}건 / HIGH: ${highCount}건 / MEDIUM: ${mediumCount}건`;
-    // reports 테이블 저장
     const [reportRow] = await db.query(
       "INSERT INTO reports (video_id, summary, created_at) VALUES (?, ?, NOW())",
       [video_id, summary]
     );
     const reportId = reportRow.insertId;
-    // report_items 저장 (프레임별 타임라인)
     for (const frame of frames) {
       const [events] = await db.query(
         "SELECT * FROM risk_events WHERE frame_id = ?",
         [frame.frame_id]
       );
-      // 상태 판단
       let status = "정상";
       if (events.some(e => e.risk_level === "CRITICAL" || e.risk_level === "HIGH")) {
         status = "위험";
@@ -233,41 +208,29 @@ app.post("/api/reports/generate", authMiddleware, async (req, res) => {
         ? events.map(e => `${e.risk_type}: ${e.description}`).join(" | ")
         : "이상 없음";
       await db.query(
-        `INSERT INTO report_items
-          (report_id, frame_id, event_time, status, description)
-         VALUES (?, ?, NOW(), ?, ?)`,
+        `INSERT INTO report_items (report_id, frame_id, event_time, status, description) VALUES (?, ?, NOW(), ?, ?)`,
         [reportId, frame.frame_id, status, description]
       );
     }
-    res.json({
-      success: true,
-      report_id: reportId,
-      summary,
-      total_frames: frames.length,
-      total_risks: totalRisks.length,
-    });
+    res.json({ success: true, report_id: reportId, summary, total_frames: frames.length, total_risks: totalRisks.length });
   } catch (error) {
     console.error("보고서 생성 오류:", error);
     res.status(500).json({ error: "보고서 생성 실패: " + error.message });
   }
 });
-// 보고서 목록 조회
-app.get("/api/reports", authMiddleware, async (req, res) => {
+// 보고서 목록 조회 - authMiddleware 제거!
+app.get("/api/reports", async (req, res) => {
   try {
     const [reports] = await db.query(
-      `SELECT r.*, v.video_path
-       FROM reports r
-       JOIN videos v ON r.video_id = v.video_id
-       ORDER BY r.created_at DESC
-       LIMIT 50`
+      `SELECT r.*, v.video_path FROM reports r JOIN videos v ON r.video_id = v.video_id ORDER BY r.created_at DESC LIMIT 50`
     );
     res.json({ reports });
   } catch (error) {
     res.status(500).json({ error: "조회 실패" });
   }
 });
-// 보고서 상세 조회
-app.get("/api/reports/:id", authMiddleware, async (req, res) => {
+// 보고서 상세 조회 - authMiddleware 제거!
+app.get("/api/reports/:id", async (req, res) => {
   try {
     const [reports] = await db.query(
       "SELECT * FROM reports WHERE report_id = ?",
@@ -276,11 +239,7 @@ app.get("/api/reports/:id", authMiddleware, async (req, res) => {
     if (reports.length === 0)
       return res.status(404).json({ error: "보고서 없음" });
     const [items] = await db.query(
-      `SELECT ri.*, f.frame_path
-       FROM report_items ri
-       JOIN frames f ON ri.frame_id = f.frame_id
-       WHERE ri.report_id = ?
-       ORDER BY ri.item_id ASC`,
+      `SELECT ri.*, f.frame_path FROM report_items ri JOIN frames f ON ri.frame_id = f.frame_id WHERE ri.report_id = ? ORDER BY ri.item_id ASC`,
       [req.params.id]
     );
     res.json({ report: reports[0], items });
@@ -288,33 +247,21 @@ app.get("/api/reports/:id", authMiddleware, async (req, res) => {
     res.status(500).json({ error: "조회 실패" });
   }
 });
-// risk_events 조회 (대시보드용)
-app.get("/api/risk-events", authMiddleware, async (req, res) => {
+// risk_events 조회 - authMiddleware 제거!
+app.get("/api/risk-events", async (req, res) => {
   try {
     const [events] = await db.query(
-      `SELECT re.*, f.frame_path, f.video_id
-       FROM risk_events re
-       JOIN frames f ON re.frame_id = f.frame_id
-       ORDER BY re.created_at DESC
-       LIMIT 100`
+      `SELECT re.*, f.frame_path, f.video_id FROM risk_events re JOIN frames f ON re.frame_id = f.frame_id ORDER BY re.created_at DESC LIMIT 100`
     );
     res.json({ events });
   } catch (error) {
     res.status(500).json({ error: "조회 실패" });
   }
 });
-// 영상 목록 조회
-app.get("/api/videos", authMiddleware, async (req, res) => {
+// 영상 목록 조회 - authMiddleware 제거!
+app.get("/api/videos", async (req, res) => {
   try {
     const [videos] = await db.query(
       "SELECT * FROM videos ORDER BY uploaded_at DESC LIMIT 50"
     );
-    res.json({ videos });
-  } catch (error) {
-    res.status(500).json({ error: "조회 실패" });
-  }
-});
-// 서버 시작
-server.listen(PORT, () => {
-  console.log(`[시스템 가동] 포트 ${PORT}에서 모니터링 중...`);
-});
+    re
