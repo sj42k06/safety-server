@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>보고서 상세</title>
+  <link rel="stylesheet" href="https://safety-server-oqza.onrender.com/reports.css" />
+  <style>
+    .detail-header { display:flex; align-items:center; gap:12px; margin-bottom:24px; }
+    .back-btn { background:#f1f5f9; border:none; padding:8px 16px; border-radius:8px; cursor:pointer; font-size:14px; color:#475569; }
+    .back-btn:hover { background:#e2e8f0; }
+    .report-meta { background:#fff; border:1px solid #e2e8f0; border-radius:12px; padding:24px; margin-bottom:20px; }
+    .report-meta h2 { font-size:18px; font-weight:700; color:#1e293b; margin-bottom:12px; }
+    .meta-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+    .meta-item { font-size:13px; color:#64748b; }
+    .meta-item strong { color:#334155; display:block; margin-bottom:2px; }
+    .summary-box { background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:16px; margin-top:12px; font-size:14px; color:#475569; }
+    .items-section { background:#fff; border:1px solid #e2e8f0; border-radius:12px; padding:24px; }
+    .items-section h3 { font-size:15px; font-weight:700; color:#1e293b; margin-bottom:16px; }
+    .item-card { border:1px solid #e2e8f0; border-radius:10px; overflow:hidden; margin-bottom:14px; }
+    .item-card-header { display:flex; align-items:center; gap:10px; padding:12px 16px; background:#f8fafc; border-bottom:1px solid #e2e8f0; }
+    .item-num { width:24px; height:24px; background:#334155; color:#fff; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:700; flex-shrink:0; }
+    .status-badge { font-size:12px; font-weight:700; padding:3px 10px; border-radius:20px; margin-left:auto; }
+    .status-위험 { background:#fee2e2; color:#dc2626; }
+    .status-주의 { background:#fef3c7; color:#d97706; }
+    .status-정상 { background:#dcfce7; color:#16a34a; }
+    .item-card-body { display:flex; gap:0; }
+    .item-frame { width:200px; flex-shrink:0; }
+    .item-frame img { width:100%; height:130px; object-fit:cover; display:block; }
+    .item-desc { padding:14px 16px; font-size:13px; color:#475569; line-height:1.6; flex:1; }
+    .item-time { font-size:11px; color:#94a3b8; margin-top:6px; }
+    .loading-state { text-align:center; padding:60px 20px; color:#94a3b8; }
+    .error-state { text-align:center; padding:60px 20px; color:#ef4444; }
+    @media (max-width:600px) {
+      .meta-grid { grid-template-columns:1fr; }
+      .item-card-body { flex-direction:column; }
+      .item-frame { width:100%; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="detail-header">
+      <button class="back-btn" onclick="history.back()">← 목록으로</button>
+      <h1 id="pageTitle" style="font-size:16px;font-weight:700;color:#1e293b;">보고서 상세</h1>
+    </div>
+    <div id="loadingState" class="loading-state">
+      <p>보고서를 불러오는 중...</p>
+    </div>
+    <div id="errorState" class="error-state" style="display:none;">
+      <p id="errorMsg">보고서를 불러오지 못했습니다.</p>
+    </div>
+    <div id="reportContent" style="display:none;">
+      <div class="report-meta">
+        <h2 id="reportTitle">보고서 #<span id="reportId"></span></h2>
+        <div class="meta-grid">
+          <div class="meta-item">
+            <strong>생성 일시</strong>
+            <span id="createdAt">-</span>
+          </div>
+          <div class="meta-item">
+            <strong>총 프레임 수</strong>
+            <span id="totalFrames">-</span>
+          </div>
+        </div>
+        <div class="summary-box" id="summaryBox">-</div>
+      </div>
+      <div class="items-section">
+        <h3>프레임별 분석 결과 (<span id="itemCount">0</span>건)</h3>
+        <div id="itemsList"></div>
+      </div>
+    </div>
+  </div>
+  <script>
+    const BASE_URL = 'https://safety-server-oqza.onrender.com';
+    const reportId = location.pathname.split('/').pop();
+    function formatDate(str) {
+      if (!str) return '-';
+      return new Date(str).toLocaleString('ko-KR');
+    }
+    async function loadDetail() {
+      try {
+        const res = await fetch(BASE_URL + '/api/reports/' + reportId);
+        if (!res.ok) throw new Error('서버 오류 ' + res.status);
+        const data = await res.json();
+        const report = data.report;
+        const items = data.items || [];
+        document.getElementById('loadingState').style.display = 'none';
+        document.getElementById('reportContent').style.display = 'block';
+        document.getElementById('reportId').textContent = report.report_id;
+        document.getElementById('pageTitle').textContent = '보고서 #' + report.report_id;
+        document.getElementById('createdAt').textContent = formatDate(report.created_at);
+        document.getElementById('totalFrames').textContent = items.length + '개';
+        document.getElementById('summaryBox').textContent = report.summary || '요약 없음';
+        document.getElementById('itemCount').textContent = items.length;
+        const list = document.getElementById('itemsList');
+        if (items.length === 0) {
+          list.innerHTML = '<p style="color:#94a3b8;font-size:14px;text-align:center;padding:30px 0;">분석 항목이 없습니다.</p>';
+          return;
+        }
+        list.innerHTML = items.map((item, i) => {
+          const statusClass = 'status-' + (item.status || '정상');
+          return '<div class="item-card">'
+            + '<div class="item-card-header">'
+            + '<span class="item-num">' + (i + 1) + '</span>'
+            + '<span style="font-size:13px;color:#475569;font-weight:600;">프레임 #' + item.frame_id + '</span>'
+            + '<span class="status-badge ' + statusClass + '">' + (item.status || '정상') + '</span>'
+            + '</div>'
+            + '<div class="item-card-body">'
+            + (item.frame_path
+              ? '<div class="item-frame"><img src="' + item.frame_path + '" alt="프레임 이미지" /></div>'
+              : '')
+            + '<div class="item-desc">'
+            + '<div>' + (item.description || '이상 없음') + '</div>'
+            + '<div class="item-time">' + formatDate(item.event_time) + '</div>'
+            + '</div>'
+            + '</div>'
+            + '</div>';
+        }).join('');
+      } catch (err) {
+        document.getElementById('loadingState').style.display = 'none';
+        document.getElementById('errorState').style.display = 'block';
+        document.getElementById('errorMsg').textContent = '오류: ' + err.message;
+      }
+    }
+    loadDetail();
+  </script>
+</body>
+</html>
