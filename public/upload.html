@@ -119,155 +119,175 @@
     </div>
   </main>
   <script>
-    const steps = [
-      { icon: 'ri-video-line', label: '영상 프레임 추출 중...' },
-      { icon: 'ri-scan-line', label: 'AI 객체 감지 실행 중...' },
-      { icon: 'ri-shield-flash-line', label: '위험 요소 분류 중...' },
-      { icon: 'ri-bar-chart-2-line', label: '정량 지수 산출 중...' },
-      { icon: 'ri-file-text-line', label: '보고서 생성 중...' },
-    ];
-    let uploadedFile = null;
-    let currentStep = 0;
-    const uploadZone = document.getElementById('uploadZone');
-    const fileInput = document.getElementById('fileInput');
-    const analyzeBtn = document.getElementById('analyzeBtn');
-    const uploadSection = document.getElementById('uploadSection');
-    const analyzingSection = document.getElementById('analyzingSection');
-    const stepsList = document.getElementById('stepsList');
-    const progressBar = document.getElementById('progressBar');
-    const progressText = document.getElementById('progressText');
-    const videoWrap = document.getElementById('videoWrap');
-    const analyzingVideo = document.getElementById('analyzingVideo');
-    // 업로드존 클릭
-    uploadZone.addEventListener('click', () => {
-      if (!uploadedFile) fileInput.click();
-    });
-    // 파일 선택
-    fileInput.addEventListener('change', (e) => {
-      if (e.target.files[0]) handleFile(e.target.files[0]);
-    });
-    // 드래그앤드롭
-    uploadZone.addEventListener('dragover', (e) => {
-      e.preventDefault();
-      uploadZone.classList.add('dragover');
-    });
-    uploadZone.addEventListener('dragleave', () => {
-      uploadZone.classList.remove('dragover');
-    });
-    uploadZone.addEventListener('drop', (e) => {
-      e.preventDefault();
-      uploadZone.classList.remove('dragover');
-      if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
-    });
-    function formatSize(bytes) {
-      if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
-      return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+const steps = [
+  { icon: 'ri-video-line', label: '영상 프레임 추출 중...' },
+  { icon: 'ri-scan-line', label: 'YOLO 객체 감지 실행 중...' },
+  { icon: 'ri-user-follow-line', label: 'ByteTrack 작업자 ID 추적 중...' },
+  { icon: 'ri-shield-flash-line', label: '위험 요소 분류 중...' },
+  { icon: 'ri-scales-3-line', label: '산업안전보건법 조항 매칭 중...' },
+  { icon: 'ri-file-text-line', label: '보고서 자동 생성 중...' },
+];
+let uploadedFile = null;
+const uploadZone = document.getElementById('uploadZone');
+const fileInput = document.getElementById('fileInput');
+const analyzeBtn = document.getElementById('analyzeBtn');
+const uploadSection = document.getElementById('uploadSection');
+const analyzingSection = document.getElementById('analyzingSection');
+const stepsList = document.getElementById('stepsList');
+const progressBar = document.getElementById('progressBar');
+const progressText = document.getElementById('progressText');
+const videoWrap = document.getElementById('videoWrap');
+const analyzingVideo = document.getElementById('analyzingVideo');
+// 업로드존 클릭
+uploadZone.addEventListener('click', () => {
+  if (!uploadedFile) fileInput.click();
+});
+// 파일 선택
+fileInput.addEventListener('change', (e) => {
+  if (e.target.files[0]) handleFile(e.target.files[0]);
+});
+// 드래그앤드롭
+uploadZone.addEventListener('dragover', (e) => {
+  e.preventDefault();
+  uploadZone.classList.add('dragover');
+});
+uploadZone.addEventListener('dragleave', () => {
+  uploadZone.classList.remove('dragover');
+});
+uploadZone.addEventListener('drop', (e) => {
+  e.preventDefault();
+  uploadZone.classList.remove('dragover');
+  if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
+});
+function formatSize(bytes) {
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+  return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+}
+function handleFile(file) {
+  if (!file.type.startsWith('video/')) return;
+  uploadedFile = file;
+  const url = URL.createObjectURL(file);
+  uploadZone.classList.add('has-file');
+  uploadZone.innerHTML = `
+<div class="file-preview">
+<div class="file-info">
+<div class="file-icon"><i class="ri-video-fill"></i></div>
+<div>
+<div class="file-name">${file.name}</div>
+<div class="file-size">${formatSize(file.size)}</div>
+</div>
+</div>
+<button class="file-change" onclick="resetFile(event)">다른 파일 선택</button>
+</div>
+`;
+  analyzingVideo.src = url;
+  videoWrap.style.display = 'block';
+  analyzeBtn.classList.remove('disabled');
+  analyzeBtn.classList.add('active');
+  analyzeBtn.disabled = false;
+}
+function resetFile(e) {
+  e.stopPropagation();
+  uploadedFile = null;
+  uploadZone.classList.remove('has-file');
+  uploadZone.innerHTML = `
+<input type="file" id="fileInput" accept="video/*" style="display:none" />
+<div class="upload-icon"><i class="ri-upload-cloud-2-line"></i></div>
+<div class="upload-title">영상 파일을 드래그하거나 클릭하여 업로드</div>
+<div class="upload-sub">MP4, MOV, AVI, MKV 지원</div>
+`;
+  document.getElementById('fileInput').addEventListener('change', (e) => {
+    if (e.target.files[0]) handleFile(e.target.files[0]);
+  });
+  uploadZone.addEventListener('click', () => {
+    if (!uploadedFile) document.getElementById('fileInput').click();
+  });
+  analyzeBtn.classList.add('disabled');
+  analyzeBtn.classList.remove('active');
+  analyzeBtn.disabled = true;
+}
+function renderSteps(activeIdx) {
+  stepsList.innerHTML = steps.map((s, i) => {
+    let cls = 'pending';
+    if (i < activeIdx) cls = 'done';
+    if (i === activeIdx) cls = 'active';
+    return `
+<div class="step-item ${cls}">
+<div class="step-icon">
+${i < activeIdx
+  ? '<i class="ri-checkbox-circle-fill"></i>'
+  : `<i class="${s.icon}"></i>`}
+</div>
+<span class="step-label">${s.label}</span>
+${i === activeIdx ? '<i class="ri-loader-4-line" style="animation:spin 1s linear infinite;margin-left:auto"></i>' : ''}
+</div>
+`;
+  }).join('');
+}
+function updateProgress(step) {
+  const pct = Math.round(((step + 1) / steps.length) * 100);
+  progressBar.style.width = pct + '%';
+  progressText.textContent = pct + '% 완료';
+  renderSteps(step);
+}
+// ★ 핵심: 실제 서버 응답을 기다리는 진짜 로딩
+analyzeBtn.addEventListener('click', async () => {
+  if (!uploadedFile) return;
+  uploadSection.style.display = 'none';
+  analyzingSection.style.display = 'block';
+  renderSteps(0);
+  updateProgress(0);
+  const formData = new FormData();
+  formData.append('video', uploadedFile);
+  formData.append('location', document.getElementById('locationInput').value);
+  formData.append('purpose', document.getElementById('purposeInput').value);
+  // UI 스텝 애니메이션 (서버 처리 중 시각적 피드백)
+  // 실제 서버 완료 전까지 step 4까지만 진행 (마지막 2개는 서버 응답 후)
+  let uiStep = 0;
+  const uiInterval = setInterval(() => {
+    if (uiStep < steps.length - 2) {
+      uiStep++;
+      updateProgress(uiStep);
     }
-    function handleFile(file) {
-      if (!file.type.startsWith('video/')) return;
-      uploadedFile = file;
-      const url = URL.createObjectURL(file);
-      uploadZone.classList.add('has-file');
-      uploadZone.innerHTML = `
-        <div class="file-preview">
-          <div class="file-info">
-            <div class="file-icon"><i class="ri-video-fill"></i></div>
-            <div>
-              <div class="file-name">${file.name}</div>
-              <div class="file-size">${formatSize(file.size)}</div>
-            </div>
-          </div>
-          <button class="file-change" onclick="resetFile(event)">다른 파일 선택</button>
-        </div>
-      `;
-      analyzingVideo.src = url;
-      videoWrap.style.display = 'block';
-      analyzeBtn.classList.remove('disabled');
-      analyzeBtn.classList.add('active');
-      analyzeBtn.disabled = false;
-    }
-    function resetFile(e) {
-      e.stopPropagation();
-      uploadedFile = null;
-      uploadZone.classList.remove('has-file');
-      uploadZone.innerHTML = `
-        <input type="file" id="fileInput" accept="video/*" style="display:none" />
-        <div class="upload-icon"><i class="ri-upload-cloud-2-line"></i></div>
-        <div class="upload-title">영상 파일을 드래그하거나 클릭하여 업로드</div>
-        <div class="upload-sub">MP4, MOV, AVI, MKV 지원</div>
-      `;
-      document.getElementById('fileInput').addEventListener('change', (e) => {
-        if (e.target.files[0]) handleFile(e.target.files[0]);
-      });
-      uploadZone.addEventListener('click', () => {
-        if (!uploadedFile) document.getElementById('fileInput').click();
-      });
-      analyzeBtn.classList.add('disabled');
-      analyzeBtn.classList.remove('active');
-      analyzeBtn.disabled = true;
-    }
-    function renderSteps(activeIdx) {
-      stepsList.innerHTML = steps.map((s, i) => {
-        let cls = 'pending';
-        if (i < activeIdx) cls = 'done';
-        if (i === activeIdx) cls = 'active';
-        return `
-          <div class="step-item ${cls}">
-            <div class="step-icon">
-              ${i < activeIdx
-                ? '<i class="ri-checkbox-circle-fill"></i>'
-                : `<i class="${s.icon}"></i>`}
-            </div>
-            <span class="step-label">${s.label}</span>
-            ${i === activeIdx ? '<i class="ri-loader-4-line" style="animation:spin 1s linear infinite;margin-left:auto"></i>' : ''}
-          </div>
-        `;
-      }).join('');
-    }
-    function updateProgress(step) {
-      const pct = Math.round(((step + 1) / steps.length) * 100);
-      progressBar.style.width = pct + '%';
-      progressText.textContent = pct + '% 완료';
-      renderSteps(step);
-    }
-    analyzeBtn.addEventListener('click', async () => {
-      if (!uploadedFile) return;
-      uploadSection.style.display = 'none';
-      analyzingSection.style.display = 'block';
-      renderSteps(0);
-      updateProgress(0);
-      const formData = new FormData();
-      formData.append('video', uploadedFile);
-      formData.append('location', document.getElementById('locationInput').value);
-      formData.append('purpose', document.getElementById('purposeInput').value);
-      let step = 0;
-      const interval = setInterval(() => {
-        if (step < steps.length - 2) {
-          step++;
-          updateProgress(step);
-        }
-      }, 2000);
-      try {
-        const res = await fetch('https://safety-server-oqza.onrender.com/analyze', { method: 'POST', body: formData });
-        const data = await res.json();
-        clearInterval(interval);
-        updateProgress(steps.length - 1);
-        setTimeout(() => {
-          if (data.report_id) {
-            window.location.href = '/reports/' + data.report_id;
-          } else {
-            window.location.href = '/reports';
-          }
-        }, 800);
-      } catch {
-        clearInterval(interval);
-        // 서버 오류시 mock으로 reports 이동
-        updateProgress(steps.length - 1);
-        setTimeout(() => {
-          window.location.href = '/reports';
-        }, 800);
-      }
+  }, 3000);
+  try {
+    // STEP 1: 실제 AI 분석 (YOLO + ByteTrack) - 서버가 완료할 때까지 대기
+    const res = await fetch('https://safety-server-oqza.onrender.com/analyze', {
+      method: 'POST',
+      body: formData
     });
-  </script>
+    if (!res.ok) throw new Error('분석 서버 오류 ' + res.status);
+    const data = await res.json();
+    const videoId = data.video_id;
+    if (!videoId) throw new Error('video_id 없음 - 서버 응답: ' + JSON.stringify(data));
+    // STEP 2: 법규 매칭 + 보고서 자동 생성
+    clearInterval(uiInterval);
+    updateProgress(steps.length - 2);
+    const repRes = await fetch('https://safety-server-oqza.onrender.com/api/reports/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ video_id: videoId })
+    });
+    if (!repRes.ok) throw new Error('보고서 생성 오류 ' + repRes.status);
+    const repData = await repRes.json();
+    updateProgress(steps.length - 1);
+    // STEP 3: 보고서 상세 페이지로 이동
+    setTimeout(() => {
+      window.location.href = '/reports/' + repData.report_id;
+    }, 800);
+  } catch (err) {
+    clearInterval(uiInterval);
+    updateProgress(steps.length - 1);
+    // 오류 메시지 표시
+    const errDiv = document.createElement('div');
+    errDiv.style.cssText = 'color:#ef4444;font-size:13px;text-align:center;margin-top:12px;padding:10px;background:#fee2e2;border-radius:8px;';
+    errDiv.textContent = '오류: ' + err.message;
+    document.querySelector('.analyzing-body').appendChild(errDiv);
+    setTimeout(() => {
+      window.location.href = '/reports';
+    }, 3000);
+  }
+});
+</script>
   </body>
 </html>
