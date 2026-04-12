@@ -86,3 +86,87 @@
       </div>
     </div>
   </div>
+<script>
+  const BASE_URL = 'https://safety-server-oqza.onrender.com';
+  const reportsGrid = document.getElementById('reportsGrid');
+  const emptyState  = document.getElementById('emptyState');
+  const totalCount  = document.getElementById('totalCount');
+  const resetBtn    = document.getElementById('resetBtn');
+  let pendingDeleteId = null;
+  function formatDate(str) {
+    if (!str) return '-';
+    return new Date(str).toLocaleString('ko-KR');
+  }
+  async function loadReports() {
+    try {
+      const res = await fetch(BASE_URL + '/api/reports');
+      if (!res.ok) throw new Error('서버 오류 ' + res.status);
+      const data = await res.json();
+      const reports = data.reports || [];
+      totalCount.textContent = reports.length;
+      if (reports.length === 0) {
+        emptyState.style.display = 'flex';
+        reportsGrid.style.display = 'none';
+        resetBtn.style.display = 'none';
+        return;
+      }
+      emptyState.style.display = 'none';
+      reportsGrid.style.display = 'grid';
+      resetBtn.style.display = 'inline-flex';
+      reportsGrid.innerHTML = reports.map(r => {
+        return '<div class="report-card" onclick="goDetail(' + r.report_id + ')">'
+          + '<div class="card-top">'
+          + '<span class="card-id">보고서 #' + r.report_id + '</span>'
+          + '<button class="card-delete" onclick="event.stopPropagation();showDeleteModal(' + r.report_id + ')">'
+          + '<i class="ri-delete-bin-line"></i></button>'
+          + '</div>'
+          + '<p class="card-summary">' + (r.summary || '요약 없음') + '</p>'
+          + '<div class="card-footer">'
+          + '<span><i class="ri-time-line"></i> ' + formatDate(r.created_at) + '</span>'
+          + '<span class="card-link">상세 보기 →</span>'
+          + '</div>'
+          + '</div>';
+      }).join('');
+    } catch (err) {
+      emptyState.style.display = 'flex';
+      reportsGrid.style.display = 'none';
+      document.querySelector('.empty-title').textContent = '보고서를 불러오지 못했습니다';
+      document.querySelector('.empty-desc').textContent = err.message;
+    }
+  }
+  function goDetail(reportId) {
+    window.location.href = '/reports/' + reportId;
+  }
+  function showDeleteModal(id) {
+    pendingDeleteId = id;
+    document.getElementById('deleteModal').style.display = 'flex';
+  }
+  function closeDeleteModal() {
+    pendingDeleteId = null;
+    document.getElementById('deleteModal').style.display = 'none';
+  }
+  async function confirmDelete() {
+    if (!pendingDeleteId) return;
+    try {
+      await fetch(BASE_URL + '/api/reports/' + pendingDeleteId, { method: 'DELETE' });
+    } catch(e) {}
+    closeDeleteModal();
+    loadReports();
+  }
+  function showResetModal() {
+    document.getElementById('resetModal').style.display = 'flex';
+  }
+  function closeResetModal() {
+    document.getElementById('resetModal').style.display = 'none';
+  }
+  async function confirmReset() {
+    try {
+      await fetch(BASE_URL + '/api/reports', { method: 'DELETE' });
+    } catch(e) {}
+    closeResetModal();
+    loadReports();
+  }
+  loadReports();
+</script>
+</body>
+</html>
