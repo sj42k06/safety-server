@@ -38,18 +38,13 @@ def run_pipeline(video_path):
         "..", "frames", video_name
     )
     os.makedirs(frames_folder, exist_ok=True)
-    # 1. 프레임 추출
     extract_frames_cv2(video_path, frames_folder)
-    # 2. 객체 탐지
     raw_objects = detect_objects(frames_folder)
     raw_ppe = detect_ppe(frames_folder)
-    # 3. 구조화
     structured = structure_data(raw_objects)
     structured_ppe = structure_ppe_data(raw_ppe)
-    # 4. 위험도 판단
     fall_risks = analyze_fall_risk(structured, structured_ppe)
     ppe_risks = analyze_ppe(structured, structured_ppe)
-    # 5. 결과 출력
     result = {
         "frames_folder": frames_folder,
         "fall_risks": fall_risks,
