@@ -172,11 +172,13 @@ app.post("/api/analyze", authMiddleware, upload.single("video"), async (req, res
     // 임시 파일 삭제
     fs.unlink(videoFile.path, () => {});
     res.json({
-      success: true,
-      video_id: videoId,
-      video_url: videoUpload.secure_url,
-      total_frames: frameFiles.length,
-    });
+  success: true,
+  video_id: videoId,
+  video_url: videoUpload.secure_url,
+  total_frames: frameFiles.length,
+  fall_risks: fall_risks,
+  ppe_risks: ppe_risks,
+});
   } catch (error) {
     console.error("분석 오류:", error);
     res.status(500).json({ error: "분석 실패: " + error.message });
