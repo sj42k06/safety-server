@@ -263,4 +263,12 @@ app.get("/api/videos", async (req, res) => {
     const [videos] = await db.query(
       "SELECT * FROM videos ORDER BY uploaded_at DESC LIMIT 50"
     );
-    res.json({ vi
+   res.json({ videos });
+  } catch (error) {
+    res.status(500).json({ error: "조회 실패" });
+  }
+});
+// 서버 시작
+server.listen(PORT, () => {
+  console.log(`[시스템 가동] 포트 ${PORT}에서 모니터링 중...`);
+});
