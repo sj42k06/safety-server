@@ -22,7 +22,7 @@ cloudinary.config(
     api_secret=os.getenv('CLOUDINARY_API_SECRET', 'AUVfLy-K6Q4CjRo9zno2P7kOoa8')
 )
 
-GEMINI_API_KEY = os.getenv('GEMINI_API_KEY', 'AIzaSyBGRzwUiDIrIKCL5DK34-uJZjKGjHdMEqM')
+OPENAI_API_KEY = os.getenv('OPENAI_API_KEY', '')
 
 def get_db_connection():
     return pymysql.connect(
@@ -43,29 +43,24 @@ def upload_to_cloudinary(image_path):
         print(f"Cloudinary 업로드 실패: {e}", file=sys.stderr)
         return ''
 
-def call_gemini(prompt):
-    import time
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={GEMINI_API_KEY}"
-    
-    for attempt in range(5):  # 최대 5번 시도
-        try:
-            body = json.dumps({
-                "contents": [{"parts": [{"text": prompt}]}]
-            }).encode('utf-8')
-            req = urllib.request.Request(url, data=body, headers={"Content-Type": "application/json"}, method="POST")
-            with urllib.request.urlopen(req, timeout=30) as res:
-                data = json.loads(res.read().decode('utf-8'))
-                return data['candidates'][0]['content']['parts'][0]['text']
-        except Exception as e:
-            print(f"Gemini 시도 {attempt+1}/5 실패: {e}", file=sys.stderr)
-            if attempt < 4:
-                wait = (attempt + 1) * 15  # 15초, 30초, 45초, 60초 간격
-                print(f"{wait}초 후 재시도...", file=sys.stderr)
-                time.sleep(wait)
-    
-    # 5번 다 실패하면 기본 보고서 직접 생성
-    print("Gemini 완전 실패 - 기본 보고서 생성", file=sys.stderr)
-    return None
+def call_openai(prompt):
+    try:
+        url = "https://api.openai.com/v1/chat/completions"
+        body = json.dumps({
+            "model": "gpt-4o-mini",
+            "messages": [{"role": "user", "content": prompt}],
+            "temperature": 0.7
+        }).encode('utf-8')
+        req = urllib.request.Request(url, data=body, headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {OPENAI_API_KEY}"
+        }, method="POST")
+        with urllib.request.urlopen(req, timeout=30) as res:
+            data = json.loads(res.read().decode('utf-8'))
+            return data['choices'][0]['message']['content']
+    except Exception as e:
+        print(f"OpenAI 호출 실패: {e}", file=sys.stderr)
+        return None
 
 def generate_ai_report(ppe_risks, video_name):
     total_frames = len(ppe_risks)
@@ -78,7 +73,6 @@ def generate_ai_report(ppe_risks, video_name):
     for frame in ppe_risks:
         for worker in frame['workers']:
             total_workers += 1
-            # NO_HELMET 또는 NO-Hardhat 둘 다 체크
             if 'NO' in str(worker.get('helmet', '')).upper():
                 helmet_violations += 1
             if 'NO' in str(worker.get('vest', '')).upper():
@@ -119,11 +113,11 @@ def generate_ai_report(ppe_risks, video_name):
 }}
 """
 
-    gemini_result = call_gemini(prompt)
+    openai_result = call_openai(prompt)
 
-    if gemini_result:
+    if openai_result:
         try:
-            clean = gemini_result.strip()
+            clean = openai_result.strip()
             if "```" in clean:
                 clean = clean.split("```")[1]
                 if clean.startswith("json"):
@@ -142,6 +136,7 @@ def generate_ai_report(ppe_risks, video_name):
         except:
             pass
 
+    # OpenAI 실패 시 기본값
     law_refs = []
     if helmet_violations > 0:
         law_refs.append("산업안전보건법 제38조 - 안전모 미착용")
@@ -219,14 +214,13 @@ def run_pipeline(video_path):
 
         ppe_risks = analyze_ppe(structured, structured_ppe)
 
-        # Gemini AI 보고서 생성
+        # OpenAI 보고서 생성
         ai_report = generate_ai_report(ppe_risks, video_name)
 
-        # ✅ 위험/주의 프레임만 저장 (workers 없으면 건너뜀)
+        # 위험/주의 프레임만 저장
         for ppe_frame in ppe_risks:
             if not ppe_frame.get('workers'):
                 continue
-
             has_violation = any(w['risk'] in ['HIGH', 'MEDIUM'] for w in ppe_frame['workers'])
             if not has_violation:
                 continue
@@ -234,7 +228,6 @@ def run_pipeline(video_path):
             frame_filename = ppe_frame['frame']
             f_path = os.path.join(frames_folder, frame_filename)
 
-            # Cloudinary 업로드
             cloudinary_url = ''
             if os.path.exists(f_path):
                 cloudinary_url = upload_to_cloudinary(f_path)
@@ -255,7 +248,6 @@ def run_pipeline(video_path):
                 """, (report_id, frame_id, datetime.now(), current_status,
                       f"보호구: {worker['helmet']}, 조끼: {worker['vest']}"))
 
-        # 보고서 업데이트
         cursor.execute("""
             UPDATE reports SET
                 summary = %s,
