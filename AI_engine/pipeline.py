@@ -16,7 +16,6 @@ from structure_ppe import structure_ppe_data
 from logic_fall import analyze_fall_risk
 from logic_ppe import analyze_ppe
 
-# Cloudinary 설정
 cloudinary.config(
     cloud_name=os.getenv('CLOUDINARY_CLOUD_NAME', 'dxxaiv5ii'),
     api_key=os.getenv('CLOUDINARY_API_KEY', '771944593733371'),
@@ -69,9 +68,10 @@ def generate_ai_report(ppe_risks, video_name):
     for frame in ppe_risks:
         for worker in frame['workers']:
             total_workers += 1
-            if worker['helmet'] == 'NO_HELMET':
+            # NO_HELMET 또는 NO-Hardhat 둘 다 체크
+            if 'NO' in str(worker.get('helmet', '')).upper():
                 helmet_violations += 1
-            if worker['vest'] == 'NO_VEST':
+            if 'NO' in str(worker.get('vest', '')).upper():
                 vest_violations += 1
             if worker['risk'] == 'HIGH':
                 high_risk_count += 1
@@ -132,7 +132,6 @@ def generate_ai_report(ppe_risks, video_name):
         except:
             pass
 
-    # Gemini 실패 시 기본값
     law_refs = []
     if helmet_violations > 0:
         law_refs.append("산업안전보건법 제38조 - 안전모 미착용")
@@ -213,14 +212,21 @@ def run_pipeline(video_path):
         # Gemini AI 보고서 생성
         ai_report = generate_ai_report(ppe_risks, video_name)
 
-        # 위험/주의 프레임만 Cloudinary 업로드
+        # ✅ 위험/주의 프레임만 저장 (workers 없으면 건너뜀)
         for ppe_frame in ppe_risks:
+            if not ppe_frame.get('workers'):
+                continue
+
+            has_violation = any(w['risk'] in ['HIGH', 'MEDIUM'] for w in ppe_frame['workers'])
+            if not has_violation:
+                continue
+
             frame_filename = ppe_frame['frame']
             f_path = os.path.join(frames_folder, frame_filename)
 
-            has_violation = any(w['risk'] in ['HIGH', 'MEDIUM'] for w in ppe_frame['workers'])
+            # Cloudinary 업로드
             cloudinary_url = ''
-            if has_violation and os.path.exists(f_path):
+            if os.path.exists(f_path):
                 cloudinary_url = upload_to_cloudinary(f_path)
 
             frame_path_to_save = cloudinary_url if cloudinary_url else f_path
