@@ -138,15 +138,15 @@ const progressBar = document.getElementById('progressBar');
 const progressText = document.getElementById('progressText');
 const videoWrap = document.getElementById('videoWrap');
 const analyzingVideo = document.getElementById('analyzingVideo');
-// 업로드존 클릭
+
 uploadZone.addEventListener('click', () => {
   if (!uploadedFile) fileInput.click();
 });
-// 파일 선택
+
 fileInput.addEventListener('change', (e) => {
   if (e.target.files[0]) handleFile(e.target.files[0]);
 });
-// 드래그앤드롭
+
 uploadZone.addEventListener('dragover', (e) => {
   e.preventDefault();
   uploadZone.classList.add('dragover');
@@ -159,10 +159,12 @@ uploadZone.addEventListener('drop', (e) => {
   uploadZone.classList.remove('dragover');
   if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
 });
+
 function formatSize(bytes) {
   if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
   return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
 }
+
 function handleFile(file) {
   if (!file.type.startsWith('video/')) return;
   uploadedFile = file;
@@ -186,6 +188,7 @@ function handleFile(file) {
   analyzeBtn.classList.add('active');
   analyzeBtn.disabled = false;
 }
+
 function resetFile(e) {
   e.stopPropagation();
   uploadedFile = null;
@@ -206,6 +209,7 @@ function resetFile(e) {
   analyzeBtn.classList.remove('active');
   analyzeBtn.disabled = true;
 }
+
 function renderSteps(activeIdx) {
   stepsList.innerHTML = steps.map((s, i) => {
     let cls = 'pending';
@@ -224,25 +228,26 @@ ${i === activeIdx ? '<i class="ri-loader-4-line" style="animation:spin 1s linear
 `;
   }).join('');
 }
+
 function updateProgress(step) {
   const pct = Math.round(((step + 1) / steps.length) * 100);
   progressBar.style.width = pct + '%';
   progressText.textContent = pct + '% 완료';
   renderSteps(step);
 }
-// ★ 핵심: 실제 서버 응답을 기다리는 진짜 로딩
+
 analyzeBtn.addEventListener('click', async () => {
   if (!uploadedFile) return;
   uploadSection.style.display = 'none';
   analyzingSection.style.display = 'block';
   renderSteps(0);
   updateProgress(0);
+
   const formData = new FormData();
   formData.append('video', uploadedFile);
   formData.append('location', document.getElementById('locationInput').value);
   formData.append('purpose', document.getElementById('purposeInput').value);
-  // UI 스텝 애니메이션 (서버 처리 중 시각적 피드백)
-  // 실제 서버 완료 전까지 step 4까지만 진행 (마지막 2개는 서버 응답 후)
+
   let uiStep = 0;
   const uiInterval = setInterval(() => {
     if (uiStep < steps.length - 2) {
@@ -250,35 +255,30 @@ analyzeBtn.addEventListener('click', async () => {
       updateProgress(uiStep);
     }
   }, 3000);
+
   try {
-    // STEP 1: 실제 AI 분석 (YOLO + ByteTrack) - 서버가 완료할 때까지 대기
     const res = await fetch('https://safety-server-oqza.onrender.com/analyze', {
       method: 'POST',
       body: formData
     });
     if (!res.ok) throw new Error('분석 서버 오류 ' + res.status);
+
     const data = await res.json();
-    const videoId = data.video_id;
-    if (!videoId) throw new Error('video_id 없음 - 서버 응답: ' + JSON.stringify(data));
-    // STEP 2: 법규 매칭 + 보고서 자동 생성
+    const reportId = data.report_id;
+    if (!reportId) throw new Error('분석 실패: ' + JSON.stringify(data));
+
     clearInterval(uiInterval);
     updateProgress(steps.length - 2);
-    const repRes = await fetch('https://safety-server-oqza.onrender.com/api/reports/generate', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ video_id: videoId })
-    });
-    if (!repRes.ok) throw new Error('보고서 생성 오류 ' + repRes.status);
-    const repData = await repRes.json();
+    await new Promise(resolve => setTimeout(resolve, 1000));
     updateProgress(steps.length - 1);
-    // STEP 3: 보고서 상세 페이지로 이동
+
     setTimeout(() => {
-      window.location.href = '/reports/' + repData.report_id;
+      window.location.href = '/reports/' + reportId;
     }, 800);
+
   } catch (err) {
     clearInterval(uiInterval);
     updateProgress(steps.length - 1);
-    // 오류 메시지 표시
     const errDiv = document.createElement('div');
     errDiv.style.cssText = 'color:#ef4444;font-size:13px;text-align:center;margin-top:12px;padding:10px;background:#fee2e2;border-radius:8px;';
     errDiv.textContent = '오류: ' + err.message;
@@ -288,6 +288,6 @@ analyzeBtn.addEventListener('click', async () => {
     }, 3000);
   }
 });
-</script>
-  </body>
+  </script>
+</body>
 </html>
