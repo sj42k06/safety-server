@@ -2,7 +2,7 @@ import sys
 import os
 import json
 import cv2
-import pymysql  # pip install pymysql 필수
+import pymysql
 from datetime import datetime
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -13,14 +13,12 @@ from structure_ppe import structure_ppe_data
 from logic_fall import analyze_fall_risk
 from logic_ppe import analyze_ppe
 
-# --- [수정] 광민님의 Railway DB 연결 설정 ---
 def get_db_connection():
     return pymysql.connect(
-        # Render 환경변수가 있으면 쓰고, 없으면 광민님 Railway 정보를 직접 씁니다.
         host=os.getenv('MYSQLHOST', 'junction.proxy.rlwy.net'),
         user=os.getenv('MYSQLUSER', 'root'),
         password=os.getenv('MYSQLPASSWORD', 'uXLlzlUcfWYHaSXqVihQFxzhGnjcxbZR'),
-        db=os.getenv('MYSQLDATABASE', 'railway'), # 아까 확인하신 이름 'railway'
+        db=os.getenv('MYSQLDATABASE', 'railway'),
         port=int(os.getenv('MYSQLPORT', 50160)),
         charset='utf8mb4',
         cursorclass=pymysql.cursors.DictCursor
@@ -73,30 +71,32 @@ def run_pipeline(video_path):
         raw_ppe = detect_ppe(frames_folder)
         structured = structure_data(raw_objects)
         structured_ppe = structure_ppe_data(raw_ppe)
-        
+
+        # detections 키 보정
+        for frame in structured_ppe:
+            if "detections" not in frame:
+                frame["detections"] = frame.get("objects", [])
+
         # 위험도 분석 결과
         ppe_risks = analyze_ppe(structured, structured_ppe)
 
-        # 3. 분석 결과를 재학님 DB 테이블 규격에 맞춰 저장
+        # 3. 분석 결과를 DB에 저장
         for ppe_frame in ppe_risks:
             frame_filename = ppe_frame['frame']
             f_path = os.path.join(frames_folder, frame_filename)
-            
-            # frames 테이블 저장
-            cursor.execute("INSERT INTO frames (video_id, frame_path, captured_at) VALUES (%s, %s, %s)", 
+
+            cursor.execute("INSERT INTO frames (video_id, frame_path, captured_at) VALUES (%s, %s, %s)",
                            (video_id, f_path, datetime.now()))
             frame_id = cursor.lastrowid
 
             for worker in ppe_frame['workers']:
-                # AI 결과를 재학님이 정한 '정상', '주의', '위험'으로 변환
                 risk_map = {"HIGH": "위험", "MEDIUM": "주의", "LOW": "정상"}
                 current_status = risk_map.get(worker['risk'], "정상")
-                
-                # report_items 테이블 저장 (재학님 보고서용)
+
                 cursor.execute("""
                     INSERT INTO report_items (report_id, frame_id, event_time, status, description)
                     VALUES (%s, %s, %s, %s, %s)
-                """, (report_id, frame_id, datetime.now(), current_status, 
+                """, (report_id, frame_id, datetime.now(), current_status,
                       f"보호구: {worker['helmet']}, 조끼: {worker['vest']}"))
 
         conn.commit()
