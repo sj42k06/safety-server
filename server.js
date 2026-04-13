@@ -151,7 +151,7 @@ app.get("/api/reports/:id", async (req, res) => {
       ORDER BY ri.item_id ASC
     `, [req.params.id]);
 
-    res.json({ success: true, info: report[0], items: details });
+res.json({ success: true, report: report[0], info: report[0], items: details });
   } catch (err) {
     res.status(500).json({ error: "상세 데이터 조회 실패" });
   }
