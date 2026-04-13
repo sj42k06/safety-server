@@ -156,7 +156,32 @@ res.json({ success: true, report: report[0], info: report[0], items: details });
     res.status(500).json({ error: "상세 데이터 조회 실패" });
   }
 });
+// 보고서 단건 삭제
+app.delete("/api/reports/:id", async (req, res) => {
+  try {
+    const id = req.params.id;
+    await db.query("DELETE FROM report_items WHERE report_id = ?", [id]);
+    await db.query(`DELETE FROM frames WHERE video_id = (SELECT video_id FROM reports WHERE report_id = ?)`, [id]);
+    await db.query("DELETE FROM reports WHERE report_id = ?", [id]);
+    await db.query("DELETE FROM videos WHERE video_id NOT IN (SELECT video_id FROM reports)");
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: "삭제 실패" });
+  }
+});
 
+// 전체 초기화
+app.delete("/api/reports", async (req, res) => {
+  try {
+    await db.query("DELETE FROM report_items");
+    await db.query("DELETE FROM frames");
+    await db.query("DELETE FROM reports");
+    await db.query("DELETE FROM videos");
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: "초기화 실패" });
+  }
+});
 // 9. 시스템 상태 모니터링
 app.get("/health", (req, res) => {
   res.json({ status: "running", uptime: process.uptime(), db_connected: true });
