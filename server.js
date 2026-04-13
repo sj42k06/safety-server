@@ -186,6 +186,10 @@ app.delete("/api/reports", async (req, res) => {
     await db.query("DELETE FROM frames");
     await db.query("DELETE FROM reports");
     await db.query("DELETE FROM videos");
+    await db.query("ALTER TABLE report_items AUTO_INCREMENT = 1");
+    await db.query("ALTER TABLE frames AUTO_INCREMENT = 1");
+    await db.query("ALTER TABLE reports AUTO_INCREMENT = 1");
+    await db.query("ALTER TABLE videos AUTO_INCREMENT = 1");
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: "초기화 실패" });
