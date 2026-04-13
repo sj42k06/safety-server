@@ -64,7 +64,11 @@ def call_openai(prompt):
 
 def generate_ai_report(ppe_risks, video_name):
     total_frames = len(ppe_risks)
-    total_workers = 0
+
+    # 고유 작업자 수 (프레임별 최대 작업자 수로 계산)
+    max_workers_per_frame = max((len(f['workers']) for f in ppe_risks if f.get('workers')), default=0)
+    total_workers = max_workers_per_frame
+
     helmet_violations = 0
     vest_violations = 0
     high_risk_count = 0
@@ -72,7 +76,6 @@ def generate_ai_report(ppe_risks, video_name):
 
     for frame in ppe_risks:
         for worker in frame['workers']:
-            total_workers += 1
             if 'NO' in str(worker.get('helmet', '')).upper():
                 helmet_violations += 1
             if 'NO' in str(worker.get('vest', '')).upper():
@@ -99,17 +102,21 @@ def generate_ai_report(ppe_risks, video_name):
 - 분석 영상: {video_name}
 - 총 분석 프레임: {total_frames}개
 - 감지된 작업자 수: {total_workers}명
-- 안전모 미착용: {helmet_violations}건
-- 안전조끼 미착용: {vest_violations}건
+- 안전모 미착용 감지 횟수: {helmet_violations}건
+- 안전조끼 미착용 감지 횟수: {vest_violations}건
 - 고위험 감지: {high_risk_count}건
 - 주의 감지: {medium_risk_count}건
 - 위험 등급: {risk_grade}
 
-아래 JSON 형식으로만 응답해주세요. 다른 텍스트 없이 JSON만:
+반드시 아래 JSON 형식으로만 응답하세요. 마크다운이나 다른 텍스트 없이 순수 JSON만:
 {{
-  "law_references": "위반된 산업안전보건법 조항 (조항명과 내용 포함, 없으면 '해당 없음')",
-  "recommendations": ["권고사항1", "권고사항2", "권고사항3"],
-  "summary_eval": "종합평가 내용 (3~4문장, 위험도/조치사항/법적책임 포함)"
+  "law_references": "위반된 산업안전보건법 조항명과 조항 번호 및 내용을 구체적으로 작성 (예: 산업안전보건법 제38조제1항 - 안전모 착용 의무 위반, 제39조 - 보호구 지급 의무 위반)",
+  "recommendations": [
+    "구체적인 권고사항 1",
+    "구체적인 권고사항 2",
+    "구체적인 권고사항 3"
+  ],
+  "summary_eval": "3~4문장으로 종합평가 작성. 위험도, 법적 책임, 즉각 조치사항 포함"
 }}
 """
 
@@ -139,15 +146,15 @@ def generate_ai_report(ppe_risks, video_name):
     # OpenAI 실패 시 기본값
     law_refs = []
     if helmet_violations > 0:
-        law_refs.append("산업안전보건법 제38조 - 안전모 미착용")
+        law_refs.append("산업안전보건법 제38조제1항 - 안전모 착용 의무 위반")
     if vest_violations > 0:
-        law_refs.append("산업안전보건법 제38조 - 안전조끼 미착용")
+        law_refs.append("산업안전보건법 제38조제1항 - 안전조끼 착용 의무 위반")
 
     recommendations = []
     if helmet_violations > 0:
-        recommendations.append("안전모 착용 의무화 및 미착용자 즉시 작업 중지")
+        recommendations.append(f"안전모 미착용 {helmet_violations}건 감지 — 즉시 작업 중지 후 착용 확인")
     if vest_violations > 0:
-        recommendations.append("안전조끼 착용 의무화 및 현장 가시성 확보")
+        recommendations.append(f"안전조끼 미착용 {vest_violations}건 감지 — 현장 출입 통제 조치")
     if not recommendations:
         recommendations.append("현재 특이사항 없음. 지속적 모니터링 유지")
 
@@ -159,7 +166,7 @@ def generate_ai_report(ppe_risks, video_name):
         "vest_violations": vest_violations,
         "law_references": " | ".join(law_refs) if law_refs else "해당 없음",
         "recommendations": recommendations,
-        "summary_eval": f"총 {total_frames}개 프레임 분석 결과 {total_workers}명 감지, 안전모 미착용 {helmet_violations}건, 안전조끼 미착용 {vest_violations}건 확인. 위험등급: {risk_grade}"
+        "summary_eval": f"총 {total_frames}개 프레임 분석 결과 작업자 {total_workers}명 감지, 안전모 미착용 {helmet_violations}건, 안전조끼 미착용 {vest_violations}건 확인. 위험등급: {risk_grade}. 즉각적인 안전 조치가 필요합니다."
     }
 
 def extract_frames_cv2(video_path, frames_folder):
