@@ -44,18 +44,28 @@ def upload_to_cloudinary(image_path):
         return ''
 
 def call_gemini(prompt):
-    try:
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={GEMINI_API_KEY}"
-        body = json.dumps({
-            "contents": [{"parts": [{"text": prompt}]}]
-        }).encode('utf-8')
-        req = urllib.request.Request(url, data=body, headers={"Content-Type": "application/json"}, method="POST")
-        with urllib.request.urlopen(req, timeout=30) as res:
-            data = json.loads(res.read().decode('utf-8'))
-            return data['candidates'][0]['content']['parts'][0]['text']
-    except Exception as e:
-        print(f"Gemini 호출 실패: {e}", file=sys.stderr)
-        return None
+    import time
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={GEMINI_API_KEY}"
+    
+    for attempt in range(5):  # 최대 5번 시도
+        try:
+            body = json.dumps({
+                "contents": [{"parts": [{"text": prompt}]}]
+            }).encode('utf-8')
+            req = urllib.request.Request(url, data=body, headers={"Content-Type": "application/json"}, method="POST")
+            with urllib.request.urlopen(req, timeout=30) as res:
+                data = json.loads(res.read().decode('utf-8'))
+                return data['candidates'][0]['content']['parts'][0]['text']
+        except Exception as e:
+            print(f"Gemini 시도 {attempt+1}/5 실패: {e}", file=sys.stderr)
+            if attempt < 4:
+                wait = (attempt + 1) * 15  # 15초, 30초, 45초, 60초 간격
+                print(f"{wait}초 후 재시도...", file=sys.stderr)
+                time.sleep(wait)
+    
+    # 5번 다 실패하면 기본 보고서 직접 생성
+    print("Gemini 완전 실패 - 기본 보고서 생성", file=sys.stderr)
+    return None
 
 def generate_ai_report(ppe_risks, video_name):
     total_frames = len(ppe_risks)
