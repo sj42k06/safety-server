@@ -2,7 +2,7 @@ from ultralytics import YOLO
 import os
 import cv2
 
-MODEL_PATH = "yolov8n.pt"
+MODEL_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "yolov8n.pt")
 CONF_THRESHOLD = 0.3
 
 #  위험 분석용 객체 필터
