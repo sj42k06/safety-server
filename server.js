@@ -122,11 +122,19 @@ app.post("/analyze", upload.single("video"), async (req, res) => {
   }
 });
 
-// 8. 보고서 데이터 조회 API (재학님 DB 테이블 최적화)
+// 8. 보고서 데이터 조회 API (썸네일 포함)
 app.get("/api/reports", async (req, res) => {
   try {
     const [rows] = await db.query(`
-      SELECT r.report_id, r.summary, r.created_at, v.video_path 
+      SELECT 
+        r.report_id, 
+        r.summary, 
+        r.created_at, 
+        r.risk_grade,
+        r.helmet_violations,
+        r.vest_violations,
+        v.video_path,
+        (SELECT f.frame_path FROM frames f WHERE f.video_id = r.video_id AND f.frame_path LIKE 'http%' LIMIT 1) AS thumbnail
       FROM reports r 
       LEFT JOIN videos v ON r.video_id = v.video_id 
       ORDER BY r.created_at DESC 
@@ -151,11 +159,12 @@ app.get("/api/reports/:id", async (req, res) => {
       ORDER BY ri.item_id ASC
     `, [req.params.id]);
 
-res.json({ success: true, report: report[0], info: report[0], items: details });
+    res.json({ success: true, report: report[0], info: report[0], items: details });
   } catch (err) {
     res.status(500).json({ error: "상세 데이터 조회 실패" });
   }
 });
+
 // 보고서 단건 삭제
 app.delete("/api/reports/:id", async (req, res) => {
   try {
@@ -182,6 +191,7 @@ app.delete("/api/reports", async (req, res) => {
     res.status(500).json({ error: "초기화 실패" });
   }
 });
+
 // 9. 시스템 상태 모니터링
 app.get("/health", (req, res) => {
   res.json({ status: "running", uptime: process.uptime(), db_connected: true });
