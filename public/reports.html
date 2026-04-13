@@ -5,16 +5,78 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>AI 보고서 - 스마트 현장 안전관제 시스템</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/remixicon/4.2.0/remixicon.min.css" />
-  <link rel="stylesheet" href="reports.css" />
+  <link rel="stylesheet" href="/reports.css" />
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: #f1f5f9; font-family: 'Pretendard', 'Apple SD Gothic Neo', sans-serif; display: flex; min-height: 100vh; }
+    aside { width: 180px; background: #1e293b; display: flex; flex-direction: column; padding: 20px 0; position: fixed; height: 100vh; }
+    .logo { padding: 0 16px 24px; border-bottom: 1px solid #334155; }
+    .logo-title { color: #fff; font-size: 14px; font-weight: 700; }
+    .logo-sub { color: #94a3b8; font-size: 11px; margin-top: 2px; }
+    nav { flex: 1; padding: 16px 0; }
+    nav a { display: flex; align-items: center; gap: 8px; padding: 10px 16px; color: #94a3b8; font-size: 13px; text-decoration: none; }
+    nav a:hover, nav a.active { background: #334155; color: #fff; }
+    nav a i { font-size: 16px; }
+    .user-section { padding: 16px; border-top: 1px solid #334155; }
+    .user-info { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+    .user-avatar { width: 32px; height: 32px; background: #475569; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 14px; }
+    .user-name { color: #fff; font-size: 12px; font-weight: 600; }
+    .user-role { color: #94a3b8; font-size: 11px; }
+    .logout-btn { width: 100%; background: none; border: 1px solid #475569; color: #94a3b8; padding: 6px; border-radius: 6px; cursor: pointer; font-size: 12px; display: flex; align-items: center; justify-content: center; gap: 4px; }
+    .logout-btn:hover { background: #334155; color: #fff; }
+    main { margin-left: 180px; flex: 1; padding: 28px; }
+    .page-tag { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #94a3b8; margin-bottom: 6px; }
+    .page-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 20px; }
+    .page-header h2 { font-size: 22px; font-weight: 700; color: #1e293b; }
+    .page-desc { font-size: 13px; color: #94a3b8; margin-top: 4px; }
+    .header-btns { display: flex; gap: 10px; }
+    .btn-reset { background: #fff; border: 1px solid #e2e8f0; padding: 8px 14px; border-radius: 8px; cursor: pointer; font-size: 13px; color: #475569; display: flex; align-items: center; gap: 6px; }
+    .btn-new { background: #1e293b; color: #fff; padding: 8px 16px; border-radius: 8px; text-decoration: none; font-size: 13px; display: flex; align-items: center; gap: 6px; }
+    .filter-tabs { display: flex; gap: 8px; margin-bottom: 20px; }
+    .filter-tab { padding: 6px 14px; border-radius: 20px; border: 1px solid #e2e8f0; background: #fff; font-size: 13px; color: #64748b; cursor: pointer; display: flex; align-items: center; gap: 6px; }
+    .filter-tab.active { background: #1e293b; color: #fff; border-color: #1e293b; }
+    .filter-tab span { font-weight: 700; }
+    .reports-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; }
+    .report-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 14px; overflow: hidden; cursor: pointer; transition: box-shadow 0.2s; }
+    .report-card:hover { box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
+    .card-thumb { width: 100%; height: 140px; background: #f1f5f9; position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center; }
+    .card-thumb img { width: 100%; height: 100%; object-fit: cover; }
+    .card-thumb .no-thumb { color: #cbd5e1; font-size: 32px; }
+    .card-grade-badge { position: absolute; top: 10px; left: 10px; font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 12px; }
+    .badge-고위험 { background: #fee2e2; color: #dc2626; }
+    .badge-관찰 { background: #fef3c7; color: #d97706; }
+    .badge-주의 { background: #fef3c7; color: #d97706; }
+    .badge-정상 { background: #dcfce7; color: #16a34a; }
+    .card-body { padding: 14px; }
+    .card-id { font-size: 14px; font-weight: 700; color: #1e293b; margin-bottom: 8px; }
+    .card-date { display: flex; align-items: center; gap: 4px; font-size: 12px; color: #94a3b8; margin-bottom: 8px; }
+    .card-footer { display: flex; align-items: center; justify-content: space-between; }
+    .card-violation { font-size: 12px; color: #64748b; }
+    .card-violation strong { color: #dc2626; }
+    .card-link { font-size: 12px; color: #475569; }
+    .empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 80px 20px; text-align: center; }
+    .empty-icon { font-size: 48px; color: #cbd5e1; margin-bottom: 16px; }
+    .empty-title { font-size: 16px; font-weight: 700; color: #334155; margin-bottom: 8px; }
+    .empty-desc { font-size: 13px; color: #94a3b8; margin-bottom: 20px; }
+    .empty-btn { background: #1e293b; color: #fff; padding: 10px 20px; border-radius: 8px; text-decoration: none; font-size: 13px; }
+    .modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 100; }
+    .modal { background: #fff; border-radius: 16px; padding: 28px; width: 320px; text-align: center; }
+    .modal-icon { width: 48px; height: 48px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 22px; margin: 0 auto 14px; }
+    .modal-icon.red { background: #fee2e2; color: #dc2626; }
+    .modal-icon.amber { background: #fef3c7; color: #d97706; }
+    .modal h3 { font-size: 16px; font-weight: 700; color: #1e293b; margin-bottom: 8px; }
+    .modal p { font-size: 13px; color: #64748b; margin-bottom: 20px; }
+    .modal-btns { display: flex; gap: 10px; }
+    .btn-cancel { flex: 1; background: #f1f5f9; border: none; padding: 10px; border-radius: 8px; cursor: pointer; font-size: 13px; color: #475569; }
+    .btn-confirm-red { flex: 1; background: #dc2626; border: none; padding: 10px; border-radius: 8px; cursor: pointer; font-size: 13px; color: #fff; }
+    .btn-confirm-amber { flex: 1; background: #d97706; border: none; padding: 10px; border-radius: 8px; cursor: pointer; font-size: 13px; color: #fff; }
+  </style>
 </head>
 <body>
   <aside>
     <div class="logo">
-      <img src="https://public.readdy.ai/ai/img_res/f3ccc83c-cf23-4ebf-b376-21d351a806b7.png" alt="로고" />
-      <div class="logo-text">
-        <div class="title">스마트 현장</div>
-        <div class="sub">안전관제 시스템</div>
-      </div>
+      <div class="logo-title">스마트 현장</div>
+      <div class="logo-sub">안전관제 시스템</div>
     </div>
     <nav>
       <a href="/upload"><i class="ri-upload-cloud-2-line"></i> 영상 분석</a>
@@ -33,36 +95,41 @@
       </button>
     </div>
   </aside>
+
   <main>
     <div class="page-header">
       <div>
-        <div class="page-tag">
-          <i class="ri-file-chart-line"></i>
-          <span>AI 분석 보고서</span>
-        </div>
+        <div class="page-tag"><i class="ri-file-chart-line"></i> AI 분석 보고서</div>
         <h2>보고서 목록</h2>
-        <p class="page-desc">업로드된 영상의 AI 안전 분석 결과 · 총 <span id="totalCount">0</span>건</p>
+        <p class="page-desc">AI 종합안전평가 보고서 · 총 <span id="totalCount">0</span>건</p>
       </div>
       <div class="header-btns">
         <button class="btn-reset" id="resetBtn" style="display:none" onclick="showResetModal()">
-          <i class="ri-refresh-line"></i> 전체 초기화
+          <i class="ri-refresh-line"></i> 새로고침
         </button>
         <a href="/upload" class="btn-new">
           <i class="ri-add-line"></i> 새 영상 분석
         </a>
       </div>
     </div>
-    <div id="emptyState" class="empty-state">
+
+    <div class="filter-tabs">
+      <div class="filter-tab active" onclick="filterReports('전체')" id="tab-전체">전체 <span id="count-전체">0</span></div>
+      <div class="filter-tab" onclick="filterReports('고위험')" id="tab-고위험">위험 <span id="count-고위험">0</span></div>
+      <div class="filter-tab" onclick="filterReports('관찰')" id="tab-관찰">주의 <span id="count-관찰">0</span></div>
+      <div class="filter-tab" onclick="filterReports('정상')" id="tab-정상">정상 <span id="count-정상">0</span></div>
+    </div>
+
+    <div id="emptyState" class="empty-state" style="display:none">
       <div class="empty-icon"><i class="ri-file-chart-line"></i></div>
       <div class="empty-title">아직 분석된 보고서가 없습니다</div>
       <p class="empty-desc">현장 영상을 업로드하면 AI가 자동으로 위험 요소를 분석하고 보고서를 생성합니다</p>
-      <a href="/upload" class="empty-btn">
-        <i class="ri-upload-cloud-2-line"></i> 첫 번째 영상 업로드하기
-      </a>
+      <a href="/upload" class="empty-btn"><i class="ri-upload-cloud-2-line"></i> 첫 번째 영상 업로드하기</a>
     </div>
-    <div id="reportsGrid" class="reports-grid" style="display:none"></div>
+
+    <div id="reportsGrid" class="reports-grid"></div>
   </main>
-  <!-- 개별 삭제 모달 -->
+
   <div class="modal-bg" id="deleteModal" style="display:none">
     <div class="modal">
       <div class="modal-icon red"><i class="ri-delete-bin-line"></i></div>
@@ -74,84 +141,107 @@
       </div>
     </div>
   </div>
-  <!-- 전체 초기화 모달 -->
+
   <div class="modal-bg" id="resetModal" style="display:none">
     <div class="modal">
       <div class="modal-icon amber"><i class="ri-refresh-line"></i></div>
       <h3>전체 초기화할까요?</h3>
-      <p>모든 보고서가 삭제되고 처음 상태로 돌아갑니다. 이 작업은 되돌릴 수 없습니다.</p>
+      <p>모든 보고서가 삭제됩니다. 되돌릴 수 없습니다.</p>
       <div class="modal-btns">
         <button class="btn-cancel" onclick="closeResetModal()">취소</button>
         <button class="btn-confirm-amber" onclick="confirmReset()">초기화</button>
       </div>
     </div>
   </div>
+
 <script>
   const BASE_URL = 'https://safety-server-oqza.onrender.com';
-  const reportsGrid = document.getElementById('reportsGrid');
-  const emptyState  = document.getElementById('emptyState');
-  const totalCount  = document.getElementById('totalCount');
-  const resetBtn    = document.getElementById('resetBtn');
+  let allReports = [];
   let pendingDeleteId = null;
+  let currentFilter = '전체';
+
   function formatDate(str) {
     if (!str) return '-';
     return new Date(str).toLocaleString('ko-KR');
   }
+
   async function loadReports() {
     try {
       const res = await fetch(BASE_URL + '/api/reports');
-      if (!res.ok) throw new Error('서버 오류 ' + res.status);
       const data = await res.json();
-      const reports = data.reports || [];
-      totalCount.textContent = reports.length;
-      if (reports.length === 0) {
-        emptyState.style.display = 'flex';
-        reportsGrid.style.display = 'none';
-        resetBtn.style.display = 'none';
-        return;
+      allReports = data.reports || [];
+
+      document.getElementById('count-전체').textContent = allReports.length;
+      document.getElementById('count-고위험').textContent = allReports.filter(r => r.risk_grade === '고위험').length;
+      document.getElementById('count-관찰').textContent = allReports.filter(r => r.risk_grade === '관찰').length;
+      document.getElementById('count-정상').textContent = allReports.filter(r => !r.risk_grade || r.risk_grade === '정상').length;
+      document.getElementById('totalCount').textContent = allReports.length;
+
+      if (allReports.length > 0) {
+        document.getElementById('resetBtn').style.display = 'inline-flex';
       }
-      emptyState.style.display = 'none';
-      reportsGrid.style.display = 'grid';
-      resetBtn.style.display = 'inline-flex';
-      reportsGrid.innerHTML = reports.map(r => {
-  // 위험 건수 계산 (서버가 danger_count 또는 items 배열 제공 시)
-  const dangerCount = r.danger_count || 0;
-  const workerCount = r.worker_count || 0;
-  const lawRef = r.law_reference || '';
-  const riskLevel = dangerCount > 3 ? 'high' : dangerCount > 0 ? 'mid' : 'low';
-  const riskLabel = riskLevel === 'high' ? '고위험' : riskLevel === 'mid' ? '주의' : '정상';
-  const riskColor = riskLevel === 'high' ? '#dc2626' : riskLevel === 'mid' ? '#d97706' : '#16a34a';
-  const riskBg = riskLevel === 'high' ? '#fee2e2' : riskLevel === 'mid' ? '#fef3c7' : '#dcfce7';
-  return '<div class="report-card" onclick="goDetail(' + r.report_id + ')">'
-    + '<div class="card-top">'
-    + '<span class="card-id">보고서 #' + r.report_id + '</span>'
-    + '<span style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;background:' + riskBg + ';color:' + riskColor + '">' + riskLabel + '</span>'
-    + '<button class="card-delete" onclick="event.stopPropagation();showDeleteModal(' + r.report_id + ')">'
-    + '<i class="ri-delete-bin-line"></i></button>'
-    + '</div>'
-    // 스냅샷 이미지 (있을 경우)
-    + (r.thumbnail ? '<div style="width:100%;height:140px;overflow:hidden;border-radius:8px;margin-bottom:12px;"><img src="' + r.thumbnail + '" style="width:100%;height:100%;object-fit:cover;object-position:top" alt="스냅샷"/></div>' : '')
-    + '<p class="card-summary">' + (r.summary || '요약 없음') + '</p>'
-    // 작업자 ID / 위반 내역
-    + (workerCount > 0 ? '<div style="font-size:12px;color:#475569;margin:8px 0 4px;"><i class="ri-user-follow-line"></i> 추적 작업자 <strong>' + workerCount + '명</strong> · 위험 감지 <strong style="color:' + riskColor + '">' + dangerCount + '건</strong></div>' : '')
-    // 법규 조항
-    + (lawRef ? '<div style="font-size:11px;color:#64748b;background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;padding:6px 10px;margin-top:6px;"><i class="ri-scales-3-line"></i> ' + lawRef + '</div>' : '')
-    + '<div class="card-footer">'
-    + '<span><i class="ri-time-line"></i> ' + formatDate(r.created_at) + '</span>'
-    + '<span class="card-link">상세 보기 →</span>'
-    + '</div>'
-    + '</div>';
-}).join('');
+
+      renderReports(currentFilter);
     } catch (err) {
-      emptyState.style.display = 'flex';
-      reportsGrid.style.display = 'none';
-      document.querySelector('.empty-title').textContent = '보고서를 불러오지 못했습니다';
-      document.querySelector('.empty-desc').textContent = err.message;
+      console.error(err);
     }
   }
-  function goDetail(reportId) {
-    window.location.href = '/reports/' + reportId;
+
+  function renderReports(filter) {
+    const grid = document.getElementById('reportsGrid');
+    const empty = document.getElementById('emptyState');
+
+    let filtered = allReports;
+    if (filter !== '전체') {
+      filtered = allReports.filter(r => {
+        if (filter === '고위험') return r.risk_grade === '고위험';
+        if (filter === '관찰') return r.risk_grade === '관찰';
+        if (filter === '정상') return !r.risk_grade || r.risk_grade === '정상';
+        return true;
+      });
+    }
+
+    if (filtered.length === 0) {
+      empty.style.display = 'flex';
+      grid.style.display = 'none';
+      return;
+    }
+
+    empty.style.display = 'none';
+    grid.style.display = 'grid';
+
+    grid.innerHTML = filtered.map(r => {
+      const grade = r.risk_grade || '정상';
+      const badgeClass = `badge-${grade}`;
+      const violations = (r.helmet_violations || 0) + (r.vest_violations || 0);
+      const thumb = r.thumbnail || '';
+
+      return `<div class="report-card" onclick="goDetail(${r.report_id})">
+        <div class="card-thumb">
+          ${thumb ? `<img src="${thumb}" alt="썸네일"/>` : '<i class="ri-video-line no-thumb"></i>'}
+          <span class="card-grade-badge ${badgeClass}">${grade}</span>
+        </div>
+        <div class="card-body">
+          <div class="card-id">보고서 #${r.report_id}</div>
+          <div class="card-date"><i class="ri-time-line"></i> ${formatDate(r.created_at)}</div>
+          <div class="card-footer">
+            <div class="card-violation">위반 <strong>${violations}</strong>건</div>
+            <div class="card-link">상세 보기 →</div>
+          </div>
+        </div>
+      </div>`;
+    }).join('');
   }
+
+  function filterReports(filter) {
+    currentFilter = filter;
+    document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
+    document.getElementById(`tab-${filter}`).classList.add('active');
+    renderReports(filter);
+  }
+
+  function goDetail(id) { window.location.href = '/reports/' + id; }
+
   function showDeleteModal(id) {
     pendingDeleteId = id;
     document.getElementById('deleteModal').style.display = 'flex';
@@ -162,25 +252,19 @@
   }
   async function confirmDelete() {
     if (!pendingDeleteId) return;
-    try {
-      await fetch(BASE_URL + '/api/reports/' + pendingDeleteId, { method: 'DELETE' });
-    } catch(e) {}
+    await fetch(BASE_URL + '/api/reports/' + pendingDeleteId, { method: 'DELETE' });
     closeDeleteModal();
     loadReports();
   }
-  function showResetModal() {
-    document.getElementById('resetModal').style.display = 'flex';
-  }
-  function closeResetModal() {
-    document.getElementById('resetModal').style.display = 'none';
-  }
+
+  function showResetModal() { document.getElementById('resetModal').style.display = 'flex'; }
+  function closeResetModal() { document.getElementById('resetModal').style.display = 'none'; }
   async function confirmReset() {
-    try {
-      await fetch(BASE_URL + '/api/reports', { method: 'DELETE' });
-    } catch(e) {}
+    await fetch(BASE_URL + '/api/reports', { method: 'DELETE' });
     closeResetModal();
     loadReports();
   }
+
   loadReports();
 </script>
 </body>
