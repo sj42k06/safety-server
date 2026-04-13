@@ -62,33 +62,43 @@ def call_openai(prompt):
         print(f"OpenAI 호출 실패: {e}", file=sys.stderr)
         return None
 
+def get_violation_signature(workers):
+    violations = set()
+    for w in workers:
+        if 'NO' in str(w.get('helmet', '')).upper():
+            violations.add('NO_HELMET')
+        if 'NO' in str(w.get('vest', '')).upper():
+            violations.add('NO_VEST')
+    return frozenset(violations)
+
 def generate_ai_report(ppe_risks, video_name):
     total_frames = len(ppe_risks)
-
-    # 고유 작업자 수 (프레임별 최대 작업자 수로 계산)
     max_workers_per_frame = max((len(f['workers']) for f in ppe_risks if f.get('workers')), default=0)
     total_workers = max_workers_per_frame
 
-    helmet_violations = 0
-    vest_violations = 0
-    high_risk_count = 0
-    medium_risk_count = 0
+    helmet_violated = False
+    vest_violated = False
+    high_risk_exists = False
+    medium_risk_exists = False
 
     for frame in ppe_risks:
         for worker in frame['workers']:
             if 'NO' in str(worker.get('helmet', '')).upper():
-                helmet_violations += 1
+                helmet_violated = True
             if 'NO' in str(worker.get('vest', '')).upper():
-                vest_violations += 1
+                vest_violated = True
             if worker['risk'] == 'HIGH':
-                high_risk_count += 1
+                high_risk_exists = True
             elif worker['risk'] == 'MEDIUM':
-                medium_risk_count += 1
+                medium_risk_exists = True
 
-    if high_risk_count > 3:
+    helmet_violations = 1 if helmet_violated else 0
+    vest_violations = 1 if vest_violated else 0
+
+    if high_risk_exists:
         risk_grade = "고위험"
         risk_score = 85
-    elif high_risk_count > 0 or medium_risk_count > 3:
+    elif medium_risk_exists:
         risk_grade = "관찰"
         risk_score = 45
     else:
@@ -102,10 +112,8 @@ def generate_ai_report(ppe_risks, video_name):
 - 분석 영상: {video_name}
 - 총 분석 프레임: {total_frames}개
 - 감지된 작업자 수: {total_workers}명
-- 안전모 미착용 감지 횟수: {helmet_violations}건
-- 안전조끼 미착용 감지 횟수: {vest_violations}건
-- 고위험 감지: {high_risk_count}건
-- 주의 감지: {medium_risk_count}건
+- 안전모 미착용: {"있음" if helmet_violated else "없음"}
+- 안전조끼 미착용: {"있음" if vest_violated else "없음"}
 - 위험 등급: {risk_grade}
 
 반드시 아래 JSON 형식으로만 응답하세요. 마크다운이나 다른 텍스트 없이 순수 JSON만:
@@ -143,18 +151,17 @@ def generate_ai_report(ppe_risks, video_name):
         except:
             pass
 
-    # OpenAI 실패 시 기본값
     law_refs = []
-    if helmet_violations > 0:
+    if helmet_violated:
         law_refs.append("산업안전보건법 제38조제1항 - 안전모 착용 의무 위반")
-    if vest_violations > 0:
+    if vest_violated:
         law_refs.append("산업안전보건법 제38조제1항 - 안전조끼 착용 의무 위반")
 
     recommendations = []
-    if helmet_violations > 0:
-        recommendations.append(f"안전모 미착용 {helmet_violations}건 감지 — 즉시 작업 중지 후 착용 확인")
-    if vest_violations > 0:
-        recommendations.append(f"안전조끼 미착용 {vest_violations}건 감지 — 현장 출입 통제 조치")
+    if helmet_violated:
+        recommendations.append("안전모 미착용 감지 — 즉시 작업 중지 후 착용 확인")
+    if vest_violated:
+        recommendations.append("안전조끼 미착용 감지 — 현장 출입 통제 조치")
     if not recommendations:
         recommendations.append("현재 특이사항 없음. 지속적 모니터링 유지")
 
@@ -166,7 +173,7 @@ def generate_ai_report(ppe_risks, video_name):
         "vest_violations": vest_violations,
         "law_references": " | ".join(law_refs) if law_refs else "해당 없음",
         "recommendations": recommendations,
-        "summary_eval": f"총 {total_frames}개 프레임 분석 결과 작업자 {total_workers}명 감지, 안전모 미착용 {helmet_violations}건, 안전조끼 미착용 {vest_violations}건 확인. 위험등급: {risk_grade}. 즉각적인 안전 조치가 필요합니다."
+        "summary_eval": f"총 {total_frames}개 프레임 분석 결과 작업자 {total_workers}명 감지. {'안전모 미착용 ' if helmet_violated else ''}{'안전조끼 미착용 ' if vest_violated else ''}위반 확인. 위험등급: {risk_grade}. 즉각적인 안전 조치가 필요합니다."
     }
 
 def extract_frames_cv2(video_path, frames_folder):
@@ -221,16 +228,22 @@ def run_pipeline(video_path):
 
         ppe_risks = analyze_ppe(structured, structured_ppe)
 
-        # OpenAI 보고서 생성
         ai_report = generate_ai_report(ppe_risks, video_name)
 
-        # 위험/주의 프레임만 저장
+        # 연속 같은 위반은 대표 1장만 저장
+        prev_signature = None
         for ppe_frame in ppe_risks:
             if not ppe_frame.get('workers'):
                 continue
             has_violation = any(w['risk'] in ['HIGH', 'MEDIUM'] for w in ppe_frame['workers'])
             if not has_violation:
+                prev_signature = None
                 continue
+
+            curr_signature = get_violation_signature(ppe_frame['workers'])
+            if curr_signature == prev_signature:
+                continue
+            prev_signature = curr_signature
 
             frame_filename = ppe_frame['frame']
             f_path = os.path.join(frames_folder, frame_filename)
