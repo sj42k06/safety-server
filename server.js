@@ -85,13 +85,12 @@ function runPipeline(videoPath) {
         return reject(new Error(`AI 엔진 오류 (코드 ${code}): ${errorOutput}`));
       }
       try {
-        const parsed = JSON.parse(output);
-        resolve(parsed);
-      } catch (e) {
-        reject(new Error(`데이터 파싱 오류: ${output}`));
-      }
-    });
-  });
+  const lines = output.trim().split('\n');
+  const jsonLine = lines.reverse().find(line => line.trim().startsWith('{'));
+  const parsed = JSON.parse(jsonLine);
+  resolve(parsed);
+} catch (e) {
+  reject(new Error(`데이터 파싱 오류: ${output}`));
 }
 
 // 7. 메인 분석 API
