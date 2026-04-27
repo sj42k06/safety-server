@@ -3,9 +3,37 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>영상 분석 - 스마트 현장 안전관제 시스템</title>
+  <title>현장 모니터링 - 스마트 현장 안전관제 시스템</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/remixicon/4.2.0/remixicon.min.css" />
   <link rel="stylesheet" href="upload.css" />
+  <style>
+    .monitoring-wrap { display: flex; flex-direction: column; gap: 16px; }
+    .camera-section { background: #000; border-radius: 16px; overflow: hidden; position: relative; width: 100%; aspect-ratio: 16/9; }
+    .camera-section video { width: 100%; height: 100%; object-fit: cover; }
+    .camera-section canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+    .camera-badge { position: absolute; top: 12px; right: 12px; background: rgba(0,0,0,0.7); color: #fff; padding: 4px 12px; border-radius: 20px; font-size: 12px; display: flex; align-items: center; gap: 6px; }
+    .camera-dot { width: 8px; height: 8px; background: #22c55e; border-radius: 50%; animation: blink 1s infinite; }
+    .camera-dot.danger { background: #ef4444; }
+    @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+    .camera-border-danger { border: 3px solid #ef4444 !important; }
+    .btn-area { display: flex; gap: 12px; }
+    .detect-btn { flex: 1; background: #1e293b; color: #fff; border: none; padding: 14px; border-radius: 10px; font-size: 15px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; }
+    .detect-btn:disabled { background: #94a3b8; cursor: not-allowed; }
+    .detect-btn.danger { background: #dc2626; }
+    .status-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; }
+    .status-title { font-size: 13px; color: #94a3b8; margin-bottom: 8px; }
+    .status-value { font-size: 18px; font-weight: 700; color: #1e293b; }
+    .status-value.danger { color: #dc2626; }
+    .status-value.safe { color: #16a34a; }
+    .status-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+    .analyzing-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 12px; color: #fff; font-size: 16px; font-weight: 700; }
+    .analyzing-spinner { width: 40px; height: 40px; border: 4px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%; animation: spin 1s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .alert-popup { position: fixed; top: 20px; right: 20px; background: #dc2626; color: #fff; padding: 16px 20px; border-radius: 12px; z-index: 999; display: none; animation: slideIn 0.3s ease; }
+    @keyframes slideIn { from { transform: translateX(100%); } to { transform: translateX(0); } }
+    .alert-title { font-size: 15px; font-weight: 700; margin-bottom: 4px; }
+    .alert-desc { font-size: 13px; opacity: 0.9; }
+  </style>
 </head>
 <body>
   <aside>
@@ -17,7 +45,7 @@
       </div>
     </div>
     <nav>
-      <a href="/upload" class="active"><i class="ri-upload-cloud-2-line"></i> 영상 분석</a>
+      <a href="/upload" class="active"><i class="ri-camera-line"></i> 현장 모니터링</a>
       <a href="/reports"><i class="ri-file-chart-line"></i> AI 보고서</a>
     </nav>
     <div class="user-section">
@@ -33,181 +61,123 @@
       </button>
     </div>
   </aside>
+
   <main>
     <div class="inner">
       <div class="page-tag">
-        <i class="ri-robot-2-line"></i>
-        <span>AI 영상 분석</span>
+        <i class="ri-camera-line"></i>
+        <span>현장 실시간 모니터링</span>
       </div>
-      <h2>현장 영상 업로드</h2>
+      <h2>현장 모니터링</h2>
       <p class="page-desc">
-        산업현장 CCTV 영상을 실시간 분석해 위험 요소를 탐지하는 시스템입니다.<br/>
-        실제 현장 데이터 확보의 제약과 보안 규정을 고려하여, 촬영되어있는 영상을 활용하여 AI 분석 로직의 동작 과정을 보여줍니다.
+        웹캠을 통해 현장을 실시간으로 모니터링합니다.<br/>
+        [감지 시작] 버튼을 클릭하면 AI가 안전장비 착용 여부를 분석합니다.
       </p>
-      <div class="card">
-        <div class="card-header">
-          <span class="card-title">영상 업로드</span>
-          <span class="card-count" id="progressCount">0 / 1 완료</span>
-        </div>
-        <button class="scenario-btn">
-          <span class="scenario-num">1</span> 시나리오 1
-        </button>
-      </div>
-      <div id="uploadSection">
-        <div class="upload-zone" id="uploadZone">
-          <input type="file" id="fileInput" accept="video/*" style="display:none" />
-          <div class="upload-icon"><i class="ri-upload-cloud-2-line"></i></div>
-          <div class="upload-title">영상 파일을 드래그하거나 클릭하여 업로드</div>
-          <div class="upload-sub">MP4, MOV, AVI, MKV 지원</div>
-        </div>
-        <div class="card">
-          <div class="card-title" style="margin-bottom:16px">분석 정보 입력 <span style="color:#94a3b8;font-weight:400">(선택)</span></div>
-          <div class="input-grid">
-            <div>
-              <label class="input-label">촬영 위치</label>
-              <input type="text" class="input-field" id="locationInput" placeholder="예: OO시 OO구 공사구간" />
-            </div>
-            <div>
-              <label class="input-label">분석 목적</label>
-              <input type="text" class="input-field" id="purposeInput" placeholder="예: 중장비 협착 위험 판단" />
-            </div>
+
+      <div class="monitoring-wrap">
+        <!-- 카메라 화면 -->
+        <div class="camera-section" id="cameraSection">
+          <video id="cameraVideo" autoplay muted playsinline></video>
+          <canvas id="cameraCanvas"></canvas>
+          <div class="camera-badge">
+            <div class="camera-dot" id="cameraDot"></div>
+            <span id="cameraStatus">카메라 연결 중...</span>
+          </div>
+          <div class="analyzing-overlay" id="analyzingOverlay" style="display:none">
+            <div class="analyzing-spinner"></div>
+            <span>AI 분석 중...</span>
           </div>
         </div>
-        <button class="analyze-btn disabled" id="analyzeBtn" disabled>
-          <i class="ri-robot-2-line"></i> AI 위험 분석 시작
-        </button>
-        <div class="info-grid">
-          <div class="info-card">
-            <div class="info-icon"><i class="ri-time-line"></i></div>
-            <div><div class="info-title">분석 소요 시간</div><div class="info-desc">약 30초 ~ 2분</div></div>
+
+        <!-- 상태 카드 -->
+        <div class="status-grid">
+          <div class="status-card">
+            <div class="status-title">현재 상태</div>
+            <div class="status-value" id="currentStatus">대기 중</div>
           </div>
-          <div class="info-card">
-            <div class="info-icon"><i class="ri-shield-check-line"></i></div>
-            <div><div class="info-title">분석 항목</div><div class="info-desc">5가지 위험 요소 자동 감지</div></div>
+          <div class="status-card">
+            <div class="status-title">마지막 감지</div>
+            <div class="status-value" id="lastDetected">-</div>
           </div>
-          <div class="info-card">
-            <div class="info-icon"><i class="ri-file-chart-line"></i></div>
-            <div><div class="info-title">결과물</div><div class="info-desc">AI 종합안전평가 보고서</div></div>
+          <div class="status-card">
+            <div class="status-title">위험 등급</div>
+            <div class="status-value" id="riskGrade">-</div>
           </div>
         </div>
-      </div>
-      <div id="analyzingSection" style="display:none">
-        <div class="analyzing-card">
-          <div class="video-wrap" id="videoWrap" style="display:none">
-            <video id="analyzingVideo" autoplay muted loop playsinline></video>
-            <div class="ai-badge"><div class="ai-dot"></div> AI 분석 중</div>
-          </div>
-          <div class="analyzing-body">
-            <div class="spinner-wrap">
-              <svg width="80" height="80" viewBox="0 0 120 120">
-                <circle cx="60" cy="60" r="54" fill="none" stroke="#f1f5f9" stroke-width="8"/>
-                <circle cx="60" cy="60" r="54" fill="none" stroke="#334155" stroke-width="8"
-                  stroke-dasharray="339.3" stroke-dashoffset="254.5" stroke-linecap="round"/>
-              </svg>
-              <div class="spinner-icon"><i class="ri-robot-2-line"></i></div>
+
+        <!-- 버튼 -->
+        <div class="btn-area">
+          <button class="detect-btn" id="detectBtn" disabled onclick="startDetection()">
+            <i class="ri-shield-flash-line"></i> 감지 시작
+          </button>
+        </div>
+
+        <!-- 분석 진행 -->
+        <div id="analyzingSection" style="display:none">
+          <div class="analyzing-card">
+            <div class="analyzing-body">
+              <div class="spinner-wrap">
+                <svg width="80" height="80" viewBox="0 0 120 120">
+                  <circle cx="60" cy="60" r="54" fill="none" stroke="#f1f5f9" stroke-width="8"/>
+                  <circle cx="60" cy="60" r="54" fill="none" stroke="#334155" stroke-width="8"
+                    stroke-dasharray="339.3" stroke-dashoffset="254.5" stroke-linecap="round"/>
+                </svg>
+                <div class="spinner-icon"><i class="ri-robot-2-line"></i></div>
+              </div>
+              <div class="analyzing-title">AI 분석 진행 중</div>
+              <div class="analyzing-sub">현장을 분석하고 있습니다</div>
+              <div class="steps-list" id="stepsList"></div>
+              <div class="progress-bar-bg">
+                <div class="progress-bar" id="progressBar" style="width:20%"></div>
+              </div>
+              <div class="progress-text" id="progressText">20% 완료</div>
             </div>
-            <div class="analyzing-title">AI 분석 진행 중</div>
-            <div class="analyzing-sub">영상을 분석하고 있습니다</div>
-            <div class="steps-list" id="stepsList"></div>
-            <div class="progress-bar-bg">
-              <div class="progress-bar" id="progressBar" style="width:20%"></div>
-            </div>
-            <div class="progress-text" id="progressText">20% 완료</div>
           </div>
         </div>
       </div>
     </div>
   </main>
+
+  <!-- 위험 알림 팝업 -->
+  <div class="alert-popup" id="alertPopup">
+    <div class="alert-title">🔴 위험 감지!</div>
+    <div class="alert-desc" id="alertDesc"></div>
+  </div>
+
   <script>
 const steps = [
-  { icon: 'ri-video-line', label: '영상 프레임 추출 중...' },
+  { icon: 'ri-camera-line', label: '현장 사진 캡처 중...' },
   { icon: 'ri-scan-line', label: 'YOLO 객체 감지 실행 중...' },
-  { icon: 'ri-user-follow-line', label: 'ByteTrack 작업자 ID 추적 중...' },
   { icon: 'ri-shield-flash-line', label: '위험 요소 분류 중...' },
   { icon: 'ri-scales-3-line', label: '산업안전보건법 조항 매칭 중...' },
   { icon: 'ri-file-text-line', label: '보고서 자동 생성 중...' },
 ];
-let uploadedFile = null;
-const uploadZone = document.getElementById('uploadZone');
-const fileInput = document.getElementById('fileInput');
-const analyzeBtn = document.getElementById('analyzeBtn');
-const uploadSection = document.getElementById('uploadSection');
+
+const cameraVideo = document.getElementById('cameraVideo');
+const cameraCanvas = document.getElementById('cameraCanvas');
+const cameraSection = document.getElementById('cameraSection');
+const cameraDot = document.getElementById('cameraDot');
+const cameraStatus = document.getElementById('cameraStatus');
+const detectBtn = document.getElementById('detectBtn');
 const analyzingSection = document.getElementById('analyzingSection');
+const analyzingOverlay = document.getElementById('analyzingOverlay');
 const stepsList = document.getElementById('stepsList');
 const progressBar = document.getElementById('progressBar');
 const progressText = document.getElementById('progressText');
-const videoWrap = document.getElementById('videoWrap');
-const analyzingVideo = document.getElementById('analyzingVideo');
+const alertPopup = document.getElementById('alertPopup');
 
-uploadZone.addEventListener('click', () => {
-  if (!uploadedFile) fileInput.click();
-});
-
-fileInput.addEventListener('change', (e) => {
-  if (e.target.files[0]) handleFile(e.target.files[0]);
-});
-
-uploadZone.addEventListener('dragover', (e) => {
-  e.preventDefault();
-  uploadZone.classList.add('dragover');
-});
-uploadZone.addEventListener('dragleave', () => {
-  uploadZone.classList.remove('dragover');
-});
-uploadZone.addEventListener('drop', (e) => {
-  e.preventDefault();
-  uploadZone.classList.remove('dragover');
-  if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
-});
-
-function formatSize(bytes) {
-  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
-  return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
-}
-
-function handleFile(file) {
-  if (!file.type.startsWith('video/')) return;
-  uploadedFile = file;
-  const url = URL.createObjectURL(file);
-  uploadZone.classList.add('has-file');
-  uploadZone.innerHTML = `
-<div class="file-preview">
-<div class="file-info">
-<div class="file-icon"><i class="ri-video-fill"></i></div>
-<div>
-<div class="file-name">${file.name}</div>
-<div class="file-size">${formatSize(file.size)}</div>
-</div>
-</div>
-<button class="file-change" onclick="resetFile(event)">다른 파일 선택</button>
-</div>
-`;
-  analyzingVideo.src = url;
-  videoWrap.style.display = 'block';
-  analyzeBtn.classList.remove('disabled');
-  analyzeBtn.classList.add('active');
-  analyzeBtn.disabled = false;
-}
-
-function resetFile(e) {
-  e.stopPropagation();
-  uploadedFile = null;
-  uploadZone.classList.remove('has-file');
-  uploadZone.innerHTML = `
-<input type="file" id="fileInput" accept="video/*" style="display:none" />
-<div class="upload-icon"><i class="ri-upload-cloud-2-line"></i></div>
-<div class="upload-title">영상 파일을 드래그하거나 클릭하여 업로드</div>
-<div class="upload-sub">MP4, MOV, AVI, MKV 지원</div>
-`;
-  document.getElementById('fileInput').addEventListener('change', (e) => {
-    if (e.target.files[0]) handleFile(e.target.files[0]);
-  });
-  uploadZone.addEventListener('click', () => {
-    if (!uploadedFile) document.getElementById('fileInput').click();
-  });
-  analyzeBtn.classList.add('disabled');
-  analyzeBtn.classList.remove('active');
-  analyzeBtn.disabled = true;
+// 카메라 연결
+async function initCamera() {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+    cameraVideo.srcObject = stream;
+    cameraDot.className = 'camera-dot';
+    cameraStatus.textContent = 'LIVE';
+    detectBtn.disabled = false;
+  } catch (err) {
+    cameraStatus.textContent = '카메라 연결 실패';
+    cameraDot.style.background = '#ef4444';
+  }
 }
 
 function renderSteps(activeIdx) {
@@ -218,14 +188,11 @@ function renderSteps(activeIdx) {
     return `
 <div class="step-item ${cls}">
 <div class="step-icon">
-${i < activeIdx
-  ? '<i class="ri-checkbox-circle-fill"></i>'
-  : `<i class="${s.icon}"></i>`}
+${i < activeIdx ? '<i class="ri-checkbox-circle-fill"></i>' : `<i class="${s.icon}"></i>`}
 </div>
 <span class="step-label">${s.label}</span>
 ${i === activeIdx ? '<i class="ri-loader-4-line" style="animation:spin 1s linear infinite;margin-left:auto"></i>' : ''}
-</div>
-`;
+</div>`;
   }).join('');
 }
 
@@ -236,58 +203,78 @@ function updateProgress(step) {
   renderSteps(step);
 }
 
-analyzeBtn.addEventListener('click', async () => {
-  if (!uploadedFile) return;
-  uploadSection.style.display = 'none';
+function showAlert(desc) {
+  document.getElementById('alertDesc').textContent = desc;
+  alertPopup.style.display = 'block';
+  cameraSection.classList.add('camera-border-danger');
+  cameraDot.classList.add('danger');
+  setTimeout(() => {
+    alertPopup.style.display = 'none';
+  }, 5000);
+}
+
+async function startDetection() {
+  detectBtn.disabled = true;
+  analyzingOverlay.style.display = 'flex';
   analyzingSection.style.display = 'block';
   renderSteps(0);
   updateProgress(0);
 
-  const formData = new FormData();
-  formData.append('video', uploadedFile);
-  formData.append('location', document.getElementById('locationInput').value);
-  formData.append('purpose', document.getElementById('purposeInput').value);
+  // 카메라에서 사진 1장 캡처
+  const canvas = document.createElement('canvas');
+  canvas.width = cameraVideo.videoWidth;
+  canvas.height = cameraVideo.videoHeight;
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(cameraVideo, 0, 0);
 
-  let uiStep = 0;
-  const uiInterval = setInterval(() => {
-    if (uiStep < steps.length - 2) {
-      uiStep++;
-      updateProgress(uiStep);
+  canvas.toBlob(async (blob) => {
+    const formData = new FormData();
+    formData.append('video', blob, 'capture.jpg');
+
+    let uiStep = 0;
+    const uiInterval = setInterval(() => {
+      if (uiStep < steps.length - 2) {
+        uiStep++;
+        updateProgress(uiStep);
+      }
+    }, 2000);
+
+    try {
+      const res = await fetch('https://safety-server-oqza.onrender.com/analyze', {
+        method: 'POST',
+        body: formData
+      });
+
+      if (!res.ok) throw new 오류('분석 서버 오류 ' + res.status);
+
+      const data = await res.json();
+      const reportId = data.report_id;
+      if (!reportId) throw new 오류('분석 실패');
+
+      clearInterval(uiInterval);
+      updateProgress(steps.length - 2);
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      updateProgress(steps.length - 1);
+
+      // 상태 업데이트
+      document.getElementById('lastDetected').textContent = new Date().toLocaleTimeString('ko-KR');
+      showAlert('위험 상황이 감지됐습니다. 보고서를 확인하세요.');
+
+      setTimeout(() => {
+        window.location.href = '/reports/' + reportId;
+      }, 1500);
+
+    } catch (err) {
+      clearInterval(uiInterval);
+      analyzingOverlay.style.display = 'none';
+      analyzingSection.style.display = 'none';
+      detectBtn.disabled = false;
+      alert('오류: ' + err.message);
     }
-  }, 3000);
+  }, 'image/jpeg');
+}
 
-  try {
-    const res = await fetch('https://safety-server-oqza.onrender.com/analyze', {
-      method: 'POST',
-      body: formData
-    });
-    if (!res.ok) throw new Error('분석 서버 오류 ' + res.status);
-
-    const data = await res.json();
-    const reportId = data.report_id;
-    if (!reportId) throw new Error('분석 실패: ' + JSON.stringify(data));
-
-    clearInterval(uiInterval);
-    updateProgress(steps.length - 2);
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    updateProgress(steps.length - 1);
-
-    setTimeout(() => {
-      window.location.href = '/reports/' + reportId;
-    }, 800);
-
-  } catch (err) {
-    clearInterval(uiInterval);
-    updateProgress(steps.length - 1);
-    const errDiv = document.createElement('div');
-    errDiv.style.cssText = 'color:#ef4444;font-size:13px;text-align:center;margin-top:12px;padding:10px;background:#fee2e2;border-radius:8px;';
-    errDiv.textContent = '오류: ' + err.message;
-    document.querySelector('.analyzing-body').appendChild(errDiv);
-    setTimeout(() => {
-      window.location.href = '/reports';
-    }, 3000);
-  }
-});
+initCamera();
   </script>
 </body>
 </html>
