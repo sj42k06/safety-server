@@ -27,7 +27,7 @@
     .status-value.safe { color: #16a34a; }
     .analyzing-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.6); display: none; align-items: center; justify-content: center; flex-direction: column; gap: 12px; color: #fff; font-size: 16px; font-weight: 700; }
     .analyzing-spinner { width: 40px; height: 40px; border: 4px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%; animation: spin 1s linear infinite; }
-    @keyframes spin { to { transform: rotate(360deg); } }
+    @keyframes spin { 까지 { transform: rotate(360deg); } }
     .alert-popup { position: fixed; top: 20px; right: 20px; background: #dc2626; color: #fff; padding: 16px 20px; border-radius: 12px; z-index: 999; display: none; box-shadow: 0 4px 20px rgba(0,0,0,0.3); }
     .alert-title { font-size: 15px; font-weight: 700; margin-bottom: 4px; }
     .alert-desc { font-size: 13px; opacity: 0.9; }
@@ -44,8 +44,9 @@
       </div>
     </div>
     <nav>
-      <a href="/upload" class="active"><i class="ri-camera-line"></i> 현장 모니터링</a>
-      <a href="/reports"><i class="ri-file-chart-line"></i> AI 보고서</a>
+  <a href="/dashboard"><i class="ri-dashboard-line"></i> 대시보드</a>
+  <a href="/upload" class="active"><i class="ri-camera-line"></i> 현장 모니터링</a>
+  <a href="/reports"><i class="ri-file-chart-line"></i> AI 보고서</a>
     </nav>
     <div class="user-section">
       <div class="user-info">
