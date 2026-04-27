@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>대시보드 - 스마트 현장 안전관제 시스템</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/remixicon/4.2.0/remixicon.min.css" />
+  <link rel="stylesheet" href="upload.css" />
+  <style>
+    .dashboard-grid { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 16px; margin-bottom: 24px; }
+    .stat-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; }
+    .stat-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+    .stat-label { font-size: 13px; color: #94a3b8; font-weight: 500; }
+    .stat-icon { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 16px; }
+    .stat-icon.red { background: #fee2e2; color: #dc2626; }
+    .stat-icon.yellow { background: #fef3c7; color: #d97706; }
+    .stat-icon.blue { background: #dbeafe; color: #2563eb; }
+    .stat-icon.green { background: #dcfce7; color: #16a34a; }
+    .stat-value { font-size: 32px; font-weight: 700; color: #1e293b; margin-bottom: 4px; }
+    .stat-desc { font-size: 12px; color: #94a3b8; }
+    .monitor-banner { background: #1e293b; border-radius: 12px; padding: 24px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; }
+    .monitor-banner-text h3 { color: #fff; font-size: 18px; font-weight: 700; margin-bottom: 6px; }
+    .monitor-banner-text p { color: #94a3b8; font-size: 13px; }
+    .monitor-btn { background: #3b82f6; color: #fff; border: none; padding: 12px 24px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; white-space: nowrap; }
+    .monitor-btn:hover { background: #2563eb; }
+    .bottom-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+    .section-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; }
+    .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+    .section-title { font-size: 15px; font-weight: 700; color: #1e293b; }
+    .section-link { font-size: 13px; color: #3b82f6; cursor: pointer; text-decoration: none; }
+    .report-item { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #f1f5f9; }
+    .report-item:last-child { border-bottom: none; }
+    .report-info { display: flex; flex-direction: column; gap: 4px; }
+    .report-title { font-size: 14px; font-weight: 600; color: #1e293b; }
+    .report-time { font-size: 12px; color: #94a3b8; }
+    .report-badge { padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+    .badge-danger { background: #fee2e2; color: #dc2626; }
+    .badge-warning { background: #fef3c7; color: #d97706; }
+    .badge-safe { background: #dcfce7; color: #16a34a; }
+    .empty-state { text-align: center; padding: 40px 0; color: #94a3b8; }
+    .empty-state i { font-size: 40px; margin-bottom: 12px; display: block; }
+    .empty-state p { font-size: 14px; margin-bottom: 8px; }
+    .empty-state a { font-size: 13px; color: #3b82f6; cursor: pointer; }
+    .flow-list { display: flex; flex-direction: column; gap: 12px; }
+    .flow-item { display: flex; align-items: center; gap: 12px; padding: 12px; background: #f8fafc; border-radius: 8px; }
+    .flow-icon { width: 32px; height: 32px; border-radius: 50%; background: #1e293b; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 14px; flex-shrink: 0; }
+    .flow-text { font-size: 13px; color: #475569; }
+    .system-status { display: flex; align-items: center; gap: 8px; background: #dcfce7; color: #16a34a; padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: 600; }
+    .status-dot { width: 8px; height: 8px; background: #16a34a; border-radius: 50%; animation: blink 1s infinite; }
+    @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+    .date-text { font-size: 13px; color: #94a3b8; margin-bottom: 20px; }
+    .risk-dist { display: flex; flex-direction: column; gap: 10px; }
+    .risk-row { display: flex; align-items: center; gap: 12px; }
+    .risk-label { font-size: 13px; color: #475569; width: 40px; }
+    .risk-bar-bg { flex: 1; height: 8px; background: #f1f5f9; border-radius: 4px; overflow: hidden; }
+    .risk-bar { height: 100%; border-radius: 4px; transition: width 0.5s; }
+    .risk-bar.danger { background: #dc2626; }
+    .risk-bar.warning { background: #f59e0b; }
+    .risk-bar.safe { background: #22c55e; }
+    .risk-count { font-size: 13px; font-weight: 600; color: #1e293b; width: 30px; text-align: right; }
+  </style>
+</head>
+<body>
+  <aside>
+    <div class="logo">
+      <img src="https://public.readdy.ai/ai/img_res/f3ccc83c-cf23-4ebf-b376-21d351a806b7.png" alt="로고" />
+      <div class="logo-text">
+        <div class="title">스마트 현장</div>
+        <div class="sub">안전관제 시스템</div>
+      </div>
+    </div>
+    <nav>
+      <a href="/dashboard" class="active"><i class="ri-dashboard-line"></i> 대시보드</a>
+      <a href="/upload"><i class="ri-camera-line"></i> 현장 모니터링</a>
+      <a href="/reports"><i class="ri-file-chart-line"></i> AI 보고서</a>
+    </nav>
+    <div class="user-section">
+      <div class="user-info">
+        <div class="user-avatar"><i class="ri-user-line"></i></div>
+        <div>
+          <div class="user-name">관리자 (admin)</div>
+          <div class="user-role">현장 관리자</div>
+        </div>
+      </div>
+      <button class="logout-btn" onclick="window.location.href='/'">
+        <i class="ri-logout-box-r-line"></i> 로그아웃
+      </button>
+    </div>
+  </aside>
+
+  <main>
+    <div class="inner">
+      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
+        <h2 style="margin:0">대시보드</h2>
+        <div class="system-status">
+          <div class="status-dot"></div>
+          시스템 정상
+        </div>
+      </div>
+      <div class="date-text" id="dateText"></div>
+
+      <!-- 통계 카드 -->
+      <div class="dashboard-grid">
+        <div class="stat-card">
+          <div class="stat-header">
+            <div class="stat-label">총 분석 보고서</div>
+            <div class="stat-icon blue"><i class="ri-file-chart-line"></i></div>
+          </div>
+          <div class="stat-value" id="totalCount">0</div>
+          <div class="stat-desc">건 누적 분석</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-header">
+            <div class="stat-label">위험 등급</div>
+            <div class="stat-icon red"><i class="ri-alarm-warning-line"></i></div>
+          </div>
+          <div class="stat-value" id="dangerCount">0</div>
+          <div class="stat-desc">건 즉시 조치 필요</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-header">
+            <div class="stat-label">관찰 등급</div>
+            <div class="stat-icon yellow"><i class="ri-eye-line"></i></div>
+          </div>
+          <div class="stat-value" id="warningCount">0</div>
+          <div class="stat-desc">건 모니터링 필요</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-header">
+            <div class="stat-label">평균 위험도</div>
+            <div class="stat-icon green"><i class="ri-shield-check-line"></i></div>
+          </div>
+          <div class="stat-value" id="avgRisk">0%</div>
+          <div class="stat-desc">전체 보고서 평균</div>
+        </div>
+      </div>
+
+      <!-- 모니터링 배너 -->
+      <div class="monitor-banner">
+        <div class="monitor-banner-text">
+          <h3>새 현장 AI 분석 시작</h3>
+          <p>웹캠을 연결하면 AI가 위험 요소를 자동 감지하고 보고서를 생성합니다</p>
+        </div>
+        <button class="monitor-btn" onclick="window.location.href='/upload'">
+          <i class="ri-camera-line"></i> 현장 모니터링 →
+        </button>
+      </div>
+
+      <!-- 하단 그리드 -->
+      <div class="bottom-grid">
+        <!-- 최근 보고서 -->
+        <div class="section-card">
+          <div class="section-header">
+            <div class="section-title">최근 AI 분석 보고서</div>
+            <a class="section-link" href="/reports">전체 보기 →</a>
+          </div>
+          <div id="recentReports">
+            <div class="empty-state">
+              <i class="ri-file-chart-line"></i>
+              <p>아직 분석된 보고서가 없습니다</p>
+              <a onclick="window.location.href='/upload'">첫 번째 현장 모니터링 시작하기 →</a>
+            </div>
+          </div>
+        </div>
+
+        <!-- 위험 등급 분포 -->
+        <div class="section-card">
+          <div class="section-header">
+            <div class="section-title">위험 등급 분포</div>
+          </div>
+          <div class="risk-dist" style="margin-bottom:24px;">
+            <div class="risk-row">
+              <div class="risk-label">위험</div>
+              <div class="risk-bar-bg"><div class="risk-bar danger" id="dangerBar" style="width:0%"></div></div>
+              <div class="risk-count" id="dangerBarCount">0건</div>
+            </div>
+            <div class="risk-row">
+              <div class="risk-label">관찰</div>
+              <div class="risk-bar-bg"><div class="risk-bar warning" id="warningBar" style="width:0%"></div></div>
+              <div class="risk-count" id="warningBarCount">0건</div>
+            </div>
+            <div class="risk-row">
+              <div class="risk-label">정상</div>
+              <div class="risk-bar-bg"><div class="risk-bar safe" id="safeBar" style="width:0%"></div></div>
+              <div class="risk-count" id="safeBarCount">0건</div>
+            </div>
+          </div>
+
+          <!-- 분석 흐름 -->
+          <div class="section-title" style="margin-bottom:12px;">분석 흐름</div>
+          <div class="flow-list">
+            <div class="flow-item">
+              <div class="flow-icon"><i class="ri-camera-line"></i></div>
+              <div class="flow-text">현장 모니터링 → 웹캠 연결 후 감지 시작</div>
+            </div>
+            <div class="flow-item">
+              <div class="flow-icon"><i class="ri-robot-2-line"></i></div>
+              <div class="flow-text">AI 자동 분석 → YOLO가 위험 요소 감지</div>
+            </div>
+            <div class="flow-item">
+              <div class="flow-icon"><i class="ri-file-text-line"></i></div>
+              <div class="flow-text">보고서 생성 → 위반법규/권고사항 자동 작성</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+// 날짜/시간 표시
+function updateDate() {
+  const now = new Date();
+  const days = ['일', '월', '화', '수', '목', '금', '토'];
+  const formatted = `${now.getFullYear()}년 ${now.getMonth()+1}월 ${now.getDate()}일 ${days[now.getDay()]}요일 · 마지막 업데이트: 오${now.getHours() < 12 ? '전' : '후'} ${now.getHours() < 12 ? now.getHours() : now.getHours()-12}:${String(now.getMinutes()).padStart(2,'0')}`;
+  document.getElementById('dateText').textContent = formatted;
+}
+updateDate();
+setInterval(updateDate, 60000);
+
+// 통계 데이터 불러오기
+async function loadStats() {
+  try {
+    const res = await fetch('https://safety-server-oqza.onrender.com/api/reports');
+    const data = await res.json();
+    if (!data.성공) return;
+
+    const reports = data.reports;
+    const total = reports.length;
+    const danger = reports.filter(r => r.risk_grade === '고위험').length;
+    const warning = reports.filter(r => r.risk_grade === '관찰').length;
+    const safe = reports.filter(r => r.risk_grade === '정상').length;
+    const avgRisk = total > 0 ? Math.round(reports.reduce((sum, r) => sum + (r.risk_score || 0), 0) / total) : 0;
+
+    document.getElementById('totalCount').textContent = total;
+    document.getElementById('dangerCount').textContent = danger;
+    document.getElementById('warningCount').textContent = warning;
+    document.getElementById('avgRisk').textContent = avgRisk + '%';
+
+    // 위험 등급 분포 바
+    if (total > 0) {
+      document.getElementById('dangerBar').style.width = (danger/total*100) + '%';
+      document.getElementById('warningBar').style.width = (warning/total*100) + '%';
+      document.getElementById('safeBar').style.width = (safe/total*100) + '%';
+    }
+    document.getElementById('dangerBarCount').textContent = danger + '건';
+    document.getElementById('warningBarCount').textContent = warning + '건';
+    document.getElementById('safeBarCount').textContent = safe + '건';
+
+    // 최근 보고서 목록
+    if (reports.length > 0) {
+      const recentHTML = reports.slice(0, 5).map(r => {
+        const date = new Date(r.created_at);
+        const timeStr = `${date.getMonth()+1}/${date.getDate()} ${date.getHours()}:${String(date.getMinutes()).padStart(2,'0')}`;
+        const badgeClass = r.risk_grade === '고위험' ? 'badge-danger' : r.risk_grade === '관찰' ? 'badge-warning' : 'badge-safe';
+        return `
+          <div class="report-item" onclick="window.location.href='/reports/${r.report_id}'" style="cursor:pointer;">
+            <div class="report-info">
+              <div class="report-title">보고서 #${r.report_id}</div>
+              <div class="report-time">${timeStr}</div>
+            </div>
+            <span class="report-badge ${badgeClass}">${r.risk_grade || '정상'}</span>
+          </div>
+        `;
+      }).join('');
+      document.getElementById('recentReports').innerHTML = recentHTML;
+    }
+
+  } catch (err) {
+    console.error('통계 로드 실패:', err);
+  }
+}
+
+loadStats();
+setInterval(loadStats, 30000);
+  </script>
+</body>
+</html>
