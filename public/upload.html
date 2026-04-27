@@ -10,29 +10,27 @@
     .monitoring-wrap { display: flex; flex-direction: column; gap: 16px; }
     .camera-section { background: #000; border-radius: 16px; overflow: hidden; position: relative; width: 100%; aspect-ratio: 16/9; }
     .camera-section video { width: 100%; height: 100%; object-fit: cover; }
-    .camera-section canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
     .camera-badge { position: absolute; top: 12px; right: 12px; background: rgba(0,0,0,0.7); color: #fff; padding: 4px 12px; border-radius: 20px; font-size: 12px; display: flex; align-items: center; gap: 6px; }
     .camera-dot { width: 8px; height: 8px; background: #22c55e; border-radius: 50%; animation: blink 1s infinite; }
     .camera-dot.danger { background: #ef4444; }
     @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
-    .camera-border-danger { border: 3px solid #ef4444 !important; }
+    .camera-border-danger { border: 4px solid #ef4444 !important; }
     .btn-area { display: flex; gap: 12px; }
     .detect-btn { flex: 1; background: #1e293b; color: #fff; border: none; padding: 14px; border-radius: 10px; font-size: 15px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; }
     .detect-btn:disabled { background: #94a3b8; cursor: not-allowed; }
-    .detect-btn.danger { background: #dc2626; }
+    .status-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
     .status-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; }
     .status-title { font-size: 13px; color: #94a3b8; margin-bottom: 8px; }
     .status-value { font-size: 18px; font-weight: 700; color: #1e293b; }
     .status-value.danger { color: #dc2626; }
     .status-value.safe { color: #16a34a; }
-    .status-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
-    .analyzing-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 12px; color: #fff; font-size: 16px; font-weight: 700; }
+    .analyzing-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.6); display: none; align-items: center; justify-content: center; flex-direction: column; gap: 12px; color: #fff; font-size: 16px; font-weight: 700; }
     .analyzing-spinner { width: 40px; height: 40px; border: 4px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%; animation: spin 1s linear infinite; }
     @keyframes spin { to { transform: rotate(360deg); } }
-    .alert-popup { position: fixed; top: 20px; right: 20px; background: #dc2626; color: #fff; padding: 16px 20px; border-radius: 12px; z-index: 999; display: none; animation: slideIn 0.3s ease; }
-    @keyframes slideIn { from { transform: translateX(100%); } to { transform: translateX(0); } }
+    .alert-popup { position: fixed; top: 20px; right: 20px; background: #dc2626; color: #fff; padding: 16px 20px; border-radius: 12px; z-index: 999; display: none; box-shadow: 0 4px 20px rgba(0,0,0,0.3); }
     .alert-title { font-size: 15px; font-weight: 700; margin-bottom: 4px; }
     .alert-desc { font-size: 13px; opacity: 0.9; }
+    .timer-text { font-size: 13px; color: #94a3b8; text-align: center; margin-top: 8px; }
   </style>
 </head>
 <body>
@@ -71,21 +69,20 @@
       <h2>현장 모니터링</h2>
       <p class="page-desc">
         웹캠을 통해 현장을 실시간으로 모니터링합니다.<br/>
-        [감지 시작] 버튼을 클릭하면 AI가 안전장비 착용 여부를 분석합니다.
+        [감지 시작] 버튼을 클릭하면 3초마다 자동으로 위험 상황을 감지합니다.
       </p>
 
       <div class="monitoring-wrap">
         <!-- 카메라 화면 -->
         <div class="camera-section" id="cameraSection">
           <video id="cameraVideo" autoplay muted playsinline></video>
-          <canvas id="cameraCanvas"></canvas>
+          <div class="analyzing-overlay" id="analyzingOverlay">
+            <div class="analyzing-spinner"></div>
+            <span>AI 분석 중...</span>
+          </div>
           <div class="camera-badge">
             <div class="camera-dot" id="cameraDot"></div>
             <span id="cameraStatus">카메라 연결 중...</span>
-          </div>
-          <div class="analyzing-overlay" id="analyzingOverlay" style="display:none">
-            <div class="analyzing-spinner"></div>
-            <span>AI 분석 중...</span>
           </div>
         </div>
 
@@ -100,39 +97,18 @@
             <div class="status-value" id="lastDetected">-</div>
           </div>
           <div class="status-card">
-            <div class="status-title">위험 등급</div>
-            <div class="status-value" id="riskGrade">-</div>
+            <div class="status-title">분석 횟수</div>
+            <div class="status-value" id="analyzeCount">0</div>
           </div>
         </div>
+
+        <div class="timer-text" id="timerText"></div>
 
         <!-- 버튼 -->
         <div class="btn-area">
           <button class="detect-btn" id="detectBtn" disabled onclick="startDetection()">
             <i class="ri-shield-flash-line"></i> 감지 시작
           </button>
-        </div>
-
-        <!-- 분석 진행 -->
-        <div id="analyzingSection" style="display:none">
-          <div class="analyzing-card">
-            <div class="analyzing-body">
-              <div class="spinner-wrap">
-                <svg width="80" height="80" viewBox="0 0 120 120">
-                  <circle cx="60" cy="60" r="54" fill="none" stroke="#f1f5f9" stroke-width="8"/>
-                  <circle cx="60" cy="60" r="54" fill="none" stroke="#334155" stroke-width="8"
-                    stroke-dasharray="339.3" stroke-dashoffset="254.5" stroke-linecap="round"/>
-                </svg>
-                <div class="spinner-icon"><i class="ri-robot-2-line"></i></div>
-              </div>
-              <div class="analyzing-title">AI 분석 진행 중</div>
-              <div class="analyzing-sub">현장을 분석하고 있습니다</div>
-              <div class="steps-list" id="stepsList"></div>
-              <div class="progress-bar-bg">
-                <div class="progress-bar" id="progressBar" style="width:20%"></div>
-              </div>
-              <div class="progress-text" id="progressText">20% 완료</div>
-            </div>
-          </div>
         </div>
       </div>
     </div>
@@ -141,30 +117,24 @@
   <!-- 위험 알림 팝업 -->
   <div class="alert-popup" id="alertPopup">
     <div class="alert-title">🔴 위험 감지!</div>
-    <div class="alert-desc" id="alertDesc"></div>
+    <div class="alert-desc" id="alertDesc">위험 상황이 감지됐습니다. 보고서를 확인하세요.</div>
   </div>
 
   <script>
-const steps = [
-  { icon: 'ri-camera-line', label: '현장 사진 캡처 중...' },
-  { icon: 'ri-scan-line', label: 'YOLO 객체 감지 실행 중...' },
-  { icon: 'ri-shield-flash-line', label: '위험 요소 분류 중...' },
-  { icon: 'ri-scales-3-line', label: '산업안전보건법 조항 매칭 중...' },
-  { icon: 'ri-file-text-line', label: '보고서 자동 생성 중...' },
-];
-
 const cameraVideo = document.getElementById('cameraVideo');
-const cameraCanvas = document.getElementById('cameraCanvas');
 const cameraSection = document.getElementById('cameraSection');
 const cameraDot = document.getElementById('cameraDot');
 const cameraStatus = document.getElementById('cameraStatus');
 const detectBtn = document.getElementById('detectBtn');
-const analyzingSection = document.getElementById('analyzingSection');
 const analyzingOverlay = document.getElementById('analyzingOverlay');
-const stepsList = document.getElementById('stepsList');
-const progressBar = document.getElementById('progressBar');
-const progressText = document.getElementById('progressText');
 const alertPopup = document.getElementById('alertPopup');
+const timerText = document.getElementById('timerText');
+
+let analyzeCount = 0;
+let isAnalyzing = false;
+let intervalId = null;
+let countdown = 3;
+let countdownId = null;
 
 // 카메라 연결
 async function initCamera() {
@@ -180,64 +150,43 @@ async function initCamera() {
   }
 }
 
-function renderSteps(activeIdx) {
-  stepsList.innerHTML = steps.map((s, i) => {
-    let cls = 'pending';
-    if (i < activeIdx) cls = 'done';
-    if (i === activeIdx) cls = 'active';
-    return `
-<div class="step-item ${cls}">
-<div class="step-icon">
-${i < activeIdx ? '<i class="ri-checkbox-circle-fill"></i>' : `<i class="${s.icon}"></i>`}
-</div>
-<span class="step-label">${s.label}</span>
-${i === activeIdx ? '<i class="ri-loader-4-line" style="animation:spin 1s linear infinite;margin-left:auto"></i>' : ''}
-</div>`;
-  }).join('');
+// 카운트다운 표시
+function startCountdown() {
+  countdown = 3;
+  timerText.textContent = `다음 분석까지 ${countdown}초`;
+  countdownId = setInterval(() => {
+    countdown--;
+    if (countdown > 0) {
+      timerText.textContent = `다음 분석까지 ${countdown}초`;
+    } else {
+      clearInterval(countdownId);
+      timerText.textContent = 'AI 분석 중...';
+    }
+  }, 1000);
 }
 
-function updateProgress(step) {
-  const pct = Math.round(((step + 1) / steps.length) * 100);
-  progressBar.style.width = pct + '%';
-  progressText.textContent = pct + '% 완료';
-  renderSteps(step);
-}
-
-function showAlert(desc) {
-  document.getElementById('alertDesc').textContent = desc;
-  alertPopup.style.display = 'block';
-  cameraSection.classList.add('camera-border-danger');
-  cameraDot.classList.add('danger');
-  setTimeout(() => {
-    alertPopup.style.display = 'none';
-  }, 5000);
-}
-
-async function startDetection() {
-  detectBtn.disabled = true;
-  analyzingOverlay.style.display = 'flex';
-  analyzingSection.style.display = 'block';
-  renderSteps(0);
-  updateProgress(0);
-
-  // 카메라에서 사진 1장 캡처
+// 카메라 사진 캡처
+function captureFrame() {
   const canvas = document.createElement('canvas');
   canvas.width = cameraVideo.videoWidth;
   canvas.height = cameraVideo.videoHeight;
   const ctx = canvas.getContext('2d');
   ctx.drawImage(cameraVideo, 0, 0);
+  return canvas;
+}
+
+// AI 분석
+async function analyze() {
+  if (isAnalyzing) return;
+  isAnalyzing = true;
+  analyzingOverlay.style.display = 'flex';
+  document.getElementById('currentStatus').textContent = '분석 중...';
+
+  const canvas = captureFrame();
 
   canvas.toBlob(async (blob) => {
     const formData = new FormData();
     formData.append('video', blob, 'capture.jpg');
-
-    let uiStep = 0;
-    const uiInterval = setInterval(() => {
-      if (uiStep < steps.length - 2) {
-        uiStep++;
-        updateProgress(uiStep);
-      }
-    }, 2000);
 
     try {
       const res = await fetch('https://safety-server-oqza.onrender.com/analyze', {
@@ -245,33 +194,67 @@ async function startDetection() {
         body: formData
       });
 
-      if (!res.ok) throw new 오류('분석 서버 오류 ' + res.status);
+      if (!res.ok) throw new Error('서버 오류');
 
       const data = await res.json();
       const reportId = data.report_id;
-      if (!reportId) throw new 오류('분석 실패');
+      if (!reportId) throw new Error('분석 실패');
 
-      clearInterval(uiInterval);
-      updateProgress(steps.length - 2);
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      updateProgress(steps.length - 1);
-
-      // 상태 업데이트
+      analyzeCount++;
+      document.getElementById('analyzeCount').textContent = analyzeCount;
       document.getElementById('lastDetected').textContent = new Date().toLocaleTimeString('ko-KR');
-      showAlert('위험 상황이 감지됐습니다. 보고서를 확인하세요.');
 
+      // 위험 감지 시 자동 중지
+      clearInterval(intervalId);
+      clearInterval(countdownId);
+      timerText.textContent = '';
+
+      // 알림 표시
+      cameraSection.classList.add('camera-border-danger');
+      cameraDot.classList.add('danger');
+      alertPopup.style.display = 'block';
+      document.getElementById('currentStatus').textContent = '위험 감지!';
+      document.getElementById('currentStatus').className = 'status-value danger';
+
+      // 보고서 페이지로 이동
       setTimeout(() => {
         window.location.href = '/reports/' + reportId;
-      }, 1500);
+      }, 2000);
 
     } catch (err) {
-      clearInterval(uiInterval);
+      // 정상이거나 오류면 계속 감지
+      analyzeCount++;
+      document.getElementById('analyzeCount').textContent = analyzeCount;
+      document.getElementById('currentStatus').textContent = '감지 중...';
       analyzingOverlay.style.display = 'none';
-      analyzingSection.style.display = 'none';
-      detectBtn.disabled = false;
-      alert('오류: ' + err.message);
+      isAnalyzing = false;
+      startCountdown();
     }
   }, 'image/jpeg');
+}
+
+// 감지 시작
+function startDetection() {
+  detectBtn.disabled = true;
+  detectBtn.innerHTML = '<i class="ri-shield-flash-line"></i> 감지 중...';
+  document.getElementById('currentStatus').textContent = '감지 중...';
+
+  // 즉시 첫 분석
+  analyze();
+
+  // 3초마다 반복
+  intervalId = setInterval(() => {
+    if (!isAnalyzing) {
+      analyze();
+    }
+  }, 3000);
+}
+
+function showAlert() {
+  alertPopup.style.display = 'block';
+  setTimeout(() => {
+    alertPopup.style.display = 'none';
+  }, 5000);
 }
 
 initCamera();
