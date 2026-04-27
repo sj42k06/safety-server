@@ -118,7 +118,7 @@ def generate_ai_report(ppe_risks, video_name):
 
 반드시 아래 JSON 형식으로만 응답하세요. 마크다운이나 다른 텍스트 없이 순수 JSON만:
 {{
-  "law_references": "위반된 산업안전보건법 조항명과 조항 번호 및 내용을 구체적으로 작성 (예: 산업안전보건법 제38조제1항 - 안전모 착용 의무 위반, 제39조 - 보호구 지급 의무 위반)",
+  "law_references": "위반된 산업안전보건법 조항명과 조항 번호 및 내용을 구체적으로 작성",
   "recommendations": [
     "구체적인 권고사항 1",
     "구체적인 권고사항 2",
@@ -176,7 +176,22 @@ def generate_ai_report(ppe_risks, video_name):
         "summary_eval": f"총 {total_frames}개 프레임 분석 결과 작업자 {total_workers}명 감지. {'안전모 미착용 ' if helmet_violated else ''}{'안전조끼 미착용 ' if vest_violated else ''}위반 확인. 위험등급: {risk_grade}. 즉각적인 안전 조치가 필요합니다."
     }
 
+def is_image_file(path):
+    ext = os.path.splitext(path)[1].lower()
+    return ext in ['.jpg', '.jpeg', '.png', '.bmp']
+
 def extract_frames_cv2(video_path, frames_folder):
+    # 이미지 파일이면 그냥 복사
+    if is_image_file(video_path):
+        frame_path = os.path.join(frames_folder, "frame_0001.jpg")
+        img = cv2.imread(video_path)
+        if img is None:
+            raise RuntimeError(f"이미지 열기 실패: {video_path}")
+        img_resized = cv2.resize(img, (640, 480))
+        cv2.imwrite(frame_path, img_resized)
+        return 1
+
+    # 영상 파일이면 기존 방식
     cap = cv2.VideoCapture(video_path)
     if not cap.isOpened():
         raise RuntimeError(f"영상 열기 실패: {video_path}")
@@ -230,7 +245,6 @@ def run_pipeline(video_path):
 
         ai_report = generate_ai_report(ppe_risks, video_name)
 
-        # 연속 같은 위반은 대표 1장만 저장
         prev_signature = None
         for ppe_frame in ppe_risks:
             if not ppe_frame.get('workers'):
@@ -255,7 +269,7 @@ def run_pipeline(video_path):
             frame_path_to_save = cloudinary_url if cloudinary_url else f_path
             cursor.execute(
                 "INSERT INTO frames (video_id, frame_path, captured_at) VALUES (%s, %s, %s)",
-                (video_id, frame_path_to_save, datetime.now())
+                (video_id, frame_path_to_save, datetime.지금())
             )
             frame_id = cursor.lastrowid
 
@@ -265,7 +279,7 @@ def run_pipeline(video_path):
                 cursor.execute("""
                     INSERT INTO report_items (report_id, frame_id, event_time, status, description)
                     VALUES (%s, %s, %s, %s, %s)
-                """, (report_id, frame_id, datetime.now(), current_status,
+                """, (report_id, frame_id, datetime.지금(), current_status,
                       f"보호구: {worker['helmet']}, 조끼: {worker['vest']}"))
 
         cursor.execute("""
@@ -293,7 +307,7 @@ def run_pipeline(video_path):
             report_id
         ))
 
-        conn.commit()
+        conn.커밋()
         print(json.dumps({"status": "success", "report_id": report_id}, ensure_ascii=False))
 
     except Exception as e:
