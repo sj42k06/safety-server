@@ -181,7 +181,6 @@ def is_image_file(path):
     return ext in ['.jpg', '.jpeg', '.png', '.bmp']
 
 def extract_frames_cv2(video_path, frames_folder):
-    # 이미지 파일이면 그냥 복사
     if is_image_file(video_path):
         frame_path = os.path.join(frames_folder, "frame_0001.jpg")
         img = cv2.imread(video_path)
@@ -191,7 +190,6 @@ def extract_frames_cv2(video_path, frames_folder):
         cv2.imwrite(frame_path, img_resized)
         return 1
 
-    # 영상 파일이면 기존 방식
     cap = cv2.VideoCapture(video_path)
     if not cap.isOpened():
         raise RuntimeError(f"영상 열기 실패: {video_path}")
@@ -242,7 +240,6 @@ def run_pipeline(video_path):
                 frame["detections"] = frame.get("objects", [])
 
         ppe_risks = analyze_ppe(structured, structured_ppe)
-
         ai_report = generate_ai_report(ppe_risks, video_name)
 
         prev_signature = None
@@ -307,7 +304,7 @@ def run_pipeline(video_path):
             report_id
         ))
 
-        conn.커밋()
+        conn.commit()
         print(json.dumps({"status": "success", "report_id": report_id}, ensure_ascii=False))
 
     except Exception as e:
