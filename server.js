@@ -21,7 +21,7 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-// 2. MySQL Pool 설정 (재학님 DB 규격)
+// 2. MySQL Pool 설정
 const db = mysql.createPool({
   host: process.env.MYSQLHOST,
   user: process.env.MYSQLUSER,
@@ -40,17 +40,19 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(express.static("public", { index: false }));
 
-// 업로드 폴더 자동 생성 확인
-const upload = multer({ 
-    dest: uploadDir,
-    fileFilter: (req, file, cb) => {
-        if (file.mimetype.startsWith('video/') || 
-            file.mimetype.startsWith('image/')) {
-            cb(null, true);
-        } else {
-            cb(new 오류('영상 또는 이미지 파일만 업로드 가능합니다.'));
-        }
+// 업로드 폴더 자동 생성
+const uploadDir = 'uploads/';
+if (!fs.existsSync(uploadDir)) { fs.mkdirSync(uploadDir); }
+const upload = multer({
+  dest: uploadDir,
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith('video/') ||
+      file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('영상 또는 이미지 파일만 업로드 가능합니다.'));
     }
+  }
 });
 
 // 4. 페이지 라우팅
@@ -60,37 +62,36 @@ app.get("/dashboard", (req, res) => res.sendFile(path.join(__dirname, "public", 
 app.get("/reports", (req, res) => res.sendFile(path.join(__dirname, "public", "reports.html")));
 app.get("/reports/:id", (req, res) => res.sendFile(path.join(__dirname, "public", "report-detail.html")));
 
-// 5. 관리자 로그인 (JWT 발급)
+// 5. 관리자 로그인
 app.post("/api/login", (req, res) => {
   const { userid, pwd } = req.body;
   if (userid === "admin" && pwd === "1234") {
     const token = jwt.sign({ userid }, process.env.JWT_SECRET || 'smart_safe_key', { expiresIn: "24h" });
-    return res.json({ 성공: true, token });
+    return res.json({ success: true, token });
   }
-  res.status(401).json({ 성공: false, error: "아이디 또는 비밀번호가 틀렸습니다." });
+  res.status(401).json({ success: false, error: "아이디 또는 비밀번호가 틀렸습니다." });
 });
 
-// 6. AI 파이프라인 실행 엔진 (에러 헨들링 강화)
+// 6. AI 파이프라인 실행
 function runPipeline(videoPath) {
   return new Promise((resolve, reject) => {
     const pipelinePath = path.join(__dirname, "AI_engine", "pipeline.py");
     console.log(`[엔진 가동] 경로: ${pipelinePath}`);
 
-    // Render 유료 플랜 환경에 맞춰 python3 사용
     const pyProcess = spawn("python3", [pipelinePath, videoPath]);
-    
+
     let output = "";
     let errorOutput = "";
 
-    pyProcess.stdout.：("data", (data) => { output += data.toString(); });
-    pyProcess.stderr.：("data", (data) => { 
+    pyProcess.stdout.on("data", (data) => { output += data.toString(); });
+    pyProcess.stderr.on("data", (data) => {
       errorOutput += data.toString();
-      console.log(`[AI 로그]: ${data}`); 
+      console.log(`[AI 로그]: ${data}`);
     });
 
-    pyProcess.：("close", (code) => {
+    pyProcess.on("close", (code) => {
       if (code !== 0) {
-        return reject(new 오류(`AI 엔진 오류 (코드 ${code}): ${errorOutput}`));
+        return reject(new Error(`AI 엔진 오류 (코드 ${code}): ${errorOutput}`));
       }
       try {
         const lines = output.trim().split('\n');
@@ -98,31 +99,27 @@ function runPipeline(videoPath) {
         const parsed = JSON.parse(jsonLine);
         resolve(parsed);
       } catch (e) {
-        reject(new 오류(`데이터 파싱 오류: ${output}`));
+        reject(new Error(`데이터 파싱 오류: ${output}`));
       }
     });
   });
 }
 
 // 7. 메인 분석 API
-
-// 7. 메인 분석 API
 app.post("/analyze", upload.single("video"), async (req, res) => {
-  if (!req.file) return res.status(400).json({ error: "분석할 영상을 업로드해 주세요." });
+  if (!req.file) return res.status(400).json({ error: "분석할 파일을 업로드해 주세요." });
 
   const tempPath = path.resolve(req.file.path);
 
   try {
     console.log(`[분석 요청] 파일명: ${req.file.originalname}`);
-    
-    // AI 분석 시작 (pipeline.py가 DB 저장까지 완료)
+
     const result = await runPipeline(tempPath);
 
-    // 분석 완료 후 임시 파일 즉시 삭제
     if (fs.existsSync(tempPath)) { fs.unlinkSync(tempPath); }
 
     res.status(200).json({
-      성공: true,
+      success: true,
       report_id: result.report_id,
       message: "안전 분석이 성공적으로 완료되었습니다."
     });
@@ -134,7 +131,7 @@ app.post("/analyze", upload.single("video"), async (req, res) => {
   }
 });
 
-// 8. 보고서 데이터 조회 API (썸네일 포함)
+// 8. 보고서 데이터 조회 API
 app.get("/api/reports", async (req, res) => {
   try {
     const [rows] = await db.query(`
@@ -152,7 +149,7 @@ app.get("/api/reports", async (req, res) => {
       ORDER BY r.created_at DESC 
       LIMIT 20
     `);
-    res.json({ 성공: true, reports: rows });
+    res.json({ success: true, reports: rows });
   } catch (err) {
     res.status(500).json({ error: "데이터베이스 조회 실패" });
   }
