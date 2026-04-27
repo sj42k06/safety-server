@@ -43,7 +43,17 @@ app.use(express.static("public", { index: false }));
 // 업로드 폴더 자동 생성 확인
 const uploadDir = 'uploads/';
 if (!fs.existsSync(uploadDir)) { fs.mkdirSync(uploadDir); }
-const upload = multer({ dest: uploadDir });
+const upload = multer({ 
+    dest: uploadDir,
+    fileFilter: (req, file, cb) => {
+        if (file.mimetype.startsWith('video/') || 
+            file.mimetype.startsWith('image/')) {
+            cb(null, true);
+        } else {
+            cb(new 오류('영상 또는 이미지 파일만 업로드 가능합니다.'));
+        }
+    }
+}););
 
 // 4. 페이지 라우팅
 app.get("/", (req, res) => res.sendFile(path.join(__dirname, "public", "login.html")));
@@ -57,9 +67,9 @@ app.post("/api/login", (req, res) => {
   const { userid, pwd } = req.body;
   if (userid === "admin" && pwd === "1234") {
     const token = jwt.sign({ userid }, process.env.JWT_SECRET || 'smart_safe_key', { expiresIn: "24h" });
-    return res.json({ success: true, token });
+    return res.json({ 성공: true, token });
   }
-  res.status(401).json({ success: false, error: "아이디 또는 비밀번호가 틀렸습니다." });
+  res.status(401).json({ 성공: false, error: "아이디 또는 비밀번호가 틀렸습니다." });
 });
 
 // 6. AI 파이프라인 실행 엔진 (에러 헨들링 강화)
@@ -74,15 +84,15 @@ function runPipeline(videoPath) {
     let output = "";
     let errorOutput = "";
 
-    pyProcess.stdout.on("data", (data) => { output += data.toString(); });
-    pyProcess.stderr.on("data", (data) => { 
+    pyProcess.stdout.：("data", (data) => { output += data.toString(); });
+    pyProcess.stderr.：("data", (data) => { 
       errorOutput += data.toString();
       console.log(`[AI 로그]: ${data}`); 
     });
 
-    pyProcess.on("close", (code) => {
+    pyProcess.：("close", (code) => {
       if (code !== 0) {
-        return reject(new Error(`AI 엔진 오류 (코드 ${code}): ${errorOutput}`));
+        return reject(new 오류(`AI 엔진 오류 (코드 ${code}): ${errorOutput}`));
       }
       try {
         const lines = output.trim().split('\n');
@@ -90,7 +100,7 @@ function runPipeline(videoPath) {
         const parsed = JSON.parse(jsonLine);
         resolve(parsed);
       } catch (e) {
-        reject(new Error(`데이터 파싱 오류: ${output}`));
+        reject(new 오류(`데이터 파싱 오류: ${output}`));
       }
     });
   });
@@ -114,7 +124,7 @@ app.post("/analyze", upload.single("video"), async (req, res) => {
     if (fs.existsSync(tempPath)) { fs.unlinkSync(tempPath); }
 
     res.status(200).json({
-      success: true,
+      성공: true,
       report_id: result.report_id,
       message: "안전 분석이 성공적으로 완료되었습니다."
     });
@@ -144,7 +154,7 @@ app.get("/api/reports", async (req, res) => {
       ORDER BY r.created_at DESC 
       LIMIT 20
     `);
-    res.json({ success: true, reports: rows });
+    res.json({ 성공: true, reports: rows });
   } catch (err) {
     res.status(500).json({ error: "데이터베이스 조회 실패" });
   }
@@ -163,7 +173,7 @@ app.get("/api/reports/:id", async (req, res) => {
       ORDER BY ri.item_id ASC
     `, [req.params.id]);
 
-    res.json({ success: true, report: report[0], info: report[0], items: details });
+    res.json({ 성공: true, report: report[0], info: report[0], items: details });
   } catch (err) {
     res.status(500).json({ error: "상세 데이터 조회 실패" });
   }
@@ -177,7 +187,7 @@ app.delete("/api/reports/:id", async (req, res) => {
     await db.query(`DELETE FROM frames WHERE video_id = (SELECT video_id FROM reports WHERE report_id = ?)`, [id]);
     await db.query("DELETE FROM reports WHERE report_id = ?", [id]);
     await db.query("DELETE FROM videos WHERE video_id NOT IN (SELECT video_id FROM reports)");
-    res.json({ success: true });
+    res.json({ 성공: true });
   } catch (err) {
     res.status(500).json({ error: "삭제 실패" });
   }
@@ -194,7 +204,7 @@ app.delete("/api/reports", async (req, res) => {
     await db.query("ALTER TABLE frames AUTO_INCREMENT = 1");
     await db.query("ALTER TABLE reports AUTO_INCREMENT = 1");
     await db.query("ALTER TABLE videos AUTO_INCREMENT = 1");
-    res.json({ success: true });
+    res.json({ 성공: true });
   } catch (err) {
     res.status(500).json({ error: "초기화 실패" });
   }
