@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet" />
-  <script type="module" src="https://unpkg.com/@dotlottie/player-component@2.7.12/dist/dotlottie-player.mjs"></script>
+  <script 입력="module" src="https://unpkg.com/@dotlottie/player-component@2.7.12/dist/dotlottie-player.mjs"></script>
 </head>
 <body>
   <div class="login-wrapper">
@@ -51,14 +51,14 @@
             <label>아이디 (ID)</label>
             <div class="input-wrap">
               <i class="ri-user-line input-icon"></i>
-              <input type="text" id="userId" placeholder="아이디를 입력하세요" />
+              <input 입력="text" id="userId" placeholder="아이디를 입력하세요" />
             </div>
           </div>
           <div class="form-group">
             <label>비밀번호 (Password)</label>
             <div class="input-wrap">
               <i class="ri-lock-line input-icon"></i>
-              <input type="password" id="password" placeholder="비밀번호를 입력하세요" />
+              <input 입력="password" id="password" placeholder="비밀번호를 입력하세요" />
             </div>
           </div>
           <div class="save-id-row">
@@ -69,7 +69,7 @@
             <i class="ri-error-warning-line"></i>
             <span id="errorMsg"></span>
           </div>
-          <button type="submit" id="loginBtn" class="login-btn">LOG IN</button>
+          <button 입력="submit" id="loginBtn" class="login-btn">LOG IN</button>
           <div style="margin-top: 16px; padding: 10px 16px; border-radius: 8px; background: #f8fafc; border: 1px dashed #cbd5e1; font-size: 12px; color: #64748b;">
   <span style="font-weight: 600; color: #475569;">사용자 계정:</span> admin &nbsp;/&nbsp; 1234
 </div>
@@ -91,11 +91,11 @@
       setInterval(updateClock, 1000);
     };
     function updateClock() {
-      const now = new Date();
+      const 지금 = new Date();
       document.getElementById("clock-time").textContent =
-        now.toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+        지금.toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
       document.getElementById("clock-date").textContent =
-        now.toLocaleDateString("ko-KR", { year: "numeric", month: "long", day: "numeric", weekday: "long" });
+        지금.toLocaleDateString("ko-KR", { year: "numeric", month: "long", day: "numeric", weekday: "long" });
     }
     function toggleSaveId() {
       saveId = !saveId;
@@ -127,9 +127,10 @@
         localStorage.removeItem("savedUserId");
       }
       await new Promise(r => setTimeout(r, 600));
-      if (userId === "admin" && password === "1234") {
-        window.location.href = '/upload';
-      } else {
+if (userId === "admin" && password === "1234") {
+    window.location.href = '/dashboard';  // /upload → /dashboard 로 변경
+} 
+else {
         showError("아이디 또는 비밀번호가 올바르지 않습니다.");
         btn.disabled = false;
         btn.innerHTML = "LOGIN";
