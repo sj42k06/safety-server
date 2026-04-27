@@ -14,14 +14,12 @@ const app = express();
 const server = http.createServer(app);
 const PORT = process.env.PORT || 10000;
 
-// 1. Cloudinary 설정
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
   api_key: process.env.CLOUDINARY_API_KEY,
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-// 2. MySQL Pool 설정
 const db = mysql.createPool({
   host: process.env.MYSQLHOST,
   user: process.env.MYSQLUSER,
@@ -34,13 +32,11 @@ const db = mysql.createPool({
   queueLimit: 0
 });
 
-// 3. 미들웨어 및 정적 파일 경로
 app.use(cors({ origin: "*", credentials: true }));
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(express.static("public", { index: false }));
 
-// 업로드 폴더 자동 생성
 const uploadDir = 'uploads/';
 if (!fs.existsSync(uploadDir)) { fs.mkdirSync(uploadDir); }
 const upload = multer({
@@ -55,14 +51,12 @@ const upload = multer({
   }
 });
 
-// 4. 페이지 라우팅
 app.get("/", (req, res) => res.sendFile(path.join(__dirname, "public", "login.html")));
 app.get("/upload", (req, res) => res.sendFile(path.join(__dirname, "public", "upload.html")));
 app.get("/dashboard", (req, res) => res.sendFile(path.join(__dirname, "public", "dashboard.html")));
 app.get("/reports", (req, res) => res.sendFile(path.join(__dirname, "public", "reports.html")));
 app.get("/reports/:id", (req, res) => res.sendFile(path.join(__dirname, "public", "report-detail.html")));
 
-// 5. 관리자 로그인
 app.post("/api/login", (req, res) => {
   const { userid, pwd } = req.body;
   if (userid === "admin" && pwd === "1234") {
@@ -72,23 +66,18 @@ app.post("/api/login", (req, res) => {
   res.status(401).json({ success: false, error: "아이디 또는 비밀번호가 틀렸습니다." });
 });
 
-// 6. AI 파이프라인 실행
 function runPipeline(videoPath) {
   return new Promise((resolve, reject) => {
     const pipelinePath = path.join(__dirname, "AI_engine", "pipeline.py");
     console.log(`[엔진 가동] 경로: ${pipelinePath}`);
-
     const pyProcess = spawn("python3", [pipelinePath, videoPath]);
-
     let output = "";
     let errorOutput = "";
-
     pyProcess.stdout.on("data", (data) => { output += data.toString(); });
     pyProcess.stderr.on("data", (data) => {
       errorOutput += data.toString();
       console.log(`[AI 로그]: ${data}`);
     });
-
     pyProcess.on("close", (code) => {
       if (code !== 0) {
         return reject(new Error(`AI 엔진 오류 (코드 ${code}): ${errorOutput}`));
@@ -105,33 +94,32 @@ function runPipeline(videoPath) {
   });
 }
 
-// 7. 메인 분석 API
 app.post("/analyze", upload.single("video"), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: "분석할 파일을 업로드해 주세요." });
 
   const tempPath = path.resolve(req.file.path);
+  
+  // 확장자 추가 (이미지면 .jpg, 영상이면 .mp4)
+  const ext = req.file.mimetype.startsWith('image/') ? '.jpg' : '.mp4';
+  const newPath = tempPath + ext;
+  fs.renameSync(tempPath, newPath);
 
   try {
     console.log(`[분석 요청] 파일명: ${req.file.originalname}`);
-
-    const result = await runPipeline(tempPath);
-
-    if (fs.existsSync(tempPath)) { fs.unlinkSync(tempPath); }
-
+    const result = await runPipeline(newPath);
+    if (fs.existsSync(newPath)) { fs.unlinkSync(newPath); }
     res.status(200).json({
       success: true,
       report_id: result.report_id,
       message: "안전 분석이 성공적으로 완료되었습니다."
     });
-
   } catch (error) {
     console.error("Critical Analysis Error:", error);
-    if (fs.existsSync(tempPath)) { fs.unlinkSync(tempPath); }
+    if (fs.existsSync(newPath)) { fs.unlinkSync(newPath); }
     res.status(500).json({ error: "분석 시스템 장애", detail: error.message });
   }
 });
 
-// 8. 보고서 데이터 조회 API
 app.get("/api/reports", async (req, res) => {
   try {
     const [rows] = await db.query(`
@@ -159,7 +147,6 @@ app.get("/api/reports/:id", async (req, res) => {
   try {
     const [report] = await db.query("SELECT * FROM reports WHERE report_id = ?", [req.params.id]);
     if (report.length === 0) return res.status(404).json({ error: "해당 보고서를 찾을 수 없습니다." });
-
     const [details] = await db.query(`
       SELECT ri.*, f.frame_path 
       FROM report_items ri 
@@ -167,14 +154,12 @@ app.get("/api/reports/:id", async (req, res) => {
       WHERE ri.report_id = ? 
       ORDER BY ri.item_id ASC
     `, [req.params.id]);
-
     res.json({ 성공: true, report: report[0], info: report[0], items: details });
   } catch (err) {
     res.status(500).json({ error: "상세 데이터 조회 실패" });
   }
 });
 
-// 보고서 단건 삭제
 app.delete("/api/reports/:id", async (req, res) => {
   try {
     const id = req.params.id;
@@ -188,7 +173,6 @@ app.delete("/api/reports/:id", async (req, res) => {
   }
 });
 
-// 전체 초기화
 app.delete("/api/reports", async (req, res) => {
   try {
     await db.query("DELETE FROM report_items");
@@ -205,19 +189,16 @@ app.delete("/api/reports", async (req, res) => {
   }
 });
 
-// 9. 시스템 상태 모니터링
 app.get("/health", (req, res) => {
   res.json({ status: "running", uptime: process.uptime(), db_connected: true });
 });
 
-// 10. 서버 가동
 server.listen(PORT, () => {
   console.log(`
   ================================================
   [Smart Safe Report] 서버가 가동되었습니다.
   - URL: https://safety-server-oqza.onrender.com
   - Port: ${PORT}
-  - DB Status: MySQL Connected (Railway)
   ================================================
   `);
 });
