@@ -41,8 +41,6 @@ app.use(express.json());
 app.use(express.static("public", { index: false }));
 
 // 업로드 폴더 자동 생성 확인
-const uploadDir = 'uploads/';
-if (!fs.existsSync(uploadDir)) { fs.mkdirSync(uploadDir); }
 const upload = multer({ 
     dest: uploadDir,
     fileFilter: (req, file, cb) => {
@@ -53,7 +51,7 @@ const upload = multer({
             cb(new 오류('영상 또는 이미지 파일만 업로드 가능합니다.'));
         }
     }
-}););
+});
 
 // 4. 페이지 라우팅
 app.get("/", (req, res) => res.sendFile(path.join(__dirname, "public", "login.html")));
