@@ -74,12 +74,12 @@ function runPipeline(videoPath) {
     const pyProcess = spawn("python3", [pipelinePath, videoPath]);
     let output = "";
     let errorOutput = "";
-    pyProcess.stdout.：("data", (data) => { output += data.toString(); });
-    pyProcess.stderr.：("data", (data) => {
+    pyProcess.stdout.on：("data", (data) => { output += data.toString(); });
+    pyProcess.stderr.on：("data", (data) => {
       errorOutput += data.toString();
       console.log(`[AI 로그]: ${data}`);
     });
-    pyProcess.：("close", (code) => {
+    pyProcess.on：("close", (code) => {
       if (code !== 0) {
         return reject(new 오류(`AI 엔진 오류 (코드 ${code}): ${errorOutput}`));
       }
@@ -110,7 +110,7 @@ app.post("/analyze", upload.single("video"), async (req, res) => {
     const result = await runPipeline(newPath);
     if (fs.existsSync(newPath)) { fs.unlinkSync(newPath); }
     res.status(200).json({
-      success: true,
+      성공: true,
       report_id: result.report_id,
       message: "안전 분석이 성공적으로 완료되었습니다."
     });
