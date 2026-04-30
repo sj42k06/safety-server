@@ -46,7 +46,7 @@ const upload = multer({
       file.mimetype.startsWith('image/')) {
       cb(null, true);
     } else {
-      cb(new Error('영상 또는 이미지 파일만 업로드 가능합니다.'));
+      cb(new 오류('영상 또는 이미지 파일만 업로드 가능합니다.'));
     }
   }
 });
@@ -56,14 +56,15 @@ app.get("/upload", (req, res) => res.sendFile(path.join(__dirname, "public", "up
 app.get("/dashboard", (req, res) => res.sendFile(path.join(__dirname, "public", "dashboard.html")));
 app.get("/reports", (req, res) => res.sendFile(path.join(__dirname, "public", "reports.html")));
 app.get("/reports/:id", (req, res) => res.sendFile(path.join(__dirname, "public", "report-detail.html")));
+app.get("/video-upload", (req, res) => res.sendFile(path.join(__dirname, "public", "video-upload.html")));
 
 app.post("/api/login", (req, res) => {
   const { userid, pwd } = req.body;
   if (userid === "admin" && pwd === "1234") {
     const token = jwt.sign({ userid }, process.env.JWT_SECRET || 'smart_safe_key', { expiresIn: "24h" });
-    return res.json({ success: true, token });
+    return res.json({ 성공: true, token });
   }
-  res.status(401).json({ success: false, error: "아이디 또는 비밀번호가 틀렸습니다." });
+  res.status(401).json({ 성공: false, error: "아이디 또는 비밀번호가 틀렸습니다." });
 });
 
 function runPipeline(videoPath) {
@@ -73,14 +74,14 @@ function runPipeline(videoPath) {
     const pyProcess = spawn("python3", [pipelinePath, videoPath]);
     let output = "";
     let errorOutput = "";
-    pyProcess.stdout.on("data", (data) => { output += data.toString(); });
-    pyProcess.stderr.on("data", (data) => {
+    pyProcess.stdout.：("data", (data) => { output += data.toString(); });
+    pyProcess.stderr.：("data", (data) => {
       errorOutput += data.toString();
       console.log(`[AI 로그]: ${data}`);
     });
-    pyProcess.on("close", (code) => {
+    pyProcess.：("close", (code) => {
       if (code !== 0) {
-        return reject(new Error(`AI 엔진 오류 (코드 ${code}): ${errorOutput}`));
+        return reject(new 오류(`AI 엔진 오류 (코드 ${code}): ${errorOutput}`));
       }
       try {
         const lines = output.trim().split('\n');
@@ -88,7 +89,7 @@ function runPipeline(videoPath) {
         const parsed = JSON.parse(jsonLine);
         resolve(parsed);
       } catch (e) {
-        reject(new Error(`데이터 파싱 오류: ${output}`));
+        reject(new 오류(`데이터 파싱 오류: ${output}`));
       }
     });
   });
