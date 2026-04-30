@@ -2,83 +2,43 @@ from ultralytics import YOLO
 import os
 import cv2
 
-MODEL_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "helmet_model.pt")
+MODEL_PATH = "helmet_model.pt"
 CONF_THRESHOLD = 0.3
-
-# 사용할 클래스 필터
-VALID_PPE = [
-    "Hardhat",
-    "NO-Hardhat",
-    "Safety Vest",
-    "NO-Safety Vest",
-    "machinery",
-    "vehicle"
-]
+# 모델에서 제공하는 클래스 리스트 반영
+VALID_CLASSES = ["Hardhat", "NO-Hardhat", "Safety Vest", "NO-Safety Vest", 
+                 "Person", "Safety Cone", "machinery", "vehicle", "Mask", "NO-Mask"]
 
 model = YOLO(MODEL_PATH)
 
-def detect_ppe(input_folder):
+def detect_all(input_folder):
     results_data = []
-
-    if not os.path.exists(input_folder):
-        print("입력 폴더가 존재하지 않습니다.")
-        return []
-
-    files = os.listdir(input_folder)
-
-    for filename in files:
-        if not filename.lower().endswith((".jpg", ".jpeg", ".png")):
-            continue
-
+    for filename in os.listdir(input_folder):
+        if not filename.lower().endswith((".jpg", ".jpeg", ".png")): continue
         path = os.path.join(input_folder, filename)
-
         try:
             img = cv2.imread(path)
-
-            if img is None:
-                continue
-
+            if img is None: continue
             h, w, _ = img.shape
-
             results = model(img)
-
             detections = []
 
             for r in results:
                 for box in r.boxes:
                     conf = float(box.conf[0])
-
-                    if conf < CONF_THRESHOLD:
-                        continue
-
-                    cls = int(box.cls[0])
-                    label = model.names[cls]
-
-                    # 필요한 객체만 필터링
-                    if label not in VALID_PPE:
-                        continue
+                    if conf < CONF_THRESHOLD: continue
+                    
+                    label = model.names[int(box.cls[0])]
+                    if label not in VALID_CLASSES: continue
 
                     x1, y1, x2, y2 = map(int, box.xyxy[0])
-
-                    cx = (x1 + x2) // 2
-                    cy = (y1 + y2) // 2
+                    # 발바닥(중앙 하단) 좌표: 거리 계산용
+                    fx, fy = (x1 + x2) // 2, y2 
 
                     detections.append({
-                        "type": label,
+                        "type": label.lower(), 
                         "confidence": round(conf, 2),
-                        "bbox": [x1, y1, x2, y2],
-                        "cx": cx,
-                        "cy": cy
+                        "bbox": [x1, y1, x2, y2], "fx": fx, "fy": fy
                     })
-
-            results_data.append({
-                "frame": filename,
-                "width": w,
-                "height": h,
-                "detections": detections
-            })
-
-        except Exception as e:
-            print(f"오류 발생 ({filename}):", e)
-
+            results_data.append({"frame": filename, "width": w, "height": h, "detections": detections})
+        except Exception as e: print(f"Error ({filename}): {e}")
     return results_data

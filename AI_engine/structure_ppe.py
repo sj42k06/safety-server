@@ -1,34 +1,27 @@
-def structure_ppe_data(results_data):
+def structure_data(results_data):
     structured = []
     for frame_data in results_data:
-        helmets = []
-        vests = []
-        machines = []
-
-        for det in frame_data.get("detections", []):
+        persons, helmets, vests, machines = [], [], [], []
+        
+        for det in frame_data["detections"]:
+            label = det["type"]
             obj_data = {
-                "id": None,
-                "type": det["type"],
-                "confidence": det["confidence"],
-                "bbox": det["bbox"],
-                "cx": det["cx"],
-                "cy": det["cy"]
+                "bbox": det["bbox"], "fx": det["fx"], "fy": det["fy"], "conf": det["confidence"]
             }
-            if det["type"] in ["Hardhat", "NO-Hardhat"]:
+
+            if label == "person":
+                persons.append(obj_data)
+            elif label in ["hardhat", "no-hardhat"]:
+                obj_data["type"] = label
                 helmets.append(obj_data)
-            elif det["type"] in ["Safety Vest", "NO-Safety Vest"]:
+            elif label in ["safety vest", "no-safety vest"]:
+                obj_data["type"] = label
                 vests.append(obj_data)
-            elif det["type"] in ["machinery", "vehicle"]:
+            elif label in ["machinery", "vehicle"]:
                 machines.append(obj_data)
 
         structured.append({
-            "frame": frame_data["frame"],
-            "width": frame_data["width"],
-            "height": frame_data["height"],
-            "helmets": helmets,
-            "vests": vests,
-            "machines": machines,
-            "detections": frame_data.get("detections", [])
+            "frame": frame_data["frame"], "width": frame_data["width"], "height": frame_data["height"],
+            "persons": persons, "helmets": helmets, "vests": vests, "machines": machines
         })
-
     return structured
