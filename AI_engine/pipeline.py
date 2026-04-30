@@ -9,12 +9,11 @@ import urllib.request
 from datetime import datetime
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from detect_objects import detect_objects
-from detect_ppe import detect_ppe
-from structure import structure_data
-from structure_ppe import structure_ppe_data
-from logic_fall import analyze_fall_risk
+from detect_ppe import detect_all
+from structure_ppe import structure_data
 from logic_ppe import analyze_ppe
+from logic_collision import analyze_collision
+from safety_engine import integrate_analysis
 
 cloudinary.config(
     cloud_name=os.getenv('CLOUDINARY_CLOUD_NAME', 'dxxaiv5ii'),
@@ -62,69 +61,67 @@ def call_openai(prompt):
         print(f"OpenAI 호출 실패: {e}", file=sys.stderr)
         return None
 
-def get_violation_signature(workers):
-    violations = set()
-    for w in workers:
-        if 'NO' in str(w.get('helmet', '')).upper():
-            violations.add('NO_HELMET')
-        if 'NO' in str(w.get('vest', '')).upper():
-            violations.add('NO_VEST')
-    return frozenset(violations)
-
-def generate_ai_report(ppe_risks, video_name):
-    total_frames = len(ppe_risks)
-    max_workers_per_frame = max((len(f['workers']) for f in ppe_risks if f.get('workers')), default=0)
-    total_workers = max_workers_per_frame
-
+def generate_ai_report(ppe_risks, collision_risks, final_result, video_name):
     helmet_violated = False
     vest_violated = False
-    high_risk_exists = False
-    medium_risk_exists = False
+    collision_detected = False
+    emergency_exists = False
+    warning_exists = False
 
     for frame in ppe_risks:
-        for worker in frame['workers']:
+        for worker in frame.get('workers', []):
             if 'NO' in str(worker.get('helmet', '')).upper():
                 helmet_violated = True
             if 'NO' in str(worker.get('vest', '')).upper():
                 vest_violated = True
-            if worker['risk'] == 'HIGH':
-                high_risk_exists = True
-            elif worker['risk'] == 'MEDIUM':
-                medium_risk_exists = True
 
-    helmet_violations = 1 if helmet_violated else 0
-    vest_violations = 1 if vest_violated else 0
+    for frame in collision_risks:
+        if frame.get('alerts'):
+            collision_detected = True
 
-    if high_risk_exists:
+    for frame in final_result:
+        for report in frame.get('reports', []):
+            if report.get('final_risk') == 'EMERGENCY':
+                emergency_exists = True
+            elif report.get('final_risk') == 'WARNING':
+                warning_exists = True
+
+    if emergency_exists:
+        risk_grade = "고위험"
+        risk_score = 95
+    elif warning_exists or helmet_violated:
         risk_grade = "고위험"
         risk_score = 85
-    elif medium_risk_exists:
+    elif vest_violated or collision_detected:
         risk_grade = "관찰"
-        risk_score = 45
+        risk_score = 55
     else:
         risk_grade = "정상"
         risk_score = 15
+
+    helmet_violations = 1 if helmet_violated else 0
+    vest_violations = 1 if vest_violated else 0
 
     prompt = f"""
 당신은 산업현장 안전관리 전문가입니다. 아래 AI 분석 결과를 바탕으로 안전 보고서를 작성해주세요.
 
 [분석 결과]
 - 분석 영상: {video_name}
-- 총 분석 프레임: {total_frames}개
-- 감지된 작업자 수: {total_workers}명
 - 안전모 미착용: {"있음" if helmet_violated else "없음"}
 - 안전조끼 미착용: {"있음" if vest_violated else "없음"}
+- 중장비 접근 감지: {"있음" if collision_detected else "없음"}
+- 위험도: {risk_score}%
 - 위험 등급: {risk_grade}
 
-반드시 아래 JSON 형식으로만 응답하세요. 마크다운이나 다른 텍스트 없이 순수 JSON만:
+반드시 아래 JSON 형식으로만 응답하세요. 마크다운 없이 순수 JSON만:
 {{
-  "law_references": "위반된 산업안전보건법 조항명과 조항 번호 및 내용을 구체적으로 작성",
+  "law_references": "위반된 산업안전보건법 조항 및 내용을 구체적으로 작성",
   "recommendations": [
     "구체적인 권고사항 1",
     "구체적인 권고사항 2",
     "구체적인 권고사항 3"
   ],
-  "summary_eval": "3~4문장으로 종합평가 작성. 위험도, 법적 책임, 즉각 조치사항 포함"
+  "summary_eval": "3~4문장으로 종합평가 작성"
 }}
 """
 
@@ -141,7 +138,6 @@ def generate_ai_report(ppe_risks, video_name):
             return {
                 "risk_grade": risk_grade,
                 "risk_score": risk_score,
-                "total_workers": total_workers,
                 "helmet_violations": helmet_violations,
                 "vest_violations": vest_violations,
                 "law_references": parsed.get("law_references", ""),
@@ -155,25 +151,28 @@ def generate_ai_report(ppe_risks, video_name):
     if helmet_violated:
         law_refs.append("산업안전보건법 제38조제1항 - 안전모 착용 의무 위반")
     if vest_violated:
-        law_refs.append("산업안전보건법 제38조제1항 - 안전조끼 착용 의무 위반")
+        law_refs.append("산업안전보건법 제39조 - 안전조끼 착용 의무 위반")
+    if collision_detected:
+        law_refs.append("산업안전보건법 제38조 - 중장비 작업 반경 안전 의무 위반")
 
     recommendations = []
     if helmet_violated:
         recommendations.append("안전모 미착용 감지 — 즉시 작업 중지 후 착용 확인")
     if vest_violated:
         recommendations.append("안전조끼 미착용 감지 — 현장 출입 통제 조치")
+    if collision_detected:
+        recommendations.append("중장비 접근 감지 — 즉시 작업 반경 이탈")
     if not recommendations:
         recommendations.append("현재 특이사항 없음. 지속적 모니터링 유지")
 
     return {
         "risk_grade": risk_grade,
         "risk_score": risk_score,
-        "total_workers": total_workers,
         "helmet_violations": helmet_violations,
         "vest_violations": vest_violations,
         "law_references": " | ".join(law_refs) if law_refs else "해당 없음",
         "recommendations": recommendations,
-        "summary_eval": f"총 {total_frames}개 프레임 분석 결과 작업자 {total_workers}명 감지. {'안전모 미착용 ' if helmet_violated else ''}{'안전조끼 미착용 ' if vest_violated else ''}위반 확인. 위험등급: {risk_grade}. 즉각적인 안전 조치가 필요합니다."
+        "summary_eval": f"위험등급: {risk_grade} ({risk_score}%). {'안전모 미착용 ' if helmet_violated else ''}{'안전조끼 미착용 ' if vest_violated else ''}{'중장비 접근 ' if collision_detected else ''}위반 확인."
     }
 
 def is_image_file(path):
@@ -229,32 +228,30 @@ def run_pipeline(video_path):
                        (video_id, f"{video_name} 안전 분석 보고서"))
         report_id = cursor.lastrowid
 
+        # 프레임 추출
         extract_frames_cv2(video_path, frames_folder)
-        raw_objects = detect_objects(frames_folder)
-        raw_ppe = detect_ppe(frames_folder)
-        structured = structure_data(raw_objects)
-        structured_ppe = structure_ppe_data(raw_ppe)
 
-        for frame in structured_ppe:
-            if "detections" not in frame:
-                frame["detections"] = frame.get("objects", [])
+        # PPE 탐지 및 분석
+        raw_ppe = detect_all(frames_folder)
+        structured = structure_data(raw_ppe)
+        ppe_risks = analyze_ppe(structured)
 
-        ppe_risks = analyze_ppe(structured, structured_ppe)
-        ai_report = generate_ai_report(ppe_risks, video_name)
+        # 중장비 접근 분석
+        collision_risks = analyze_collision(structured, ppe_risks)
 
-        prev_signature = None
+        # 종합 위험도
+        final_result = integrate_analysis(ppe_risks, collision_risks)
+
+        # AI 보고서 생성
+        ai_report = generate_ai_report(ppe_risks, collision_risks, final_result, video_name)
+
+        # 위반 프레임 저장
         for ppe_frame in ppe_risks:
             if not ppe_frame.get('workers'):
                 continue
             has_violation = any(w['risk'] in ['HIGH', 'MEDIUM'] for w in ppe_frame['workers'])
             if not has_violation:
-                prev_signature = None
                 continue
-
-            curr_signature = get_violation_signature(ppe_frame['workers'])
-            if curr_signature == prev_signature:
-                continue
-            prev_signature = curr_signature
 
             frame_filename = ppe_frame['frame']
             f_path = os.path.join(frames_folder, frame_filename)
@@ -284,7 +281,6 @@ def run_pipeline(video_path):
                 summary = %s,
                 risk_grade = %s,
                 risk_score = %s,
-                total_workers = %s,
                 helmet_violations = %s,
                 vest_violations = %s,
                 law_references = %s,
@@ -295,7 +291,6 @@ def run_pipeline(video_path):
             f"{video_name} 안전 분석 보고서",
             ai_report['risk_grade'],
             ai_report['risk_score'],
-            ai_report['total_workers'],
             ai_report['helmet_violations'],
             ai_report['vest_violations'],
             ai_report['law_references'],
@@ -304,7 +299,7 @@ def run_pipeline(video_path):
             report_id
         ))
 
-        conn.commit()
+        conn.커밋()
         print(json.dumps({"status": "success", "report_id": report_id}, ensure_ascii=False))
 
     except Exception as e:
