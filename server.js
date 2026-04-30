@@ -74,12 +74,12 @@ function runPipeline(videoPath) {
     const pyProcess = spawn("python3", [pipelinePath, videoPath]);
     let output = "";
     let errorOutput = "";
-    pyProcess.stdout.on：("data", (data) => { output += data.toString(); });
-    pyProcess.stderr.on：("data", (data) => {
+    pyProcess.stdout.on("data", (data) => { output += data.toString(); });
+    pyProcess.stderr.on("data", (data) => {
       errorOutput += data.toString();
       console.log(`[AI 로그]: ${data}`);
     });
-    pyProcess.on：("close", (code) => {
+    pyProcess.on("close", (code) => {
       if (code !== 0) {
         return reject(new 오류(`AI 엔진 오류 (코드 ${code}): ${errorOutput}`));
       }
