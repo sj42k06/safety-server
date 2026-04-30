@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>영상 분석 - 스마트 현장 안전관제 시스템</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/remixicon/4.2.0/remixicon.min.css" />
+  <link rel="stylesheet" href="upload.css" />
+  <style>
+    .upload-wrap { display: flex; flex-direction: column; gap: 16px; }
+    .upload-box { background: #fff; border: 2px dashed #e2e8f0; border-radius: 16px; padding: 40px; text-align: center; cursor: pointer; transition: border-color 0.2s; }
+    .upload-box:hover { border-color: #1e293b; }
+    .upload-box i { font-size: 48px; color: #94a3b8; margin-bottom: 12px; display: block; }
+    .upload-box p { font-size: 15px; color: #475569; font-weight: 600; margin-bottom: 6px; }
+    .upload-box span { font-size: 13px; color: #94a3b8; }
+    .upload-btn { background: #1e293b; color: #fff; border: none; padding: 14px; border-radius: 10px; font-size: 15px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; }
+    .upload-btn:disabled { background: #94a3b8; cursor: not-allowed; }
+    .progress-box { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; display: none; }
+    .progress-title { font-size: 14px; font-weight: 700; color: #1e293b; margin-bottom: 12px; }
+    .progress-bar-bg { background: #f1f5f9; border-radius: 8px; height: 8px; overflow: hidden; margin-bottom: 8px; }
+    .progress-bar { background: #1e293b; height: 100%; border-radius: 8px; width: 0%; transition: width 0.3s; }
+    .progress-status { font-size: 13px; color: #94a3b8; }
+    .preview-box { background: #000; border-radius: 12px; overflow: hidden; display: none; }
+    .preview-box video, .preview-box img { width: 100%; max-height: 300px; object-fit: contain; }
+    .file-info { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 14px; display: none; }
+    .file-info-row { display: flex; justify-content: space-between; font-size: 13px; }
+    .file-info-label { color: #94a3b8; }
+    .file-info-value { color: #1e293b; font-weight: 600; }
+  </style>
+</head>
+<body>
+  <aside>
+    <div class="logo">
+      <img src="https://public.readdy.ai/ai/img_res/f3ccc83c-cf23-4ebf-b376-21d351a806b7.png" alt="로고" />
+      <div class="logo-text">
+        <div class="title">스마트 현장</div>
+        <div class="sub">안전관제 시스템</div>
+      </div>
+    </div>
+    <nav>
+      <a href="/dashboard"><i class="ri-dashboard-line"></i> 대시보드</a>
+      <a href="/upload"><i class="ri-camera-line"></i> 현장 모니터링</a>
+      <a href="/video-upload" class="active"><i class="ri-video-upload-line"></i> 영상 분석</a>
+      <a href="/reports"><i class="ri-file-chart-line"></i> AI 보고서</a>
+    </nav>
+    <div class="user-section">
+      <div class="user-info">
+        <div class="user-avatar"><i class="ri-user-line"></i></div>
+        <div>
+          <div class="user-name">관리자 (admin)</div>
+          <div class="user-role">현장 관리자</div>
+        </div>
+      </div>
+      <button class="logout-btn" onclick="window.location.href='/'">
+        <i class="ri-logout-box-r-line"></i> 로그아웃
+      </button>
+    </div>
+  </aside>
+
+  <main>
+    <div class="inner">
+      <div class="page-tag">
+        <i class="ri-video-upload-line"></i>
+        <span>영상/사진 분석</span>
+      </div>
+      <h2>영상 분석</h2>
+      <p class="page-desc">
+        영상 또는 사진을 업로드하면 AI가 자동으로 위험 요소를 분석하고 보고서를 생성합니다.
+      </p>
+
+      <div class="upload-wrap">
+        <!-- 업로드 박스 -->
+        <div class="upload-box" onclick="document.getElementById('fileInput').click()">
+          <i class="ri-upload-cloud-2-line"></i>
+          <p>영상 또는 사진을 업로드하세요</p>
+          <span>MP4, AVI, MOV, JPG, PNG 지원</span>
+        </div>
+        <input type="file" id="fileInput" accept="video/*,image/*" style="display:none" onchange="onFileSelect(event)" />
+
+        <!-- 파일 정보 -->
+        <div class="file-info" id="fileInfo">
+          <div class="file-info-row">
+            <span class="file-info-label">파일명</span>
+            <span class="file-info-value" id="fileName">-</span>
+          </div>
+          <div class="file-info-row" style="margin-top: 6px;">
+            <span class="file-info-label">파일 크기</span>
+            <span class="file-info-value" id="fileSize">-</span>
+          </div>
+        </div>
+
+        <!-- 미리보기 -->
+        <div class="preview-box" id="previewBox">
+          <video id="previewVideo" controls style="display:none;"></video>
+          <img id="previewImage" style="display:none;" />
+        </div>
+
+        <!-- 분석 진행 -->
+        <div class="progress-box" id="progressBox">
+          <div class="progress-title">AI 분석 중...</div>
+          <div class="progress-bar-bg">
+            <div class="progress-bar" id="progressBar"></div>
+          </div>
+          <div class="progress-status" id="progressStatus">서버로 전송 중...</div>
+        </div>
+
+        <!-- 분석 버튼 -->
+        <button class="upload-btn" id="uploadBtn" onclick="uploadFile()" disabled>
+          <i class="ri-shield-flash-line"></i> AI 분석 시작
+        </button>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    let selectedFile = null;
+
+    function onFileSelect(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      selectedFile = file;
+
+      // 파일 정보 표시
+      document.getElementById('fileName').textContent = file.name;
+      document.getElementById('fileSize').textContent = (file.size / 1024 / 1024).toFixed(2) + ' MB';
+      document.getElementById('fileInfo').style.display = 'block';
+
+      // 미리보기
+      const previewBox = document.getElementById('previewBox');
+      const previewVideo = document.getElementById('previewVideo');
+      const previewImage = document.getElementById('previewImage');
+      previewBox.style.display = 'block';
+
+      if (file.type.startsWith('video/')) {
+        previewVideo.style.display = 'block';
+        previewImage.style.display = 'none';
+        previewVideo.src = URL.createObjectURL(file);
+      } else {
+        previewImage.style.display = 'block';
+        previewVideo.style.display = 'none';
+        previewImage.src = URL.createObjectURL(file);
+      }
+
+      document.getElementById('uploadBtn').disabled = false;
+    }
+
+    async function uploadFile() {
+      if (!selectedFile) return;
+
+      const btn = document.getElementById('uploadBtn');
+      const progressBox = document.getElementById('progressBox');
+      const progressBar = document.getElementById('progressBar');
+      const progressStatus = document.getElementById('progressStatus');
+
+      btn.disabled = true;
+      btn.innerHTML = '<i class="ri-loader-4-line"></i> 분석 중...';
+      progressBox.style.display = 'block';
+
+      // 진행 애니메이션
+      let progress = 0;
+      const progressInterval = setInterval(() => {
+        progress += 2;
+        if (progress > 90) clearInterval(progressInterval);
+        progressBar.style.width = progress + '%';
+        if (progress < 30) progressStatus.textContent = '서버로 전송 중...';
+        else if (progress < 60) progressStatus.textContent = 'YOLO AI 분석 중...';
+        else progressStatus.textContent = '보고서 생성 중...';
+      }, 600);
+
+      const formData = new FormData();
+      formData.append('video', selectedFile);
+
+      try {
+        const res = await fetch('https://safety-server-oqza.onrender.com/analyze', {
+          method: 'POST',
+          body: formData
+        });
+        const data = await res.json();
+
+        clearInterval(progressInterval);
+        progressBar.style.width = '100%';
+
+        if (data.report_id) {
+          progressStatus.textContent = '분석 완료! 보고서로 이동합니다.';
+          setTimeout(() => window.location.href = '/reports/' + data.report_id, 1500);
+        } else {
+          progressStatus.textContent = '분석 실패: ' + (data.error || '오류 발생');
+          btn.disabled = false;
+          btn.innerHTML = '<i class="ri-shield-flash-line"></i> AI 분석 시작';
+        }
+      } catch (err) {
+        clearInterval(progressInterval);
+        progressStatus.textContent = '서버 오류: ' + err.message;
+        btn.disabled = false;
+        btn.innerHTML = '<i class="ri-shield-flash-line"></i> AI 분석 시작';
+      }
+    }
+  </script>
+</body>
+</html>
