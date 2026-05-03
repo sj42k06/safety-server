@@ -74,8 +74,8 @@ function runPipeline(videoPath) {
     const pyProcess = spawn("python3", [pipelinePath, videoPath]);
     let output = "";
     let errorOutput = "";
-   pyProcess.stdout.：("data", (data) => { output += data.toString(); });
-    pyProcess.stderr.：("data", (data) => {
+    pyProcess.stdout.on("data", (data) => { output += data.toString(); });
+    pyProcess.stderr.on("data", (data) => {
       errorOutput += data.toString();
       console.log(`[AI 로그]: ${data}`);
     });
