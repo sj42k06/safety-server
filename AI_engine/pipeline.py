@@ -229,24 +229,18 @@ def run_pipeline(video_path):
                        (video_id, f"{video_name} 안전 분석 보고서"))
         report_id = cursor.lastrowid
 
-        # 프레임 추출
         extract_frames_cv2(video_path, frames_folder)
 
-        # PPE 탐지 및 분석
         raw_ppe = detect_all(frames_folder)
         structured = structure_data(raw_ppe)
         ppe_risks = analyze_ppe(structured)
 
-        # 중장비 접근 분석
         collision_risks = analyze_collision(structured, ppe_risks)
 
-        # 종합 위험도
         final_result = integrate_analysis(ppe_risks, collision_risks)
 
-        # AI 보고서 생성
         ai_report = generate_ai_report(ppe_risks, collision_risks, final_result, video_name)
 
-        # 위반 프레임 저장
         for ppe_frame in ppe_risks:
             if not ppe_frame.get('workers'):
                 continue
@@ -274,7 +268,7 @@ def run_pipeline(video_path):
                 cursor.execute("""
                     INSERT INTO report_items (report_id, frame_id, event_time, status, description)
                     VALUES (%s, %s, %s, %s, %s)
-                """, (report_id, frame_id, datetime.지금(), current_status,
+                """, (report_id, frame_id, datetime.now(), current_status,
                       f"보호구: {worker['helmet']}, 조끼: {worker['vest']}"))
 
         cursor.execute("""
