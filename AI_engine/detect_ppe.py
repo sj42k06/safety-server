@@ -2,7 +2,7 @@ from ultralytics import YOLO
 import os
 import cv2
 
-MODEL_PATH = "helmet_model.pt"
+MODEL_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "helmet_model.pt")
 CONF_THRESHOLD = 0.3
 # 모델에서 제공하는 클래스 리스트 반영
 VALID_CLASSES = ["Hardhat", "NO-Hardhat", "Safety Vest", "NO-Safety Vest", 
