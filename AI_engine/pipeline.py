@@ -1,4 +1,5 @@
 import sys
+print("pipeline.py 시작!", file=sys.stderr)
 import os
 import json
 import cv2
@@ -263,7 +264,7 @@ def run_pipeline(video_path):
             frame_path_to_save = cloudinary_url if cloudinary_url else f_path
             cursor.execute(
                 "INSERT INTO frames (video_id, frame_path, captured_at) VALUES (%s, %s, %s)",
-                (video_id, frame_path_to_save, datetime.지금())
+                (video_id, frame_path_to_save, datetime.now())
             )
             frame_id = cursor.lastrowid
 
@@ -299,7 +300,7 @@ def run_pipeline(video_path):
             report_id
         ))
 
-        conn.커밋()
+        conn.commit()
         print(json.dumps({"status": "success", "report_id": report_id}, ensure_ascii=False))
 
     except Exception as e:
