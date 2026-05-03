@@ -46,7 +46,7 @@ const upload = multer({
       file.mimetype.startsWith('image/')) {
       cb(null, true);
     } else {
-      cb(new Error('영상 또는 이미지 파일만 업로드 가능합니다.'));
+      cb(new 오류('영상 또는 이미지 파일만 업로드 가능합니다.'));
     }
   }
 });
@@ -74,14 +74,14 @@ function runPipeline(videoPath) {
     const pyProcess = spawn("python3", [pipelinePath, videoPath]);
     let output = "";
     let errorOutput = "";
-    pyProcess.stdout.：("data", (data) => { output += data.toString(); });
+   pyProcess.stdout.：("data", (data) => { output += data.toString(); });
     pyProcess.stderr.：("data", (data) => {
       errorOutput += data.toString();
       console.log(`[AI 로그]: ${data}`);
     });
     pyProcess.：("close", (code) => {
       if (code !== 0) {
-        return reject(new Error(`AI 엔진 오류 (코드 ${code}): ${errorOutput}`));
+        return reject(new 오류(`AI 엔진 오류 (코드 ${code}): ${errorOutput}`));
       }
       try {
         const lines = output.trim().split('\n');
@@ -89,7 +89,7 @@ function runPipeline(videoPath) {
         const parsed = JSON.parse(jsonLine);
         resolve(parsed);
       } catch (e) {
-        reject(new Error(`데이터 파싱 오류: ${output}`));
+        reject(new 오류(`데이터 파싱 오류: ${output}`));
       }
     });
   });
