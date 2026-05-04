@@ -62,6 +62,31 @@ def call_openai(prompt):
         print(f"OpenAI 호출 실패: {e}", file=sys.stderr)
         return None
 
+def draw_bounding_boxes(image_path, workers, output_path):
+    img = cv2.imread(image_path)
+    if img is None:
+        return image_path
+
+    for worker in workers:
+        bbox = worker['bbox']
+        x1, y1, x2, y2 = bbox
+
+        if worker['risk'] == 'HIGH':
+            color = (0, 0, 255)
+        elif worker['risk'] == 'MEDIUM':
+            color = (0, 165, 255)
+        else:
+            color = (0, 255, 0)
+
+        cv2.rectangle(img, (x1, y1), (x2, y2), color, 2)
+
+        label = f"{worker['helmet']} | {worker['vest']}"
+        cv2.putText(img, label, (x1, y1 - 10),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+
+    cv2.imwrite(output_path, img)
+    return output_path
+
 def generate_ai_report(ppe_risks, collision_risks, final_result, video_name):
     helmet_violated = False
     vest_violated = False
@@ -234,11 +259,8 @@ def run_pipeline(video_path):
         raw_ppe = detect_all(frames_folder)
         structured = structure_data(raw_ppe)
         ppe_risks = analyze_ppe(structured)
-
         collision_risks = analyze_collision(structured, ppe_risks)
-
         final_result = integrate_analysis(ppe_risks, collision_risks)
-
         ai_report = generate_ai_report(ppe_risks, collision_risks, final_result, video_name)
 
         for ppe_frame in ppe_risks:
@@ -251,8 +273,15 @@ def run_pipeline(video_path):
             frame_filename = ppe_frame['frame']
             f_path = os.path.join(frames_folder, frame_filename)
 
+            # 바운딩박스 그리기
+            boxed_path = f_path.replace('.jpg', '_boxed.jpg')
+            draw_bounding_boxes(f_path, ppe_frame['workers'], boxed_path)
+
+            # Cloudinary 업로드 (바운딩박스 있는 이미지)
             cloudinary_url = ''
-            if os.path.exists(f_path):
+            if os.path.exists(boxed_path):
+                cloudinary_url = upload_to_cloudinary(boxed_path)
+            elif os.path.exists(f_path):
                 cloudinary_url = upload_to_cloudinary(f_path)
 
             frame_path_to_save = cloudinary_url if cloudinary_url else f_path
