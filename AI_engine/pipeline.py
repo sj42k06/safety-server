@@ -1,20 +1,33 @@
 import sys
 print("pipeline.py 시작!", file=sys.stderr)
+print("import 시작", file=sys.stderr)
 import os
 import json
 import cv2
+print("cv2 완료", file=sys.stderr)
 import pymysql
+print("pymysql 완료", file=sys.stderr)
 import cloudinary
 import cloudinary.uploader
 import urllib.request
 from datetime import datetime
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+print("모듈 import 시작", file=sys.stderr)
 from detect_ppe import detect_all
+print("detect_ppe 완료", file=sys.stderr)
 from structure_ppe import structure_data
+print("structure_ppe 완료", file=sys.stderr)
 from logic_ppe import analyze_ppe
+print("logic_ppe 완료", file=sys.stderr)
 from logic_collision import analyze_collision
+print("logic_collision 완료", file=sys.stderr)
+from logic_falling import analyze_falling
+print("logic_falling 완료", file=sys.stderr)
+from logic_trip import analyze_trip
+print("logic_trip 완료", file=sys.stderr)
 from safety_engine import integrate_analysis
+print("safety_engine 완료", file=sys.stderr)
 
 cloudinary.config(
     cloud_name=os.getenv('CLOUDINARY_CLOUD_NAME', 'dxxaiv5ii'),
@@ -125,10 +138,12 @@ def create_annotated_video(frames_folder, ppe_risks, output_path):
     out.release()
     return output_path
 
-def generate_ai_report(ppe_risks, collision_risks, final_result, video_name):
+def generate_ai_report(ppe_risks, collision_risks, falling_risks, trip_risks, final_result, video_name):
     helmet_violated = False
     vest_violated = False
     collision_detected = False
+    falling_detected = False
+    trip_detected = False
     emergency_exists = False
     warning_exists = False
 
@@ -143,11 +158,22 @@ def generate_ai_report(ppe_risks, collision_risks, final_result, video_name):
         if frame.get('alerts'):
             collision_detected = True
 
+    for frame in falling_risks:
+        if frame.get('falling_alerts'):
+            falling_detected = True
+
+    for frame in trip_risks:
+        if frame.get('trip_events'):
+            trip_detected = True
+
     for frame in final_result:
-        for report in frame.get('reports', []):
+        for report in frame.get('worker_reports', []):
             if report.get('final_risk') == 'EMERGENCY':
                 emergency_exists = True
             elif report.get('final_risk') == 'WARNING':
+                warning_exists = True
+        for report in frame.get('site_reports', []):
+            if report.get('risk_level') == 'WARNING':
                 warning_exists = True
 
     if emergency_exists:
@@ -156,7 +182,7 @@ def generate_ai_report(ppe_risks, collision_risks, final_result, video_name):
     elif warning_exists or helmet_violated:
         risk_grade = "고위험"
         risk_score = 85
-    elif vest_violated or collision_detected:
+    elif vest_violated or collision_detected or falling_detected or trip_detected:
         risk_grade = "관찰"
         risk_score = 55
     else:
@@ -174,6 +200,8 @@ def generate_ai_report(ppe_risks, collision_risks, final_result, video_name):
 - 안전모 미착용: {"있음" if helmet_violated else "없음"}
 - 안전조끼 미착용: {"있음" if vest_violated else "없음"}
 - 중장비 접근 감지: {"있음" if collision_detected else "없음"}
+- 낙하물 위험 감지: {"있음" if falling_detected else "없음"}
+- 통로 자재 방치 감지: {"있음" if trip_detected else "없음"}
 - 위험도: {risk_score}%
 - 위험 등급: {risk_grade}
 
@@ -218,6 +246,10 @@ def generate_ai_report(ppe_risks, collision_risks, final_result, video_name):
         law_refs.append("산업안전보건법 제39조 - 안전조끼 착용 의무 위반")
     if collision_detected:
         law_refs.append("산업안전보건법 제38조 - 중장비 작업 반경 안전 의무 위반")
+    if falling_detected:
+        law_refs.append("산업안전보건법 제38조 - 낙하물 위험 방지 의무 위반")
+    if trip_detected:
+        law_refs.append("산업안전보건법 제38조 - 통로 안전 확보 의무 위반")
 
     recommendations = []
     if helmet_violated:
@@ -226,6 +258,10 @@ def generate_ai_report(ppe_risks, collision_risks, final_result, video_name):
         recommendations.append("안전조끼 미착용 감지 — 현장 출입 통제 조치")
     if collision_detected:
         recommendations.append("중장비 접근 감지 — 즉시 작업 반경 이탈")
+    if falling_detected:
+        recommendations.append("낙하물 위험 감지 — 즉시 해당 구역 대피")
+    if trip_detected:
+        recommendations.append("통로 자재 방치 감지 — 즉시 자재 정리")
     if not recommendations:
         recommendations.append("현재 특이사항 없음. 지속적 모니터링 유지")
 
@@ -236,7 +272,7 @@ def generate_ai_report(ppe_risks, collision_risks, final_result, video_name):
         "vest_violations": vest_violations,
         "law_references": " | ".join(law_refs) if law_refs else "해당 없음",
         "recommendations": recommendations,
-        "summary_eval": f"위험등급: {risk_grade} ({risk_score}%). {'안전모 미착용 ' if helmet_violated else ''}{'안전조끼 미착용 ' if vest_violated else ''}{'중장비 접근 ' if collision_detected else ''}위반 확인."
+        "summary_eval": f"위험등급: {risk_grade} ({risk_score}%). 위반 확인."
     }
 
 def is_image_file(path):
@@ -292,20 +328,27 @@ def run_pipeline(video_path):
                        (video_id, f"{video_name} 안전 분석 보고서"))
         report_id = cursor.lastrowid
 
+        print(f"프레임 추출 시작", file=sys.stderr)
         extract_frames_cv2(video_path, frames_folder)
+        print(f"프레임 추출 완료", file=sys.stderr)
 
+        print(f"PPE 탐지 시작", file=sys.stderr)
         raw_ppe = detect_all(frames_folder)
+        print(f"PPE 탐지 완료: {len(raw_ppe)}프레임", file=sys.stderr)
+
         structured = structure_data(raw_ppe)
         ppe_risks = analyze_ppe(structured)
         collision_risks = analyze_collision(structured, ppe_risks)
-        final_result = integrate_analysis(ppe_risks, collision_risks)
-        ai_report = generate_ai_report(ppe_risks, collision_risks, final_result, video_name)
+        falling_risks = analyze_falling(structured, ppe_risks)
+        trip_risks = analyze_trip(structured)
+        final_result = integrate_analysis(ppe_risks, collision_risks, falling_risks, trip_risks)
+        ai_report = generate_ai_report(ppe_risks, collision_risks, falling_risks, trip_risks, final_result, video_name)
 
-        # 바운딩박스 영상 생성
+        print(f"보고서 생성 완료: {ai_report['risk_grade']}", file=sys.stderr)
+
         annotated_video_path = os.path.join(frames_folder, "annotated.mp4")
         create_annotated_video(frames_folder, ppe_risks, annotated_video_path)
 
-        # Cloudinary에 영상 업로드
         annotated_video_url = ''
         if os.path.exists(annotated_video_path):
             try:
@@ -384,6 +427,7 @@ def run_pipeline(video_path):
 
     except Exception as e:
         conn.rollback()
+        print(f"오류 발생: {e}", file=sys.stderr)
         print(json.dumps({"error": str(e)}))
     finally:
         cursor.close()
