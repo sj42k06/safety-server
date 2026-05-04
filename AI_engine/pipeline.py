@@ -79,12 +79,50 @@ def draw_bounding_boxes(image_path, workers, output_path):
             color = (0, 255, 0)
 
         cv2.rectangle(img, (x1, y1), (x2, y2), color, 2)
-
         label = f"{worker['helmet']} | {worker['vest']}"
         cv2.putText(img, label, (x1, y1 - 10),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
 
     cv2.imwrite(output_path, img)
+    return output_path
+
+def create_annotated_video(frames_folder, ppe_risks, output_path):
+    frames = sorted([f for f in os.listdir(frames_folder) if f.endswith('.jpg') and '_boxed' not in f])
+    if not frames:
+        return None
+
+    first = cv2.imread(os.path.join(frames_folder, frames[0]))
+    if first is None:
+        return None
+    h, w = first.shape[:2]
+
+    fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+    out = cv2.VideoWriter(output_path, fourcc, 1.0, (w, h))
+
+    risk_map = {r['frame']: r for r in ppe_risks}
+
+    for frame_file in frames:
+        img = cv2.imread(os.path.join(frames_folder, frame_file))
+        if img is None:
+            continue
+
+        if frame_file in risk_map:
+            for worker in risk_map[frame_file].get('workers', []):
+                x1, y1, x2, y2 = worker['bbox']
+                if worker['risk'] == 'HIGH':
+                    color = (0, 0, 255)
+                elif worker['risk'] == 'MEDIUM':
+                    color = (0, 165, 255)
+                else:
+                    color = (0, 255, 0)
+                cv2.rectangle(img, (x1, y1), (x2, y2), color, 2)
+                label = f"{worker['helmet']} | {worker['vest']}"
+                cv2.putText(img, label, (x1, y1 - 10),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+
+        out.write(img)
+
+    out.release()
     return output_path
 
 def generate_ai_report(ppe_risks, collision_risks, final_result, video_name):
@@ -263,6 +301,24 @@ def run_pipeline(video_path):
         final_result = integrate_analysis(ppe_risks, collision_risks)
         ai_report = generate_ai_report(ppe_risks, collision_risks, final_result, video_name)
 
+        # 바운딩박스 영상 생성
+        annotated_video_path = os.path.join(frames_folder, "annotated.mp4")
+        create_annotated_video(frames_folder, ppe_risks, annotated_video_path)
+
+        # Cloudinary에 영상 업로드
+        annotated_video_url = ''
+        if os.path.exists(annotated_video_path):
+            try:
+                video_result = cloudinary.uploader.upload(
+                    annotated_video_path,
+                    resource_type="video",
+                    folder="safety_videos"
+                )
+                annotated_video_url = video_result.get('secure_url', '')
+                print(f"영상 업로드 완료: {annotated_video_url}", file=sys.stderr)
+            except Exception as e:
+                print(f"영상 업로드 실패: {e}", file=sys.stderr)
+
         for ppe_frame in ppe_risks:
             if not ppe_frame.get('workers'):
                 continue
@@ -273,11 +329,9 @@ def run_pipeline(video_path):
             frame_filename = ppe_frame['frame']
             f_path = os.path.join(frames_folder, frame_filename)
 
-            # 바운딩박스 그리기
             boxed_path = f_path.replace('.jpg', '_boxed.jpg')
             draw_bounding_boxes(f_path, ppe_frame['workers'], boxed_path)
 
-            # Cloudinary 업로드 (바운딩박스 있는 이미지)
             cloudinary_url = ''
             if os.path.exists(boxed_path):
                 cloudinary_url = upload_to_cloudinary(boxed_path)
@@ -309,7 +363,8 @@ def run_pipeline(video_path):
                 vest_violations = %s,
                 law_references = %s,
                 recommendations = %s,
-                summary_eval = %s
+                summary_eval = %s,
+                annotated_video_url = %s
             WHERE report_id = %s
         """, (
             f"{video_name} 안전 분석 보고서",
@@ -320,6 +375,7 @@ def run_pipeline(video_path):
             ai_report['law_references'],
             json.dumps(ai_report['recommendations'], ensure_ascii=False),
             ai_report['summary_eval'],
+            annotated_video_url,
             report_id
         ))
 
