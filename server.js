@@ -42,8 +42,7 @@ if (!fs.existsSync(uploadDir)) { fs.mkdirSync(uploadDir); }
 const upload = multer({
   dest: uploadDir,
   fileFilter: (req, file, cb) => {
-    if (file.mimetype.startsWith('video/') ||
-      file.mimetype.startsWith('image/')) {
+    if (file.mimetype.startsWith('video/') || file.mimetype.startsWith('image/')) {
       cb(null, true);
     } else {
       cb(new Error('영상 또는 이미지 파일만 업로드 가능합니다.'));
@@ -75,19 +74,13 @@ function runPipeline(videoPath) {
     let output = "";
     let errorOutput = "";
     pyProcess.stdout.on("data", (data) => { output += data.toString(); });
-    pyProcess.stderr.on("data", (data) => {
-      errorOutput += data.toString();
-      console.log(`[AI 로그]: ${data}`);
-    });
+    pyProcess.stderr.on("data", (data) => { errorOutput += data.toString(); console.log(`[AI 로그]: ${data}`); });
     pyProcess.on("close", (code) => {
-      if (code !== 0) {
-        return reject(new Error(`AI 엔진 오류 (코드 ${code}): ${errorOutput}`));
-      }
+      if (code !== 0) return reject(new Error(`AI 엔진 오류 (코드 ${code}): ${errorOutput}`));
       try {
         const lines = output.trim().split('\n');
         const jsonLine = lines.reverse().find(line => line.trim().startsWith('{'));
-        const parsed = JSON.parse(jsonLine);
-        resolve(parsed);
+        resolve(JSON.parse(jsonLine));
       } catch (e) {
         reject(new Error(`데이터 파싱 오류: ${output}`));
       }
@@ -97,26 +90,18 @@ function runPipeline(videoPath) {
 
 app.post("/analyze", upload.single("video"), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: "분석할 파일을 업로드해 주세요." });
-
   const tempPath = path.resolve(req.file.path);
-  
-  // 확장자 추가 (이미지면 .jpg, 영상이면 .mp4)
   const ext = req.file.mimetype.startsWith('image/') ? '.jpg' : '.mp4';
   const newPath = tempPath + ext;
   fs.renameSync(tempPath, newPath);
-
   try {
     console.log(`[분석 요청] 파일명: ${req.file.originalname}`);
     const result = await runPipeline(newPath);
-    if (fs.existsSync(newPath)) { fs.unlinkSync(newPath); }
-    res.status(200).json({
-      성공: true,
-      report_id: result.report_id,
-      message: "안전 분석이 성공적으로 완료되었습니다."
-    });
+    if (fs.existsSync(newPath)) fs.unlinkSync(newPath);
+    res.status(200).json({ 성공: true, report_id: result.report_id, message: "안전 분석이 성공적으로 완료되었습니다." });
   } catch (error) {
     console.error("Critical Analysis Error:", error);
-    if (fs.existsSync(newPath)) { fs.unlinkSync(newPath); }
+    if (fs.existsSync(newPath)) fs.unlinkSync(newPath);
     res.status(500).json({ error: "분석 시스템 장애", detail: error.message });
   }
 });
@@ -125,12 +110,9 @@ app.get("/api/reports", async (req, res) => {
   try {
     const [rows] = await db.query(`
       SELECT 
-        r.report_id, 
-        r.summary, 
-        r.created_at, 
-        r.risk_grade,
-        r.helmet_violations,
-        r.vest_violations,
+        r.report_id, r.summary, r.created_at, r.risk_grade,
+        r.helmet_violations, r.vest_violations,
+        r.action_status,
         v.video_path,
         (SELECT f.frame_path FROM frames f WHERE f.video_id = r.video_id AND f.frame_path LIKE 'http%' LIMIT 1) AS thumbnail
       FROM reports r 
@@ -144,10 +126,17 @@ app.get("/api/reports", async (req, res) => {
   }
 });
 
+// ─────────────────────────────────────────────
+// GET /api/reports/:id  (조치 상태 필드 + 이력 포함)
+// ─────────────────────────────────────────────
 app.get("/api/reports/:id", async (req, res) => {
   try {
-    const [report] = await db.query("SELECT * FROM reports WHERE report_id = ?", [req.params.id]);
+    const [report] = await db.query(
+      "SELECT * FROM reports WHERE report_id = ?",
+      [req.params.id]
+    );
     if (report.length === 0) return res.status(404).json({ error: "해당 보고서를 찾을 수 없습니다." });
+
     const [details] = await db.query(`
       SELECT ri.*, f.frame_path 
       FROM report_items ri 
@@ -155,9 +144,93 @@ app.get("/api/reports/:id", async (req, res) => {
       WHERE ri.report_id = ? 
       ORDER BY ri.item_id ASC
     `, [req.params.id]);
-    res.json({ 성공: true, report: report[0], info: report[0], items: details });
+
+    // 조치 이력 조회 (테이블 없으면 빈 배열)
+    let actionHistory = [];
+    try {
+      const [histRows] = await db.query(
+        "SELECT * FROM action_history WHERE report_id = ? ORDER BY created_at ASC",
+        [req.params.id]
+      );
+      actionHistory = histRows.map(h => ({
+        id: h.id, status: h.status, person: h.person,
+        note: h.note, method: h.method, category: h.category,
+        timestamp: h.created_at
+      }));
+    } catch (_) {}
+
+    res.json({ 성공: true, report: report[0], info: report[0], items: details, action_history: actionHistory });
   } catch (err) {
     res.status(500).json({ error: "상세 데이터 조회 실패" });
+  }
+});
+
+// ─────────────────────────────────────────────
+// PUT /api/reports/:id/action  (조치 상태 저장) ← 신규
+// ─────────────────────────────────────────────
+app.put("/api/reports/:id/action", async (req, res) => {
+  const { id } = req.params;
+  const { action_status, action_person, action_reason, action_note, action_method, action_category, action_time } = req.body;
+
+  const validStatuses = ['미조치', '조치중', '조치완료'];
+  if (!action_status || !validStatuses.includes(action_status)) {
+    return res.status(400).json({ error: "유효하지 않은 조치 상태입니다." });
+  }
+
+  const now = action_time ? new Date(action_time) : new Date();
+
+  try {
+    // reports 테이블 업데이트
+    await db.query(
+      `UPDATE reports SET
+        action_status   = ?,
+        action_person   = ?,
+        action_reason   = ?,
+        action_note     = ?,
+        action_method   = ?,
+        action_category = ?,
+        action_time     = ?
+      WHERE report_id = ?`,
+      [
+        action_status,
+        action_person   || null,
+        action_reason   || null,
+        action_note     || null,
+        action_method   || null,
+        action_category || null,
+        now,
+        id
+      ]
+    );
+
+    // 이력 테이블에 추가
+    try {
+      await db.query(
+        `INSERT INTO action_history (report_id, status, person, note, method, category, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        [id, action_status, action_person || null, action_reason || action_note || null, action_method || null, action_category || null, now]
+      );
+    } catch (_) {}
+
+    // 최신 이력 반환
+    let history = [];
+    try {
+      const [histRows] = await db.query(
+        "SELECT * FROM action_history WHERE report_id = ? ORDER BY created_at ASC",
+        [id]
+      );
+      history = histRows.map(h => ({
+        id: h.id, status: h.status, person: h.person,
+        note: h.note, method: h.method, category: h.category,
+        timestamp: h.created_at
+      }));
+    } catch (_) {}
+
+    res.json({ success: true, message: `'${action_status}'으로 저장되었습니다.`, history });
+
+  } catch (err) {
+    console.error("조치 상태 저장 오류:", err);
+    res.status(500).json({ error: "저장 중 오류가 발생했습니다.", detail: err.message });
   }
 });
 
@@ -194,7 +267,40 @@ app.get("/health", (req, res) => {
   res.json({ status: "running", uptime: process.uptime(), db_connected: true });
 });
 
-server.listen(PORT, () => {
+// ─────────────────────────────────────────────
+// DB 컬럼 & 테이블 자동 생성 (서버 시작 시 1회)
+// ─────────────────────────────────────────────
+async function addActionColumns() {
+  const alterSqls = [
+    "ALTER TABLE reports ADD COLUMN IF NOT EXISTS action_status   VARCHAR(20)  DEFAULT '미조치'",
+    "ALTER TABLE reports ADD COLUMN IF NOT EXISTS action_person   VARCHAR(100) DEFAULT NULL",
+    "ALTER TABLE reports ADD COLUMN IF NOT EXISTS action_reason   TEXT         DEFAULT NULL",
+    "ALTER TABLE reports ADD COLUMN IF NOT EXISTS action_note     TEXT         DEFAULT NULL",
+    "ALTER TABLE reports ADD COLUMN IF NOT EXISTS action_method   VARCHAR(100) DEFAULT NULL",
+    "ALTER TABLE reports ADD COLUMN IF NOT EXISTS action_category VARCHAR(100) DEFAULT NULL",
+    "ALTER TABLE reports ADD COLUMN IF NOT EXISTS action_time     DATETIME     DEFAULT NULL",
+  ];
+  const createHistory = `
+    CREATE TABLE IF NOT EXISTS action_history (
+      id         INT AUTO_INCREMENT PRIMARY KEY,
+      report_id  INT          NOT NULL,
+      status     VARCHAR(20)  NOT NULL,
+      person     VARCHAR(100) DEFAULT NULL,
+      note       TEXT         DEFAULT NULL,
+      method     VARCHAR(100) DEFAULT NULL,
+      category   VARCHAR(100) DEFAULT NULL,
+      created_at DATETIME     DEFAULT CURRENT_TIMESTAMP
+    )
+  `;
+  for (const sql of alterSqls) {
+    await db.query(sql).catch(() => {});
+  }
+  await db.query(createHistory).catch(() => {});
+  console.log('✅ 조치 상태 컬럼 및 action_history 테이블 준비 완료');
+}
+
+server.listen(PORT, async () => {
+  await addActionColumns();   // ← 서버 시작 시 자동으로 DB 준비
   console.log(`
   ================================================
   [Smart Safe Report] 서버가 가동되었습니다.
