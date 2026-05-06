@@ -9,7 +9,7 @@ const { spawn } = require("child_process");
 const http = require("http");
 const cors = require("cors");
 const jwt = require("jsonwebtoken");
-const coolsms = require("coolsms-node-sdk").default;
+const { SolapiMessageService } = require("solapi");
 
 const app = express();
 const server = http.createServer(app);
@@ -36,7 +36,7 @@ const db = mysql.createPool({
 });
 
 // ── Coolsms 클라이언트 ──────────────────
-const smsClient = new coolsms(
+const smsClient = new SolapiMessageService(
   process.env.COOLSMS_API_KEY,
   process.env.COOLSMS_API_SECRET
 );
