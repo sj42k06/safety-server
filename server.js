@@ -9,17 +9,20 @@ const { spawn } = require("child_process");
 const http = require("http");
 const cors = require("cors");
 const jwt = require("jsonwebtoken");
+const coolsms = require("coolsms-node-sdk").default;
 
 const app = express();
 const server = http.createServer(app);
 const PORT = process.env.PORT || 10000;
 
+// ── Cloudinary ──────────────────────────
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
   api_key: process.env.CLOUDINARY_API_KEY,
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
+// ── DB Pool ─────────────────────────────
 const db = mysql.createPool({
   host: process.env.MYSQLHOST,
   user: process.env.MYSQLUSER,
@@ -32,6 +35,47 @@ const db = mysql.createPool({
   queueLimit: 0
 });
 
+// ── Coolsms 클라이언트 ──────────────────
+const smsClient = new coolsms(
+  process.env.COOLSMS_API_KEY,
+  process.env.COOLSMS_API_SECRET
+);
+
+// 수신 번호 매핑
+// admin이 승인 → admin2 번호로 발송
+// admin2가 승인 → admin 번호로 발송
+const PHONE_MAP = {
+  admin:  process.env.ADMIN_PHONE,
+  admin2: process.env.ADMIN2_PHONE,
+};
+
+async function sendHandoverSms(approvedBy, unresolvedCount, todayCount) {
+  try {
+    const toUser  = approvedBy === 'admin' ? 'admin2' : 'admin';
+    const toPhone = PHONE_MAP[toUser];
+    const from    = process.env.COOLSMS_FROM;
+
+    if (!toPhone || !from) {
+      console.warn('⚠️  SMS 번호 미설정 - 발송 스킵');
+      return false;
+    }
+
+    const now = new Date().toLocaleString('ko-KR');
+    const msg = `[안전관리시스템] 인수인계 완료\n`
+      + `승인자: ${approvedBy}\n`
+      + `시각: ${now}\n`
+      + `미조치: ${unresolvedCount}건 / 당일보고서: ${todayCount}건`;
+
+    await smsClient.sendOne({ to: toPhone, from, text: msg });
+    console.log(`✅ SMS 발송 완료 → ${toUser}(${toPhone})`);
+    return true;
+  } catch (err) {
+    console.error('❌ SMS 발송 오류:', err.message);
+    return false;
+  }
+}
+
+// ── 미들웨어 ─────────────────────────────
 app.use(cors({ origin: "*", credentials: true }));
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
@@ -50,29 +94,43 @@ const upload = multer({
   }
 });
 
-app.get("/", (req, res) => res.sendFile(path.join(__dirname, "public", "login.html")));
-app.get("/upload", (req, res) => res.sendFile(path.join(__dirname, "public", "upload.html")));
-app.get("/dashboard", (req, res) => res.sendFile(path.join(__dirname, "public", "dashboard.html")));
-app.get("/reports", (req, res) => res.sendFile(path.join(__dirname, "public", "reports.html")));
+// ────────────────────────────────────────
+// 페이지 라우트
+// ────────────────────────────────────────
+app.get("/",         (req, res) => res.sendFile(path.join(__dirname, "public", "login.html")));
+app.get("/handover", (req, res) => res.sendFile(path.join(__dirname, "public", "handover.html")));
+app.get("/upload",   (req, res) => res.sendFile(path.join(__dirname, "public", "upload.html")));
+app.get("/dashboard",(req, res) => res.sendFile(path.join(__dirname, "public", "dashboard.html")));
+app.get("/reports",  (req, res) => res.sendFile(path.join(__dirname, "public", "reports.html")));
 app.get("/reports/:id", (req, res) => res.sendFile(path.join(__dirname, "public", "report-detail.html")));
 app.get("/video-upload", (req, res) => res.sendFile(path.join(__dirname, "public", "video-upload.html")));
 
+// ────────────────────────────────────────
+// 로그인 (admin + admin2)
+// ────────────────────────────────────────
+const ACCOUNTS = {
+  admin:  { pwd: '1234', name: '관리자'  },
+  admin2: { pwd: '1234', name: '관리자2' },
+};
+
 app.post("/api/login", (req, res) => {
   const { userid, pwd } = req.body;
-  if (userid === "admin" && pwd === "1234") {
+  const account = ACCOUNTS[userid];
+  if (account && account.pwd === pwd) {
     const token = jwt.sign({ userid }, process.env.JWT_SECRET || 'smart_safe_key', { expiresIn: "24h" });
-    return res.json({ 성공: true, token });
+    return res.json({ 성공: true, token, name: account.name });
   }
   res.status(401).json({ 성공: false, error: "아이디 또는 비밀번호가 틀렸습니다." });
 });
 
+// ────────────────────────────────────────
+// AI 파이프라인
+// ────────────────────────────────────────
 function runPipeline(videoPath) {
   return new Promise((resolve, reject) => {
     const pipelinePath = path.join(__dirname, "AI_engine", "pipeline.py");
-    console.log(`[엔진 가동] 경로: ${pipelinePath}`);
     const pyProcess = spawn("python3", [pipelinePath, videoPath]);
-    let output = "";
-    let errorOutput = "";
+    let output = "", errorOutput = "";
     pyProcess.stdout.on("data", (data) => { output += data.toString(); });
     pyProcess.stderr.on("data", (data) => { errorOutput += data.toString(); console.log(`[AI 로그]: ${data}`); });
     pyProcess.on("close", (code) => {
@@ -81,9 +139,7 @@ function runPipeline(videoPath) {
         const lines = output.trim().split('\n');
         const jsonLine = lines.reverse().find(line => line.trim().startsWith('{'));
         resolve(JSON.parse(jsonLine));
-      } catch (e) {
-        reject(new Error(`데이터 파싱 오류: ${output}`));
-      }
+      } catch (e) { reject(new Error(`데이터 파싱 오류: ${output}`)); }
     });
   });
 }
@@ -95,30 +151,28 @@ app.post("/analyze", upload.single("video"), async (req, res) => {
   const newPath = tempPath + ext;
   fs.renameSync(tempPath, newPath);
   try {
-    console.log(`[분석 요청] 파일명: ${req.file.originalname}`);
     const result = await runPipeline(newPath);
     if (fs.existsSync(newPath)) fs.unlinkSync(newPath);
     res.status(200).json({ 성공: true, report_id: result.report_id, message: "안전 분석이 성공적으로 완료되었습니다." });
   } catch (error) {
-    console.error("Critical Analysis Error:", error);
     if (fs.existsSync(newPath)) fs.unlinkSync(newPath);
     res.status(500).json({ error: "분석 시스템 장애", detail: error.message });
   }
 });
 
+// ────────────────────────────────────────
+// 보고서 목록
+// ────────────────────────────────────────
 app.get("/api/reports", async (req, res) => {
   try {
     const [rows] = await db.query(`
-      SELECT 
-        r.report_id, r.summary, r.created_at, r.risk_grade,
-        r.helmet_violations, r.vest_violations,
-        r.action_status,
-        v.video_path,
-        (SELECT f.frame_path FROM frames f WHERE f.video_id = r.video_id AND f.frame_path LIKE 'http%' LIMIT 1) AS thumbnail
-      FROM reports r 
-      LEFT JOIN videos v ON r.video_id = v.video_id 
-      ORDER BY r.created_at DESC 
-      LIMIT 20
+      SELECT r.report_id, r.summary, r.created_at, r.risk_grade,
+             r.helmet_violations, r.vest_violations, r.action_status,
+             v.video_path,
+             (SELECT f.frame_path FROM frames f WHERE f.video_id = r.video_id AND f.frame_path LIKE 'http%' LIMIT 1) AS thumbnail
+      FROM reports r
+      LEFT JOIN videos v ON r.video_id = v.video_id
+      ORDER BY r.created_at DESC LIMIT 20
     `);
     res.json({ success: true, reports: rows });
   } catch (err) {
@@ -126,26 +180,21 @@ app.get("/api/reports", async (req, res) => {
   }
 });
 
-// ─────────────────────────────────────────────
-// GET /api/reports/:id  (조치 상태 필드 + 이력 포함)
-// ─────────────────────────────────────────────
+// ────────────────────────────────────────
+// 보고서 상세
+// ────────────────────────────────────────
 app.get("/api/reports/:id", async (req, res) => {
   try {
-    const [report] = await db.query(
-      "SELECT * FROM reports WHERE report_id = ?",
-      [req.params.id]
-    );
+    const [report] = await db.query("SELECT * FROM reports WHERE report_id = ?", [req.params.id]);
     if (report.length === 0) return res.status(404).json({ error: "해당 보고서를 찾을 수 없습니다." });
 
     const [details] = await db.query(`
-      SELECT ri.*, f.frame_path 
-      FROM report_items ri 
-      JOIN frames f ON ri.frame_id = f.frame_id 
-      WHERE ri.report_id = ? 
-      ORDER BY ri.item_id ASC
+      SELECT ri.*, f.frame_path
+      FROM report_items ri
+      JOIN frames f ON ri.frame_id = f.frame_id
+      WHERE ri.report_id = ? ORDER BY ri.item_id ASC
     `, [req.params.id]);
 
-    // 조치 이력 조회 (테이블 없으면 빈 배열)
     let actionHistory = [];
     try {
       const [histRows] = await db.query(
@@ -165,75 +214,54 @@ app.get("/api/reports/:id", async (req, res) => {
   }
 });
 
-// ─────────────────────────────────────────────
-// PUT /api/reports/:id/action  (조치 상태 저장) ← 신규
-// ─────────────────────────────────────────────
+// ────────────────────────────────────────
+// 조치 상태 저장
+// ────────────────────────────────────────
 app.put("/api/reports/:id/action", async (req, res) => {
   const { id } = req.params;
   const { action_status, action_person, action_reason, action_note, action_method, action_category, action_time } = req.body;
 
-  const validStatuses = ['미조치', '조치중', '조치완료'];
-  if (!action_status || !validStatuses.includes(action_status)) {
+  if (!['미조치','조치중','조치완료'].includes(action_status)) {
     return res.status(400).json({ error: "유효하지 않은 조치 상태입니다." });
   }
-
   const now = action_time ? new Date(action_time) : new Date();
 
   try {
-    // reports 테이블 업데이트
     await db.query(
-      `UPDATE reports SET
-        action_status   = ?,
-        action_person   = ?,
-        action_reason   = ?,
-        action_note     = ?,
-        action_method   = ?,
-        action_category = ?,
-        action_time     = ?
-      WHERE report_id = ?`,
-      [
-        action_status,
-        action_person   || null,
-        action_reason   || null,
-        action_note     || null,
-        action_method   || null,
-        action_category || null,
-        now,
-        id
-      ]
+      `UPDATE reports SET action_status=?, action_person=?, action_reason=?,
+       action_note=?, action_method=?, action_category=?, action_time=? WHERE report_id=?`,
+      [action_status, action_person||null, action_reason||null,
+       action_note||null, action_method||null, action_category||null, now, id]
     );
-
-    // 이력 테이블에 추가
     try {
       await db.query(
-        `INSERT INTO action_history (report_id, status, person, note, method, category, created_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?)`,
-        [id, action_status, action_person || null, action_reason || action_note || null, action_method || null, action_category || null, now]
+        `INSERT INTO action_history (report_id,status,person,note,method,category,created_at) VALUES (?,?,?,?,?,?,?)`,
+        [id, action_status, action_person||null, action_reason||action_note||null,
+         action_method||null, action_category||null, now]
       );
     } catch (_) {}
 
-    // 최신 이력 반환
     let history = [];
     try {
-      const [histRows] = await db.query(
-        "SELECT * FROM action_history WHERE report_id = ? ORDER BY created_at ASC",
-        [id]
+      const [h] = await db.query(
+        "SELECT * FROM action_history WHERE report_id=? ORDER BY created_at ASC", [id]
       );
-      history = histRows.map(h => ({
-        id: h.id, status: h.status, person: h.person,
-        note: h.note, method: h.method, category: h.category,
-        timestamp: h.created_at
+      history = h.map(r => ({
+        id: r.id, status: r.status, person: r.person,
+        note: r.note, method: r.method, category: r.category,
+        timestamp: r.created_at
       }));
     } catch (_) {}
 
     res.json({ success: true, message: `'${action_status}'으로 저장되었습니다.`, history });
-
   } catch (err) {
-    console.error("조치 상태 저장 오류:", err);
-    res.status(500).json({ error: "저장 중 오류가 발생했습니다.", detail: err.message });
+    res.status(500).json({ error: "저장 오류", detail: err.message });
   }
 });
 
+// ────────────────────────────────────────
+// 보고서 삭제
+// ────────────────────────────────────────
 app.delete("/api/reports/:id", async (req, res) => {
   try {
     const id = req.params.id;
@@ -242,9 +270,7 @@ app.delete("/api/reports/:id", async (req, res) => {
     await db.query("DELETE FROM reports WHERE report_id = ?", [id]);
     await db.query("DELETE FROM videos WHERE video_id NOT IN (SELECT video_id FROM reports)");
     res.json({ 성공: true });
-  } catch (err) {
-    res.status(500).json({ error: "삭제 실패" });
-  }
+  } catch (err) { res.status(500).json({ error: "삭제 실패" }); }
 });
 
 app.delete("/api/reports", async (req, res) => {
@@ -258,19 +284,77 @@ app.delete("/api/reports", async (req, res) => {
     await db.query("ALTER TABLE reports AUTO_INCREMENT = 1");
     await db.query("ALTER TABLE videos AUTO_INCREMENT = 1");
     res.json({ 성공: true });
+  } catch (err) { res.status(500).json({ error: "초기화 실패" }); }
+});
+
+// ════════════════════════════════════════
+//  인수인계 API
+// ════════════════════════════════════════
+
+// GET /api/handover/summary
+app.get("/api/handover/summary", async (req, res) => {
+  try {
+    const [[{ unresolved_count }]] = await db.query(
+      `SELECT COUNT(*) AS unresolved_count FROM reports
+       WHERE action_status = '미조치' OR action_status IS NULL`
+    );
+    const [[{ today_count }]] = await db.query(
+      `SELECT COUNT(*) AS today_count FROM reports WHERE DATE(created_at) = CURDATE()`
+    );
+    const [unresolved_reports] = await db.query(
+      `SELECT report_id, risk_grade, summary, created_at FROM reports
+       WHERE action_status = '미조치' OR action_status IS NULL
+       ORDER BY created_at DESC LIMIT 5`
+    );
+    res.json({ success: true, unresolved_count, today_count, unresolved_reports });
   } catch (err) {
-    res.status(500).json({ error: "초기화 실패" });
+    res.status(500).json({ error: "데이터 조회 실패", detail: err.message });
   }
 });
 
+// POST /api/handover/approve  ← 인수 승인 + SMS 발송
+app.post("/api/handover/approve", async (req, res) => {
+  const { user, approved_at } = req.body;
+  const now = approved_at ? new Date(approved_at) : new Date();
+
+  // 현재 건수 조회 (SMS 내용에 포함)
+  let unresolvedCount = 0, todayCount = 0;
+  try {
+    const [[u]] = await db.query(
+      `SELECT COUNT(*) AS cnt FROM reports WHERE action_status = '미조치' OR action_status IS NULL`
+    );
+    const [[t]] = await db.query(
+      `SELECT COUNT(*) AS cnt FROM reports WHERE DATE(created_at) = CURDATE()`
+    );
+    unresolvedCount = u.cnt;
+    todayCount      = t.cnt;
+  } catch (_) {}
+
+  // DB 기록
+  try {
+    await db.query(
+      "INSERT INTO handover_logs (user, approved_at) VALUES (?, ?)",
+      [user || 'unknown', now]
+    );
+  } catch (_) {}
+
+  // SMS 발송
+  const smsSent = await sendHandoverSms(user, unresolvedCount, todayCount);
+
+  res.json({ success: true, message: "인수 승인이 완료되었습니다.", sms_sent: smsSent });
+});
+
+// ────────────────────────────────────────
+// 헬스 체크
+// ────────────────────────────────────────
 app.get("/health", (req, res) => {
   res.json({ status: "running", uptime: process.uptime(), db_connected: true });
 });
 
-// ─────────────────────────────────────────────
-// DB 컬럼 & 테이블 자동 생성 (서버 시작 시 1회)
-// ─────────────────────────────────────────────
-async function addActionColumns() {
+// ════════════════════════════════════════
+//  DB 자동 준비
+// ════════════════════════════════════════
+async function setupDatabase() {
   const alterSqls = [
     "ALTER TABLE reports ADD COLUMN IF NOT EXISTS action_status   VARCHAR(20)  DEFAULT '미조치'",
     "ALTER TABLE reports ADD COLUMN IF NOT EXISTS action_person   VARCHAR(100) DEFAULT NULL",
@@ -280,27 +364,31 @@ async function addActionColumns() {
     "ALTER TABLE reports ADD COLUMN IF NOT EXISTS action_category VARCHAR(100) DEFAULT NULL",
     "ALTER TABLE reports ADD COLUMN IF NOT EXISTS action_time     DATETIME     DEFAULT NULL",
   ];
-  const createHistory = `
+  for (const sql of alterSqls) await db.query(sql).catch(() => {});
+
+  await db.query(`
     CREATE TABLE IF NOT EXISTS action_history (
-      id         INT AUTO_INCREMENT PRIMARY KEY,
-      report_id  INT          NOT NULL,
-      status     VARCHAR(20)  NOT NULL,
-      person     VARCHAR(100) DEFAULT NULL,
-      note       TEXT         DEFAULT NULL,
-      method     VARCHAR(100) DEFAULT NULL,
-      category   VARCHAR(100) DEFAULT NULL,
-      created_at DATETIME     DEFAULT CURRENT_TIMESTAMP
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      report_id INT NOT NULL, status VARCHAR(20) NOT NULL,
+      person VARCHAR(100) DEFAULT NULL, note TEXT DEFAULT NULL,
+      method VARCHAR(100) DEFAULT NULL, category VARCHAR(100) DEFAULT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )
-  `;
-  for (const sql of alterSqls) {
-    await db.query(sql).catch(() => {});
-  }
-  await db.query(createHistory).catch(() => {});
-  console.log('✅ 조치 상태 컬럼 및 action_history 테이블 준비 완료');
+  `).catch(() => {});
+
+  await db.query(`
+    CREATE TABLE IF NOT EXISTS handover_logs (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      user VARCHAR(100) NOT NULL,
+      approved_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `).catch(() => {});
+
+  console.log('✅ DB 테이블 준비 완료');
 }
 
 server.listen(PORT, async () => {
-  await addActionColumns();   // ← 서버 시작 시 자동으로 DB 준비
+  await setupDatabase();
   console.log(`
   ================================================
   [Smart Safe Report] 서버가 가동되었습니다.
