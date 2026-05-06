@@ -9,7 +9,8 @@ const { spawn } = require("child_process");
 const http = require("http");
 const cors = require("cors");
 const jwt = require("jsonwebtoken");
-const { SolapiMessageService } = require("solapi");
+const axios = require("axios");
+const crypto = require("crypto");
 
 const app = express();
 const server = http.createServer(app);
@@ -35,40 +36,49 @@ const db = mysql.createPool({
   queueLimit: 0
 });
 
-// ── Solapi SMS 클라이언트 ───────────────
-const smsClient = new SolapiMessageService(
-  process.env.COOLSMS_API_KEY,
-  process.env.COOLSMS_API_SECRET
-);
-
 // ── 수신 번호 매핑 ──────────────────────
-// admin이 승인 → admin2 번호로 발송
-// admin2가 승인 → admin 번호로 발송
 const PHONE_MAP = {
   admin:  process.env.ADMIN_PHONE,
   admin2: process.env.ADMIN2_PHONE,
 };
 
+// ── SMS 발송 (Solapi REST API 직접 호출) ─
+// solapi SDK 버전 문제를 피하기 위해 REST API 직접 호출
 async function sendHandoverSms(approvedBy, unresolvedCount, todayCount) {
   try {
     const toUser  = approvedBy === 'admin' ? 'admin2' : 'admin';
     const toPhone = PHONE_MAP[toUser];
     const from    = process.env.COOLSMS_FROM;
+    const apiKey    = process.env.COOLSMS_API_KEY;
+    const apiSecret = process.env.COOLSMS_API_SECRET;
 
-    if (!toPhone || !from) {
-      console.warn('⚠️  SMS 번호 미설정 - 발송 스킵');
+    if (!toPhone || !from || !apiKey || !apiSecret) {
+      console.warn('⚠️  SMS 설정 누락 - 발송 스킵');
       return false;
     }
 
-    const now = new Date().toLocaleString('ko-KR');
+    const date      = new Date().toISOString();
+    const salt      = crypto.randomBytes(16).toString('hex');
+    const signature = crypto.createHmac('sha256', apiSecret).update(date + salt).digest('hex');
+
+    const now  = new Date().toLocaleString('ko-KR');
     const text = `[안전관리시스템] 인수인계 완료\n승인자: ${approvedBy}\n시각: ${now}\n미조치: ${unresolvedCount}건 / 당일보고서: ${todayCount}건`;
 
-    await smsClient.send({ to: toPhone, from, text });
+    await axios.post(
+      'https://api.solapi.com/messages/v4/send',
+      { message: { to: toPhone, from, text } },
+      {
+        headers: {
+          'Authorization': `HMAC-SHA256 apiKey=${apiKey}, date=${date}, salt=${salt}, signature=${signature}`,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
 
     console.log(`✅ SMS 발송 완료 → ${toUser}(${toPhone})`);
     return true;
   } catch (err) {
-    console.error('❌ SMS 발송 오류:', err.message);
+    console.error('❌ SMS 발송 오류:', err.response?.data || err.message);
     return false;
   }
 }
@@ -289,7 +299,6 @@ app.delete("/api/reports", async (req, res) => {
 //  인수인계 API
 // ════════════════════════════════════════
 
-// GET /api/handover/summary
 app.get("/api/handover/summary", async (req, res) => {
   try {
     const [[{ unresolved_count }]] = await db.query(
@@ -310,7 +319,6 @@ app.get("/api/handover/summary", async (req, res) => {
   }
 });
 
-// POST /api/handover/approve  ← 인수 승인 + SMS 발송
 app.post("/api/handover/approve", async (req, res) => {
   const { user, approved_at } = req.body;
   const now = approved_at ? new Date(approved_at) : new Date();
@@ -335,7 +343,6 @@ app.post("/api/handover/approve", async (req, res) => {
   } catch (_) {}
 
   const smsSent = await sendHandoverSms(user, unresolvedCount, todayCount);
-
   res.json({ success: true, message: "인수 승인이 완료되었습니다.", sms_sent: smsSent });
 });
 
