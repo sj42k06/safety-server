@@ -35,13 +35,13 @@ const db = mysql.createPool({
   queueLimit: 0
 });
 
-// ── Coolsms 클라이언트 ──────────────────
+// ── Solapi SMS 클라이언트 ───────────────
 const smsClient = new SolapiMessageService(
   process.env.COOLSMS_API_KEY,
   process.env.COOLSMS_API_SECRET
 );
 
-// 수신 번호 매핑
+// ── 수신 번호 매핑 ──────────────────────
 // admin이 승인 → admin2 번호로 발송
 // admin2가 승인 → admin 번호로 발송
 const PHONE_MAP = {
@@ -61,12 +61,10 @@ async function sendHandoverSms(approvedBy, unresolvedCount, todayCount) {
     }
 
     const now = new Date().toLocaleString('ko-KR');
-    const msg = `[안전관리시스템] 인수인계 완료\n`
-      + `승인자: ${approvedBy}\n`
-      + `시각: ${now}\n`
-      + `미조치: ${unresolvedCount}건 / 당일보고서: ${todayCount}건`;
+    const text = `[안전관리시스템] 인수인계 완료\n승인자: ${approvedBy}\n시각: ${now}\n미조치: ${unresolvedCount}건 / 당일보고서: ${todayCount}건`;
 
-    await smsClient.sendOne({ to: toPhone, from, text: msg });
+    await smsClient.send({ to: toPhone, from, text });
+
     console.log(`✅ SMS 발송 완료 → ${toUser}(${toPhone})`);
     return true;
   } catch (err) {
@@ -97,12 +95,12 @@ const upload = multer({
 // ────────────────────────────────────────
 // 페이지 라우트
 // ────────────────────────────────────────
-app.get("/",         (req, res) => res.sendFile(path.join(__dirname, "public", "login.html")));
-app.get("/handover", (req, res) => res.sendFile(path.join(__dirname, "public", "handover.html")));
-app.get("/upload",   (req, res) => res.sendFile(path.join(__dirname, "public", "upload.html")));
-app.get("/dashboard",(req, res) => res.sendFile(path.join(__dirname, "public", "dashboard.html")));
-app.get("/reports",  (req, res) => res.sendFile(path.join(__dirname, "public", "reports.html")));
-app.get("/reports/:id", (req, res) => res.sendFile(path.join(__dirname, "public", "report-detail.html")));
+app.get("/",             (req, res) => res.sendFile(path.join(__dirname, "public", "login.html")));
+app.get("/handover",     (req, res) => res.sendFile(path.join(__dirname, "public", "handover.html")));
+app.get("/upload",       (req, res) => res.sendFile(path.join(__dirname, "public", "upload.html")));
+app.get("/dashboard",    (req, res) => res.sendFile(path.join(__dirname, "public", "dashboard.html")));
+app.get("/reports",      (req, res) => res.sendFile(path.join(__dirname, "public", "reports.html")));
+app.get("/reports/:id",  (req, res) => res.sendFile(path.join(__dirname, "public", "report-detail.html")));
 app.get("/video-upload", (req, res) => res.sendFile(path.join(__dirname, "public", "video-upload.html")));
 
 // ────────────────────────────────────────
@@ -317,7 +315,6 @@ app.post("/api/handover/approve", async (req, res) => {
   const { user, approved_at } = req.body;
   const now = approved_at ? new Date(approved_at) : new Date();
 
-  // 현재 건수 조회 (SMS 내용에 포함)
   let unresolvedCount = 0, todayCount = 0;
   try {
     const [[u]] = await db.query(
@@ -330,7 +327,6 @@ app.post("/api/handover/approve", async (req, res) => {
     todayCount      = t.cnt;
   } catch (_) {}
 
-  // DB 기록
   try {
     await db.query(
       "INSERT INTO handover_logs (user, approved_at) VALUES (?, ?)",
@@ -338,7 +334,6 @@ app.post("/api/handover/approve", async (req, res) => {
     );
   } catch (_) {}
 
-  // SMS 발송
   const smsSent = await sendHandoverSms(user, unresolvedCount, todayCount);
 
   res.json({ success: true, message: "인수 승인이 완료되었습니다.", sms_sent: smsSent });
