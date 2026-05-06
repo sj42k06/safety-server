@@ -9,6 +9,10 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet" />
   <script type="module" src="https://unpkg.com/@dotlottie/player-component@2.7.12/dist/dotlottie-player.mjs"></script>
+  <style>
+    .spin { display:inline-block; animation:spin .7s linear infinite; }
+    @keyframes spin { to { transform:rotate(360deg); } }
+  </style>
 </head>
 <body>
   <div class="login-wrapper">
@@ -27,10 +31,7 @@
       <div class="lottie-wrap">
         <dotlottie-player
           src="https://lottie.host/35709285-a7ce-4841-9789-ac4fabe2cb91/0WNUiQc08G.lottie"
-          background="transparent"
-          speed="1"
-          loop
-          autoplay>
+          background="transparent" speed="1" loop autoplay>
         </dotlottie-player>
       </div>
       <div class="badges">
@@ -38,6 +39,7 @@
         <div class="badge"><span class="dot red"></span>위험 감지</div>
       </div>
     </div>
+
     <div class="right-panel">
       <div class="login-card">
         <div class="login-header">
@@ -68,15 +70,22 @@
             <span id="errorMsg"></span>
           </div>
           <button type="submit" id="loginBtn" class="login-btn">LOG IN</button>
-          <div style="margin-top: 16px; padding: 10px 16px; border-radius: 8px; background: #f8fafc; border: 1px dashed #cbd5e1; font-size: 12px; color: #64748b;">
-            <span style="font-weight: 600; color: #475569;">사용자 계정:</span> admin &nbsp;/&nbsp; 1234
+          <div style="margin-top:16px; padding:10px 16px; border-radius:8px; background:#f8fafc; border:1px dashed #cbd5e1; font-size:12px; color:#64748b;">
+            <span style="font-weight:600; color:#475569;">계정:</span>
+            admin / 1234 &nbsp;·&nbsp; admin2 / 1234
           </div>
         </form>
       </div>
     </div>
   </div>
+
   <script>
+    const ACCOUNTS = {
+      'admin':  { pwd: '1234', name: '관리자 (admin)'  },
+      'admin2': { pwd: '1234', name: '관리자2 (admin2)' },
+    };
     let saveId = false;
+
     window.onload = () => {
       const saved = localStorage.getItem("savedUserId");
       if (saved) {
@@ -87,45 +96,50 @@
       updateClock();
       setInterval(updateClock, 1000);
     };
+
     function updateClock() {
-      const 지금 = new Date();
+      const now = new Date();
       document.getElementById("clock-time").textContent =
-        지금.toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+        now.toLocaleTimeString("ko-KR", { hour:"2-digit", minute:"2-digit", second:"2-digit" });
       document.getElementById("clock-date").textContent =
-        지금.toLocaleDateString("ko-KR", { year: "numeric", month: "long", day: "numeric", weekday: "long" });
+        now.toLocaleDateString("ko-KR", { year:"numeric", month:"long", day:"numeric", weekday:"long" });
     }
+
     function toggleSaveId() {
       saveId = !saveId;
       document.getElementById("saveIdBox").classList.toggle("checked", saveId);
     }
+
     function showError(msg) {
-      const box = document.getElementById("errorBox");
       document.getElementById("errorMsg").textContent = msg;
-      box.style.display = "flex";
+      document.getElementById("errorBox").style.display = "flex";
     }
     function hideError() {
       document.getElementById("errorBox").style.display = "none";
     }
+
     async function handleLogin(e) {
       e.preventDefault();
       hideError();
-      const userId = document.getElementById("userId").value.trim();
+      const userId   = document.getElementById("userId").value.trim();
       const password = document.getElementById("password").value;
-      if (!userId || !password) {
-        showError("아이디와 비밀번호를 입력해주세요.");
-        return;
-      }
+      if (!userId || !password) { showError("아이디와 비밀번호를 입력해주세요."); return; }
+
       const btn = document.getElementById("loginBtn");
       btn.disabled = true;
       btn.innerHTML = '<i class="ri-loader-4-line spin"></i> 로그인 중...';
-      if (saveId) {
-        localStorage.setItem("savedUserId", userId);
-      } else {
-        localStorage.removeItem("savedUserId");
-      }
-      await new Promise(r => setTimeout(r, 600));
-      if (userId === "admin" && password === "1234") {
-        window.location.href = '/dashboard';
+
+      if (saveId) localStorage.setItem("savedUserId", userId);
+      else        localStorage.removeItem("savedUserId");
+
+      await new Promise(r => setTimeout(r, 500));
+
+      const account = ACCOUNTS[userId];
+      if (account && account.pwd === password) {
+        // 로그인 정보 저장 후 인수인계 페이지로 이동
+        localStorage.setItem('username', userId);
+        localStorage.setItem('username_display', account.name);
+        window.location.href = '/handover';
       } else {
         showError("아이디 또는 비밀번호가 올바르지 않습니다.");
         btn.disabled = false;
