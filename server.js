@@ -109,6 +109,7 @@ app.get("/",             (req, res) => res.sendFile(path.join(__dirname, "public
 app.get("/handover",     (req, res) => res.sendFile(path.join(__dirname, "public", "handover.html")));
 app.get("/upload",       (req, res) => res.sendFile(path.join(__dirname, "public", "upload.html")));
 app.get("/dashboard",    (req, res) => res.sendFile(path.join(__dirname, "public", "dashboard.html")));
+app.get("/archive",      (req, res) => res.sendFile(path.join(__dirname, "public", "archive.html")));
 app.get("/reports",      (req, res) => res.sendFile(path.join(__dirname, "public", "reports.html")));
 app.get("/reports/:id",  (req, res) => res.sendFile(path.join(__dirname, "public", "report-detail.html")));
 app.get("/video-upload", (req, res) => res.sendFile(path.join(__dirname, "public", "video-upload.html")));
