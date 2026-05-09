@@ -29,47 +29,92 @@
     .page-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 20px; }
     .page-header h2 { font-size: 22px; font-weight: 700; color: #1e293b; }
     .page-desc { font-size: 13px; color: #94a3b8; margin-top: 4px; }
-    .header-btns { display: flex; gap: 10px; }
+    .header-btns { display: flex; gap: 10px; align-items: center; }
     .btn-reset { background: #fff; border: 1px solid #e2e8f0; padding: 8px 14px; border-radius: 8px; cursor: pointer; font-size: 13px; color: #475569; display: flex; align-items: center; gap: 6px; }
     .btn-new { background: #1e293b; color: #fff; padding: 8px 16px; border-radius: 8px; text-decoration: none; font-size: 13px; display: flex; align-items: center; gap: 6px; }
+
+    /* ── 당일/전체 토글 ── */
+    .view-toggle {
+      display: flex; background: #f1f5f9; border-radius: 10px; padding: 3px; gap: 2px;
+    }
+    .toggle-btn {
+      padding: 7px 16px; border: none; border-radius: 8px; font-size: 13px; font-weight: 600;
+      cursor: pointer; font-family: inherit; color: #94a3b8; background: transparent; transition: all .2s;
+    }
+    .toggle-btn.active { background: #1e293b; color: #fff; }
+
+    /* ── 당일 날짜 배너 ── */
+    .today-banner {
+      background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+      border-radius: 12px; padding: 16px 20px;
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 20px;
+    }
+    .today-banner-left { display: flex; align-items: center; gap: 12px; }
+    .today-dot { width: 10px; height: 10px; border-radius: 50%; background: #22c55e; animation: blink 1s infinite; }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
+    .today-label { color: #94a3b8; font-size: 12px; }
+    .today-date  { color: #fff; font-size: 15px; font-weight: 700; }
+    .today-count { background: #dc2626; color: #fff; font-size: 12px; font-weight: 700; padding: 4px 12px; border-radius: 20px; }
+    .today-count.safe { background: #16a34a; }
+
     .filter-tabs { display: flex; gap: 8px; margin-bottom: 20px; }
     .filter-tab { padding: 6px 14px; border-radius: 20px; border: 1px solid #e2e8f0; background: #fff; font-size: 13px; color: #64748b; cursor: pointer; display: flex; align-items: center; gap: 6px; }
     .filter-tab.active { background: #1e293b; color: #fff; border-color: #1e293b; }
     .filter-tab span { font-weight: 700; }
+
     .reports-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; }
-    .report-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 14px; overflow: hidden; cursor: pointer; transition: box-shadow 0.2s; }
+    .report-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 14px; overflow: hidden; cursor: pointer; transition: box-shadow 0.2s; position: relative; }
     .report-card:hover { box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
+
+    /* 최신 보고서 NEW 뱃지 */
+    .new-badge {
+      position: absolute; top: 10px; right: 10px; z-index: 2;
+      background: #dc2626; color: #fff; font-size: 10px; font-weight: 800;
+      padding: 2px 7px; border-radius: 10px; letter-spacing: .5px;
+    }
+
     .card-thumb { width: 100%; height: 140px; background: #f1f5f9; position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center; }
     .card-thumb img { width: 100%; height: 100%; object-fit: cover; }
     .card-thumb .no-thumb { color: #cbd5e1; font-size: 32px; }
     .card-grade-badge { position: absolute; top: 10px; left: 10px; font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 12px; }
     .badge-고위험 { background: #fee2e2; color: #dc2626; }
-    .badge-관찰 { background: #fef3c7; color: #d97706; }
-    .badge-주의 { background: #fef3c7; color: #d97706; }
-    .badge-정상 { background: #dcfce7; color: #16a34a; }
+    .badge-관찰   { background: #fef3c7; color: #d97706; }
+    .badge-정상   { background: #dcfce7; color: #16a34a; }
+
+    /* 조치상태 */
+    .action-badge {
+      display: inline-block; font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 10px; margin-top: 5px;
+    }
+    .action-badge.미조치  { background: #fee2e2; color: #dc2626; }
+    .action-badge.조치중  { background: #fef3c7; color: #d97706; }
+    .action-badge.조치완료{ background: #dcfce7; color: #16a34a; }
+
     .card-body { padding: 14px; }
-    .card-id { font-size: 14px; font-weight: 700; color: #1e293b; margin-bottom: 8px; }
-    .card-date { display: flex; align-items: center; gap: 4px; font-size: 12px; color: #94a3b8; margin-bottom: 8px; }
-    .card-footer { display: flex; align-items: center; justify-content: space-between; }
+    .card-id   { font-size: 14px; font-weight: 700; color: #1e293b; margin-bottom: 6px; }
+    .card-date { display: flex; align-items: center; gap: 4px; font-size: 12px; color: #94a3b8; margin-bottom: 6px; }
+    .card-footer { display: flex; align-items: center; justify-content: space-between; margin-top: 6px; }
     .card-violation { font-size: 12px; color: #64748b; }
     .card-violation strong { color: #dc2626; }
     .card-link { font-size: 12px; color: #475569; }
+
     .empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 80px 20px; text-align: center; }
-    .empty-icon { font-size: 48px; color: #cbd5e1; margin-bottom: 16px; }
+    .empty-icon  { font-size: 48px; color: #cbd5e1; margin-bottom: 16px; }
     .empty-title { font-size: 16px; font-weight: 700; color: #334155; margin-bottom: 8px; }
-    .empty-desc { font-size: 13px; color: #94a3b8; margin-bottom: 20px; }
-    .empty-btn { background: #1e293b; color: #fff; padding: 10px 20px; border-radius: 8px; text-decoration: none; font-size: 13px; }
+    .empty-desc  { font-size: 13px; color: #94a3b8; margin-bottom: 20px; }
+    .empty-btn   { background: #1e293b; color: #fff; padding: 10px 20px; border-radius: 8px; text-decoration: none; font-size: 13px; }
+
     .modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 100; }
     .modal { background: #fff; border-radius: 16px; padding: 28px; width: 320px; text-align: center; }
     .modal-icon { width: 48px; height: 48px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 22px; margin: 0 auto 14px; }
-    .modal-icon.red { background: #fee2e2; color: #dc2626; }
+    .modal-icon.red   { background: #fee2e2; color: #dc2626; }
     .modal-icon.amber { background: #fef3c7; color: #d97706; }
     .modal h3 { font-size: 16px; font-weight: 700; color: #1e293b; margin-bottom: 8px; }
-    .modal p { font-size: 13px; color: #64748b; margin-bottom: 20px; }
+    .modal p  { font-size: 13px; color: #64748b; margin-bottom: 20px; }
     .modal-btns { display: flex; gap: 10px; }
-    .btn-cancel { flex: 1; background: #f1f5f9; border: none; padding: 10px; border-radius: 8px; cursor: pointer; font-size: 13px; color: #475569; }
-    .btn-confirm-red { flex: 1; background: #dc2626; border: none; padding: 10px; border-radius: 8px; cursor: pointer; font-size: 13px; color: #fff; }
-    .btn-confirm-amber { flex: 1; background: #d97706; border: none; padding: 10px; border-radius: 8px; cursor: pointer; font-size: 13px; color: #fff; }
+    .btn-cancel       { flex: 1; background: #f1f5f9; border: none; padding: 10px; border-radius: 8px; cursor: pointer; font-size: 13px; color: #475569; }
+    .btn-confirm-red  { flex: 1; background: #dc2626; border: none; padding: 10px; border-radius: 8px; cursor: pointer; font-size: 13px; color: #fff; }
+    .btn-confirm-amber{ flex: 1; background: #d97706; border: none; padding: 10px; border-radius: 8px; cursor: pointer; font-size: 13px; color: #fff; }
   </style>
 </head>
 <body>
@@ -79,7 +124,7 @@
       <div class="logo-sub">안전관제 시스템</div>
     </div>
     <nav>
-      <a href="/dashboard"><i class="ri-dashboard-line"></i> 대시보드</a>
+      <a href="/dashboard"><i class="ri-dashboard-line"></i> 자료실</a>
       <a href="/upload"><i class="ri-camera-line"></i> 현장 모니터링</a>
       <a href="/video-upload"><i class="ri-video-upload-line"></i> 영상 분석</a>
       <a href="/reports" class="active"><i class="ri-file-chart-line"></i> AI 보고서</a>
@@ -88,7 +133,7 @@
       <div class="user-info">
         <div class="user-avatar"><i class="ri-user-line"></i></div>
         <div>
-          <div class="user-name">관리자 (admin)</div>
+          <div class="user-name" id="sidebarUser">관리자</div>
           <div class="user-role">현장 관리자</div>
         </div>
       </div>
@@ -102,10 +147,15 @@
     <div class="page-header">
       <div>
         <div class="page-tag"><i class="ri-file-chart-line"></i> AI 분석 보고서</div>
-        <h2>보고서 목록</h2>
-        <p class="page-desc">AI 종합안전평가 보고서 · 총 <span id="totalCount">0</span>건</p>
+        <h2>AI 보고서</h2>
+        <p class="page-desc">총 <span id="totalCount">0</span>건</p>
       </div>
       <div class="header-btns">
+        <!-- 당일 / 전체 토글 -->
+        <div class="view-toggle">
+          <button class="toggle-btn active" id="toggleToday" onclick="setView('today')">📅 당일</button>
+          <button class="toggle-btn" id="toggleAll" onclick="setView('all')">전체</button>
+        </div>
         <button class="btn-reset" id="resetBtn" style="display:none" onclick="showResetModal()">
           <i class="ri-refresh-line"></i> 초기화
         </button>
@@ -115,6 +165,19 @@
       </div>
     </div>
 
+    <!-- 당일 날짜 배너 -->
+    <div class="today-banner" id="todayBanner">
+      <div class="today-banner-left">
+        <div class="today-dot"></div>
+        <div>
+          <div class="today-label">당일 보고서</div>
+          <div class="today-date" id="todayDateText"></div>
+        </div>
+      </div>
+      <div class="today-count" id="todayCountBadge">0건</div>
+    </div>
+
+    <!-- 필터 탭 -->
     <div class="filter-tabs">
       <div class="filter-tab active" onclick="filterReports('전체')" id="tab-전체">전체 <span id="count-전체">0</span></div>
       <div class="filter-tab" onclick="filterReports('고위험')" id="tab-고위험">위험 <span id="count-고위험">0</span></div>
@@ -124,14 +187,15 @@
 
     <div id="emptyState" class="empty-state" style="display:none">
       <div class="empty-icon"><i class="ri-file-chart-line"></i></div>
-      <div class="empty-title">아직 분석된 보고서가 없습니다</div>
-      <p class="empty-desc">현장 모니터링을 시작하면 AI가 자동으로 위험 요소를 분석하고 보고서를 생성합니다</p>
+      <div class="empty-title" id="emptyTitle">오늘 생성된 보고서가 없습니다</div>
+      <p class="empty-desc" id="emptyDesc">현장 모니터링을 시작하면 AI가 자동으로 위험 요소를 분석하고 보고서를 생성합니다</p>
       <a href="/upload" class="empty-btn"><i class="ri-camera-line"></i> 현장 모니터링 시작하기</a>
     </div>
 
     <div id="reportsGrid" class="reports-grid"></div>
   </main>
 
+  <!-- 삭제 모달 -->
   <div class="modal-bg" id="deleteModal" style="display:none">
     <div class="modal">
       <div class="modal-icon red"><i class="ri-delete-bin-line"></i></div>
@@ -144,6 +208,7 @@
     </div>
   </div>
 
+  <!-- 초기화 모달 -->
   <div class="modal-bg" id="resetModal" style="display:none">
     <div class="modal">
       <div class="modal-icon amber"><i class="ri-refresh-line"></i></div>
@@ -158,92 +223,160 @@
 
   <script>
     const BASE_URL = 'https://safety-server-oqza.onrender.com';
-    let allReports = [];
-    let pendingDeleteId = null;
+    let allReports   = [];
     let currentFilter = '전체';
+    let currentView   = 'today'; // 'today' or 'all'
+    let pendingDeleteId = null;
+
+    // 사용자
+    const user = localStorage.getItem('username') || 'admin';
+    document.getElementById('sidebarUser').textContent = user === 'admin2' ? '관리자2 (admin2)' : '관리자 (admin)';
+
+    // 오늘 날짜 문자열 (YYYY-MM-DD)
+    const todayStr = new Date().toISOString().slice(0, 10);
+
+    // 당일 날짜 배너
+    const now = new Date();
+    const days = ['일','월','화','수','목','금','토'];
+    document.getElementById('todayDateText').textContent =
+      `${now.getFullYear()}년 ${now.getMonth()+1}월 ${now.getDate()}일 ${days[now.getDay()]}요일`;
 
     function formatDate(str) {
       if (!str) return '-';
       return new Date(str).toLocaleString('ko-KR');
     }
 
+    // ── 보고서 로드 ──────────────────────
     async function loadReports() {
       try {
-        const res = await fetch(BASE_URL + '/api/reports');
+        const res  = await fetch(BASE_URL + '/api/reports');
         const data = await res.json();
-        allReports = data.reports || [];
+        // 최신순 정렬
+        allReports = (data.reports || []).sort((a, b) =>
+          new Date(b.created_at) - new Date(a.created_at)
+        );
 
-        document.getElementById('count-전체').textContent = allReports.length;
-        document.getElementById('count-고위험').textContent = allReports.filter(r => r.risk_grade === '고위험').length;
-        document.getElementById('count-관찰').textContent = allReports.filter(r => r.risk_grade === '관찰').length;
-        document.getElementById('count-정상').textContent = allReports.filter(r => !r.risk_grade || r.risk_grade === '정상').length;
         document.getElementById('totalCount').textContent = allReports.length;
-
         if (allReports.length > 0) {
           document.getElementById('resetBtn').style.display = 'inline-flex';
         }
 
-        renderReports(currentFilter);
+        updateFilterCounts();
+        renderReports();
       } catch (err) {
         console.error(err);
       }
     }
 
-    function renderReports(filter) {
-      const grid = document.getElementById('reportsGrid');
+    // ── 당일/전체 뷰 전환 ────────────────
+    function setView(view) {
+      currentView = view;
+      document.getElementById('toggleToday').classList.toggle('active', view === 'today');
+      document.getElementById('toggleAll').classList.toggle('active', view === 'all');
+
+      // 당일 배너 표시/숨김
+      document.getElementById('todayBanner').style.display = view === 'today' ? 'flex' : 'none';
+
+      updateFilterCounts();
+      renderReports();
+    }
+
+    // ── 현재 뷰에 맞는 보고서 반환 ───────
+    function getViewReports() {
+      if (currentView === 'today') {
+        return allReports.filter(r => r.created_at && r.created_at.slice(0, 10) === todayStr);
+      }
+      return allReports;
+    }
+
+    // ── 필터 탭 카운트 업데이트 ──────────
+    function updateFilterCounts() {
+      const viewReports = getViewReports();
+      document.getElementById('count-전체').textContent  = viewReports.length;
+      document.getElementById('count-고위험').textContent = viewReports.filter(r => r.risk_grade === '고위험').length;
+      document.getElementById('count-관찰').textContent   = viewReports.filter(r => r.risk_grade === '관찰').length;
+      document.getElementById('count-정상').textContent   = viewReports.filter(r => !r.risk_grade || r.risk_grade === '정상').length;
+
+      // 당일 카운트 배너
+      const todayCount = allReports.filter(r => r.created_at && r.created_at.slice(0,10) === todayStr).length;
+      const badge = document.getElementById('todayCountBadge');
+      badge.textContent = todayCount + '건';
+      badge.className   = 'today-count' + (todayCount === 0 ? ' safe' : '');
+    }
+
+    // ── 보고서 렌더링 ─────────────────────
+    function renderReports() {
+      const grid  = document.getElementById('reportsGrid');
       const empty = document.getElementById('emptyState');
 
-      let filtered = allReports;
-      if (filter !== '전체') {
-        filtered = allReports.filter(r => {
-          if (filter === '고위험') return r.risk_grade === '고위험';
-          if (filter === '관찰') return r.risk_grade === '관찰';
-          if (filter === '정상') return !r.risk_grade || r.risk_grade === '정상';
+      let viewReports = getViewReports();
+
+      // 위험등급 필터
+      let filtered = viewReports;
+      if (currentFilter !== '전체') {
+        filtered = viewReports.filter(r => {
+          if (currentFilter === '고위험') return r.risk_grade === '고위험';
+          if (currentFilter === '관찰')   return r.risk_grade === '관찰';
+          if (currentFilter === '정상')   return !r.risk_grade || r.risk_grade === '정상';
           return true;
         });
       }
 
       if (filtered.length === 0) {
         empty.style.display = 'flex';
-        grid.style.display = 'none';
+        grid.style.display  = 'none';
+        document.getElementById('emptyTitle').textContent =
+          currentView === 'today' ? '오늘 생성된 보고서가 없습니다' : '보고서가 없습니다';
+        document.getElementById('emptyDesc').textContent =
+          currentView === 'today'
+            ? '현장 모니터링을 시작하면 오늘의 보고서가 여기에 표시됩니다.'
+            : '현장 모니터링을 시작하면 AI가 자동으로 위험 요소를 분석하고 보고서를 생성합니다.';
         return;
       }
 
       empty.style.display = 'none';
-      grid.style.display = 'grid';
+      grid.style.display  = 'grid';
 
-      grid.innerHTML = filtered.map(r => {
-        const grade = r.risk_grade || '정상';
-        const badgeClass = `badge-${grade}`;
+      grid.innerHTML = filtered.map((r, idx) => {
+        const grade      = r.risk_grade    || '정상';
+        const action     = r.action_status || '미조치';
         const violations = (r.helmet_violations || 0) + (r.vest_violations || 0);
-        const thumb = r.thumbnail || '';
+        const thumb      = r.thumbnail || '';
+        const isNewest   = idx === 0; // 최신 보고서에만 NEW 뱃지
 
-        return `<div class="report-card" onclick="goDetail(${r.report_id})">
-          <div class="card-thumb">
-            ${thumb ? `<img src="${thumb}" alt="썸네일"/>` : '<i class="ri-video-line no-thumb"></i>'}
-            <span class="card-grade-badge ${badgeClass}">${grade}</span>
-          </div>
-          <div class="card-body">
-            <div class="card-id">보고서 #${r.report_id}</div>
-            <div class="card-date"><i class="ri-time-line"></i> ${formatDate(r.created_at)}</div>
-            <div class="card-footer">
-              <div class="card-violation">위반 <strong>${violations}</strong>건</div>
-              <div class="card-link">상세 보기 →</div>
+        return `
+          <div class="report-card" onclick="goDetail(${r.report_id})">
+            ${isNewest && currentView === 'today' ? '<div class="new-badge">NEW</div>' : ''}
+            <div class="card-thumb">
+              ${thumb
+                ? `<img src="${thumb}" alt="썸네일"/>`
+                : '<i class="ri-video-line no-thumb"></i>'}
+              <span class="card-grade-badge badge-${grade}">${grade}</span>
             </div>
-          </div>
-        </div>`;
+            <div class="card-body">
+              <div class="card-id">보고서 #${r.report_id}</div>
+              <div class="card-date"><i class="ri-time-line"></i> ${formatDate(r.created_at)}</div>
+              <div><span class="action-badge ${action}">${action}</span></div>
+              <div class="card-footer">
+                <div class="card-violation">위반 <strong>${violations}</strong>건</div>
+                <div class="card-link">상세 보기 →</div>
+              </div>
+            </div>
+          </div>`;
       }).join('');
     }
 
+    // ── 필터 탭 클릭 ─────────────────────
     function filterReports(filter) {
       currentFilter = filter;
       document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
       document.getElementById(`tab-${filter}`).classList.add('active');
-      renderReports(filter);
+      renderReports();
     }
 
     function goDetail(id) { window.location.href = '/reports/' + id; }
 
+    // ── 삭제 ─────────────────────────────
     function showDeleteModal(id) {
       pendingDeleteId = id;
       document.getElementById('deleteModal').style.display = 'flex';
@@ -259,6 +392,7 @@
       loadReports();
     }
 
+    // ── 초기화 ───────────────────────────
     function showResetModal() { document.getElementById('resetModal').style.display = 'flex'; }
     function closeResetModal() { document.getElementById('resetModal').style.display = 'none'; }
     async function confirmReset() {
@@ -268,6 +402,8 @@
     }
 
     loadReports();
+    // 30초마다 자동 갱신
+    setInterval(loadReports, 30000);
   </script>
 </body>
 </html>
