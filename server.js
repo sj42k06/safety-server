@@ -183,6 +183,20 @@ app.get("/api/reports", async (req, res) => {
       LEFT JOIN videos v ON r.video_id = v.video_id
       ORDER BY r.created_at DESC LIMIT 20
     `);
+
+    // 각 보고서의 주요 위험요소 감지결과 추가
+    for (const row of rows) {
+      try {
+        const [items] = await db.query(
+          `SELECT DISTINCT description FROM report_items WHERE report_id = ? LIMIT 5`,
+          [row.report_id]
+        );
+        row.danger_types = items.map(i => i.description).filter(Boolean);
+      } catch (_) {
+        row.danger_types = [];
+      }
+    }
+
     res.json({ success: true, reports: rows });
   } catch (err) {
     res.status(500).json({ error: "데이터베이스 조회 실패" });
