@@ -327,7 +327,14 @@
       }
 
       document.getElementById('hwLoading').style.display = 'none';
-      document.getElementById('hwBody').style.display    = 'block';
+
+      // 미조치 0건이면 바로 대시보드 이동
+      if (unresolvedCount === 0) {
+        goDashboard();
+        return;
+      }
+
+      document.getElementById('hwBody').style.display = 'block';
     };
 
     // 인수 승인
