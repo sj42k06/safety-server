@@ -42,8 +42,7 @@ const PHONE_MAP = {
   admin2: process.env.ADMIN2_PHONE,
 };
 
-// ── SMS 발송 (Solapi REST API 직접 호출) ─
-// solapi SDK 버전 문제를 피하기 위해 REST API 직접 호출
+// ── SMS 발송 ─────────────────────────────
 async function sendHandoverSms(approvedBy, unresolvedCount, todayCount) {
   try {
     const toUser  = approvedBy === 'admin' ? 'admin2' : 'admin';
@@ -115,30 +114,37 @@ app.get("/reports/:id",  (req, res) => res.sendFile(path.join(__dirname, "public
 app.get("/video-upload", (req, res) => res.sendFile(path.join(__dirname, "public", "video-upload.html")));
 
 // ────────────────────────────────────────
-// 로그인 (admin + admin2)
+// 로그인 (users 테이블 기반)
 // ────────────────────────────────────────
-const ACCOUNTS = {
-  admin:  { pwd: '1234', name: '관리자'  },
-  admin2: { pwd: '1234', name: '관리자2' },
-};
-
-app.post("/api/login", (req, res) => {
+app.post("/api/login", async (req, res) => {
   const { userid, pwd } = req.body;
-  const account = ACCOUNTS[userid];
-  if (account && account.pwd === pwd) {
-    const token = jwt.sign({ userid }, process.env.JWT_SECRET || 'smart_safe_key', { expiresIn: "24h" });
-    return res.json({ 성공: true, token, name: account.name });
+  try {
+    const [rows] = await db.query(
+      "SELECT * FROM users WHERE login_id = ? AND password = ?",
+      [userid, pwd]
+    );
+    if (rows.length === 0) {
+      return res.status(401).json({ 성공: false, error: "아이디 또는 비밀번호가 틀렸습니다." });
+    }
+    const user = rows[0];
+    const token = jwt.sign(
+      { user_id: user.user_id, login_id: user.login_id, name: user.name },
+      process.env.JWT_SECRET || 'smart_safe_key',
+      { expiresIn: "24h" }
+    );
+    res.json({ 성공: true, token, name: user.name, user_id: user.user_id });
+  } catch (err) {
+    res.status(500).json({ 성공: false, error: "서버 오류" });
   }
-  res.status(401).json({ 성공: false, error: "아이디 또는 비밀번호가 틀렸습니다." });
 });
 
 // ────────────────────────────────────────
 // AI 파이프라인
 // ────────────────────────────────────────
-function runPipeline(videoPath) {
+function runPipeline(videoPath, userId) {
   return new Promise((resolve, reject) => {
     const pipelinePath = path.join(__dirname, "AI_engine", "pipeline.py");
-    const pyProcess = spawn("python3", [pipelinePath, videoPath]);
+    const pyProcess = spawn("python3", [pipelinePath, videoPath, String(userId || 1)]);
     let output = "", errorOutput = "";
     pyProcess.stdout.on("data", (data) => { output += data.toString(); });
     pyProcess.stderr.on("data", (data) => { errorOutput += data.toString(); console.log(`[AI 로그]: ${data}`); });
@@ -159,10 +165,18 @@ app.post("/analyze", upload.single("video"), async (req, res) => {
   const ext = req.file.mimetype.startsWith('image/') ? '.jpg' : '.mp4';
   const newPath = tempPath + ext;
   fs.renameSync(tempPath, newPath);
+
+  // 로그인한 사용자 ID (헤더나 바디에서 받거나 기본값 1)
+  const userId = req.body.user_id || req.headers['x-user-id'] || 1;
+
   try {
-    const result = await runPipeline(newPath);
+    const result = await runPipeline(newPath, userId);
     if (fs.existsSync(newPath)) fs.unlinkSync(newPath);
-    res.status(200).json({ 성공: true, report_id: result.report_id, message: "안전 분석이 성공적으로 완료되었습니다." });
+    res.status(200).json({
+      성공: true,
+      report_id: result.report_id,
+      message: "안전 분석이 성공적으로 완료되었습니다."
+    });
   } catch (error) {
     if (fs.existsSync(newPath)) fs.unlinkSync(newPath);
     res.status(500).json({ error: "분석 시스템 장애", detail: error.message });
@@ -170,114 +184,107 @@ app.post("/analyze", upload.single("video"), async (req, res) => {
 });
 
 // ────────────────────────────────────────
-// 보고서 목록
+// 보고서 목록 (reports + risk_logs 조인)
 // ────────────────────────────────────────
 app.get("/api/reports", async (req, res) => {
   try {
     const [rows] = await db.query(`
-      SELECT r.report_id, r.summary, r.created_at, r.risk_grade,
-             r.helmet_violations, r.vest_violations, r.action_status,
-             v.video_path,
-             (SELECT f.frame_path FROM frames f WHERE f.video_id = r.video_id AND f.frame_path LIKE 'http%' LIMIT 1) AS thumbnail
+      SELECT
+        r.report_id,
+        r.report_title,
+        r.report_date,
+        r.created_at,
+        r.report_content,
+        u.name AS created_by_name,
+        rl.risk_id,
+        rl.detection_status,
+        rl.description,
+        rl.image_path,
+        rl.action_status,
+        rl.detected_at,
+        sr.case_name,
+        sr.law_name
       FROM reports r
-      LEFT JOIN videos v ON r.video_id = v.video_id
-      ORDER BY r.created_at DESC LIMIT 20
+      LEFT JOIN users u ON r.created_by = u.user_id
+      LEFT JOIN risk_logs rl ON r.risk_id = rl.risk_id
+      LEFT JOIN safety_rules sr ON rl.rule_id = sr.rule_id
+      ORDER BY r.created_at DESC
+      LIMIT 50
     `);
-
-    // 각 보고서의 주요 위험요소 감지결과 추가
-    for (const row of rows) {
-      try {
-        const [items] = await db.query(
-          `SELECT DISTINCT description FROM report_items WHERE report_id = ? LIMIT 5`,
-          [row.report_id]
-        );
-        row.danger_types = items.map(i => i.description).filter(Boolean);
-      } catch (_) {
-        row.danger_types = [];
-      }
-    }
-
     res.json({ success: true, reports: rows });
   } catch (err) {
+    console.error(err);
     res.status(500).json({ error: "데이터베이스 조회 실패" });
   }
 });
 
 // ────────────────────────────────────────
-// 보고서 상세
+// 보고서 상세 (report + risk_log + safety_rule)
 // ────────────────────────────────────────
 app.get("/api/reports/:id", async (req, res) => {
   try {
-    const [report] = await db.query("SELECT * FROM reports WHERE report_id = ?", [req.params.id]);
-    if (report.length === 0) return res.status(404).json({ error: "해당 보고서를 찾을 수 없습니다." });
-
-    const [details] = await db.query(`
-      SELECT ri.*, f.frame_path
-      FROM report_items ri
-      JOIN frames f ON ri.frame_id = f.frame_id
-      WHERE ri.report_id = ? ORDER BY ri.item_id ASC
+    const [rows] = await db.query(`
+      SELECT
+        r.report_id,
+        r.report_title,
+        r.report_date,
+        r.report_content,
+        r.created_at,
+        u.name AS created_by_name,
+        rl.risk_id,
+        rl.detection_status,
+        rl.description,
+        rl.image_path,
+        rl.action_status,
+        rl.action_note,
+        rl.detected_at,
+        sr.case_name,
+        sr.law_name,
+        sr.law_content,
+        sr.recommendation
+      FROM reports r
+      LEFT JOIN users u ON r.created_by = u.user_id
+      LEFT JOIN risk_logs rl ON r.risk_id = rl.risk_id
+      LEFT JOIN safety_rules sr ON rl.rule_id = sr.rule_id
+      WHERE r.report_id = ?
     `, [req.params.id]);
 
-    let actionHistory = [];
-    try {
-      const [histRows] = await db.query(
-        "SELECT * FROM action_history WHERE report_id = ? ORDER BY created_at ASC",
-        [req.params.id]
-      );
-      actionHistory = histRows.map(h => ({
-        id: h.id, status: h.status, person: h.person,
-        note: h.note, method: h.method, category: h.category,
-        timestamp: h.created_at
-      }));
-    } catch (_) {}
+    if (rows.length === 0) return res.status(404).json({ error: "해당 보고서를 찾을 수 없습니다." });
 
-    res.json({ 성공: true, report: report[0], info: report[0], items: details, action_history: actionHistory });
+    res.json({ 성공: true, report: rows[0] });
   } catch (err) {
+    console.error(err);
     res.status(500).json({ error: "상세 데이터 조회 실패" });
   }
 });
 
 // ────────────────────────────────────────
-// 조치 상태 저장
+// 조치 상태 저장 (risk_logs.action_status 업데이트)
 // ────────────────────────────────────────
 app.put("/api/reports/:id/action", async (req, res) => {
   const { id } = req.params;
-  const { action_status, action_person, action_reason, action_note, action_method, action_category, action_time } = req.body;
+  const { action_status, action_note } = req.body;
 
-  if (!['미조치','조치중','조치완료'].includes(action_status)) {
+  if (!['조치완료', '미조치'].includes(action_status)) {
     return res.status(400).json({ error: "유효하지 않은 조치 상태입니다." });
   }
-  const now = action_time ? new Date(action_time) : new Date();
 
   try {
-    await db.query(
-      `UPDATE reports SET action_status=?, action_person=?, action_reason=?,
-       action_note=?, action_method=?, action_category=?, action_time=? WHERE report_id=?`,
-      [action_status, action_person||null, action_reason||null,
-       action_note||null, action_method||null, action_category||null, now, id]
+    // report의 risk_id 찾기
+    const [[report]] = await db.query(
+      "SELECT risk_id FROM reports WHERE report_id = ?", [id]
     );
-    try {
-      await db.query(
-        `INSERT INTO action_history (report_id,status,person,note,method,category,created_at) VALUES (?,?,?,?,?,?,?)`,
-        [id, action_status, action_person||null, action_reason||action_note||null,
-         action_method||null, action_category||null, now]
-      );
-    } catch (_) {}
+    if (!report) return res.status(404).json({ error: "보고서를 찾을 수 없습니다." });
 
-    let history = [];
-    try {
-      const [h] = await db.query(
-        "SELECT * FROM action_history WHERE report_id=? ORDER BY created_at ASC", [id]
-      );
-      history = h.map(r => ({
-        id: r.id, status: r.status, person: r.person,
-        note: r.note, method: r.method, category: r.category,
-        timestamp: r.created_at
-      }));
-    } catch (_) {}
+    // risk_logs 업데이트
+    await db.query(
+      "UPDATE risk_logs SET action_status = ?, action_note = ? WHERE risk_id = ?",
+      [action_status, action_note || null, report.risk_id]
+    );
 
-    res.json({ success: true, message: `'${action_status}'으로 저장되었습니다.`, history });
+    res.json({ success: true, message: `'${action_status}'으로 저장되었습니다.` });
   } catch (err) {
+    console.error(err);
     res.status(500).json({ error: "저장 오류", detail: err.message });
   }
 });
@@ -287,78 +294,159 @@ app.put("/api/reports/:id/action", async (req, res) => {
 // ────────────────────────────────────────
 app.delete("/api/reports/:id", async (req, res) => {
   try {
-    const id = req.params.id;
-    await db.query("DELETE FROM report_items WHERE report_id = ?", [id]);
-    await db.query(`DELETE FROM frames WHERE video_id = (SELECT video_id FROM reports WHERE report_id = ?)`, [id]);
-    await db.query("DELETE FROM reports WHERE report_id = ?", [id]);
-    await db.query("DELETE FROM videos WHERE video_id NOT IN (SELECT video_id FROM reports)");
+    const [[report]] = await db.query(
+      "SELECT risk_id FROM reports WHERE report_id = ?", [req.params.id]
+    );
+    await db.query("DELETE FROM reports WHERE report_id = ?", [req.params.id]);
+    if (report) {
+      await db.query("DELETE FROM risk_logs WHERE risk_id = ?", [report.risk_id]);
+    }
     res.json({ 성공: true });
-  } catch (err) { res.status(500).json({ error: "삭제 실패" }); }
+  } catch (err) {
+    res.status(500).json({ error: "삭제 실패" });
+  }
 });
 
 app.delete("/api/reports", async (req, res) => {
   try {
-    await db.query("DELETE FROM report_items");
-    await db.query("DELETE FROM frames");
     await db.query("DELETE FROM reports");
-    await db.query("DELETE FROM videos");
-    await db.query("ALTER TABLE report_items AUTO_INCREMENT = 1");
-    await db.query("ALTER TABLE frames AUTO_INCREMENT = 1");
-    await db.query("ALTER TABLE reports AUTO_INCREMENT = 1");
-    await db.query("ALTER TABLE videos AUTO_INCREMENT = 1");
+    await db.query("DELETE FROM risk_logs");
     res.json({ 성공: true });
-  } catch (err) { res.status(500).json({ error: "초기화 실패" }); }
+  } catch (err) {
+    res.status(500).json({ error: "초기화 실패" });
+  }
 });
 
 // ════════════════════════════════════════
 //  인수인계 API
 // ════════════════════════════════════════
 
+// GET /api/handover/summary
 app.get("/api/handover/summary", async (req, res) => {
   try {
-    const [[{ unresolved_count }]] = await db.query(
-      `SELECT COUNT(*) AS unresolved_count FROM reports
-       WHERE action_status = '미조치' OR action_status IS NULL`
-    );
-    const [[{ today_count }]] = await db.query(
-      `SELECT COUNT(*) AS today_count FROM reports WHERE DATE(created_at) = CURDATE()`
-    );
-    const [unresolved_reports] = await db.query(
-      `SELECT report_id, risk_grade, summary, created_at FROM reports
-       WHERE action_status = '미조치' OR action_status IS NULL
-       ORDER BY created_at DESC LIMIT 5`
-    );
+    // 미조치 건수
+    const [[{ unresolved_count }]] = await db.query(`
+      SELECT COUNT(*) AS unresolved_count
+      FROM reports r
+      JOIN risk_logs rl ON r.risk_id = rl.risk_id
+      WHERE rl.action_status = '미조치' OR rl.action_status IS NULL
+    `);
+
+    // 당일 보고서 건수
+    const [[{ today_count }]] = await db.query(`
+      SELECT COUNT(*) AS today_count
+      FROM reports
+      WHERE DATE(created_at) = CURDATE()
+    `);
+
+    // 미조치 보고서 목록 (최대 5건)
+    const [unresolved_reports] = await db.query(`
+      SELECT r.report_id, r.report_title, r.report_date, r.created_at,
+             rl.action_status, sr.case_name
+      FROM reports r
+      JOIN risk_logs rl ON r.risk_id = rl.risk_id
+      LEFT JOIN safety_rules sr ON rl.rule_id = sr.rule_id
+      WHERE rl.action_status = '미조치' OR rl.action_status IS NULL
+      ORDER BY r.created_at DESC
+      LIMIT 5
+    `);
+
     res.json({ success: true, unresolved_count, today_count, unresolved_reports });
   } catch (err) {
+    console.error(err);
     res.status(500).json({ error: "데이터 조회 실패", detail: err.message });
   }
 });
 
+// POST /api/handover/approve
 app.post("/api/handover/approve", async (req, res) => {
   const { user, approved_at } = req.body;
   const now = approved_at ? new Date(approved_at) : new Date();
 
   let unresolvedCount = 0, todayCount = 0;
   try {
-    const [[u]] = await db.query(
-      `SELECT COUNT(*) AS cnt FROM reports WHERE action_status = '미조치' OR action_status IS NULL`
-    );
+    const [[u]] = await db.query(`
+      SELECT COUNT(*) AS cnt FROM reports r
+      JOIN risk_logs rl ON r.risk_id = rl.risk_id
+      WHERE rl.action_status = '미조치' OR rl.action_status IS NULL
+    `);
     const [[t]] = await db.query(
-      `SELECT COUNT(*) AS cnt FROM reports WHERE DATE(created_at) = CURDATE()`
+      "SELECT COUNT(*) AS cnt FROM reports WHERE DATE(created_at) = CURDATE()"
     );
     unresolvedCount = u.cnt;
     todayCount      = t.cnt;
   } catch (_) {}
 
   try {
-    await db.query(
-      "INSERT INTO handover_logs (user, approved_at) VALUES (?, ?)",
-      [user || 'unknown', now]
-    );
-  } catch (_) {}
+    // handover_logs에 기록
+    // from_user, to_user를 users 테이블에서 조회
+    const [users] = await db.query("SELECT user_id, login_id FROM users");
+    const fromUser = users.find(u => u.login_id === user);
+    const toUser   = users.find(u => u.login_id !== user);
 
+    if (fromUser && toUser) {
+      // 오늘 날짜 보고서 중 최신 보고서에 인수인계 기록
+      const [[latestReport]] = await db.query(
+        "SELECT report_id FROM reports WHERE DATE(created_at) = CURDATE() ORDER BY created_at DESC LIMIT 1"
+      ).catch(() => [[null]]);
+
+      if (latestReport) {
+        await db.query(`
+          INSERT INTO handover_logs
+            (report_id, from_user_id, to_user_id, handover_date, handover_status, confirmed_at, signature_check, sms_sent)
+          VALUES (?, ?, ?, CURDATE(), '확인완료', ?, TRUE, FALSE)
+        `, [latestReport.report_id, fromUser.user_id, toUser.user_id, now]);
+      }
+    }
+  } catch (err) {
+    console.error("인수인계 기록 오류:", err.message);
+  }
+
+  // SMS 발송
   const smsSent = await sendHandoverSms(user, unresolvedCount, todayCount);
+
+  // sms_sent 업데이트
+  if (smsSent) {
+    await db.query(
+      "UPDATE handover_logs SET sms_sent = TRUE WHERE from_user_id = (SELECT user_id FROM users WHERE login_id = ?) ORDER BY handover_id DESC LIMIT 1",
+      [user]
+    ).catch(() => {});
+  }
+
   res.json({ success: true, message: "인수 승인이 완료되었습니다.", sms_sent: smsSent });
+});
+
+// ────────────────────────────────────────
+// 통계 API (대시보드용)
+// ────────────────────────────────────────
+app.get("/api/stats", async (req, res) => {
+  try {
+    const [[{ total }]] = await db.query("SELECT COUNT(*) AS total FROM reports");
+
+    const [byCase] = await db.query(`
+      SELECT sr.case_name, COUNT(*) AS count
+      FROM reports r
+      JOIN risk_logs rl ON r.risk_id = rl.risk_id
+      JOIN safety_rules sr ON rl.rule_id = sr.rule_id
+      GROUP BY sr.case_name
+    `);
+
+    const [[{ unresolved }]] = await db.query(`
+      SELECT COUNT(*) AS unresolved FROM reports r
+      JOIN risk_logs rl ON r.risk_id = rl.risk_id
+      WHERE rl.action_status = '미조치' OR rl.action_status IS NULL
+    `);
+
+    const [[{ resolved }]] = await db.query(`
+      SELECT COUNT(*) AS resolved FROM reports r
+      JOIN risk_logs rl ON r.risk_id = rl.risk_id
+      WHERE rl.action_status = '조치완료'
+    `);
+
+    res.json({ success: true, total, byCase, unresolved, resolved });
+  } catch (err) {
+    res.status(500).json({ error: "통계 조회 실패" });
+  }
 });
 
 // ────────────────────────────────────────
@@ -368,44 +456,7 @@ app.get("/health", (req, res) => {
   res.json({ status: "running", uptime: process.uptime(), db_connected: true });
 });
 
-// ════════════════════════════════════════
-//  DB 자동 준비
-// ════════════════════════════════════════
-async function setupDatabase() {
-  const alterSqls = [
-    "ALTER TABLE reports ADD COLUMN IF NOT EXISTS action_status   VARCHAR(20)  DEFAULT '미조치'",
-    "ALTER TABLE reports ADD COLUMN IF NOT EXISTS action_person   VARCHAR(100) DEFAULT NULL",
-    "ALTER TABLE reports ADD COLUMN IF NOT EXISTS action_reason   TEXT         DEFAULT NULL",
-    "ALTER TABLE reports ADD COLUMN IF NOT EXISTS action_note     TEXT         DEFAULT NULL",
-    "ALTER TABLE reports ADD COLUMN IF NOT EXISTS action_method   VARCHAR(100) DEFAULT NULL",
-    "ALTER TABLE reports ADD COLUMN IF NOT EXISTS action_category VARCHAR(100) DEFAULT NULL",
-    "ALTER TABLE reports ADD COLUMN IF NOT EXISTS action_time     DATETIME     DEFAULT NULL",
-  ];
-  for (const sql of alterSqls) await db.query(sql).catch(() => {});
-
-  await db.query(`
-    CREATE TABLE IF NOT EXISTS action_history (
-      id INT AUTO_INCREMENT PRIMARY KEY,
-      report_id INT NOT NULL, status VARCHAR(20) NOT NULL,
-      person VARCHAR(100) DEFAULT NULL, note TEXT DEFAULT NULL,
-      method VARCHAR(100) DEFAULT NULL, category VARCHAR(100) DEFAULT NULL,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    )
-  `).catch(() => {});
-
-  await db.query(`
-    CREATE TABLE IF NOT EXISTS handover_logs (
-      id INT AUTO_INCREMENT PRIMARY KEY,
-      user VARCHAR(100) NOT NULL,
-      approved_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    )
-  `).catch(() => {});
-
-  console.log('✅ DB 테이블 준비 완료');
-}
-
 server.listen(PORT, async () => {
-  await setupDatabase();
   console.log(`
   ================================================
   [Smart Safe Report] 서버가 가동되었습니다.
