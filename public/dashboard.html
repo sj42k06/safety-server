@@ -8,7 +8,6 @@
   <link rel="stylesheet" href="upload.css" />
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
   <style>
-    /* ── 사이드바 하위 메뉴 ── */
     .nav-group-title {
       display:flex; align-items:center; gap:10px;
       padding:10px 16px; border-radius:8px;
@@ -19,21 +18,16 @@
     .nav-group-title.open  { color:#fff; }
     .nav-arrow { margin-left:auto; transition:transform .2s; font-size:16px; }
     .nav-arrow.open { transform:rotate(180deg); }
-    .nav-sub {
-      display:none; flex-direction:column; gap:2px;
-      padding-left:14px; margin-top:2px;
-    }
+    .nav-sub { display:none; flex-direction:column; gap:2px; padding-left:14px; margin-top:2px; }
     .nav-sub.open { display:flex; }
     .nav-sub a {
       display:flex; align-items:center; gap:8px;
       padding:8px 14px; border-radius:8px;
-      color:#94a3b8; font-size:13px; text-decoration:none;
-      transition:all .2s;
+      color:#94a3b8; font-size:13px; text-decoration:none; transition:all .2s;
     }
     .nav-sub a:hover  { background:rgba(255,255,255,.05); color:#fff; }
     .nav-sub a.active { background:rgba(59,130,246,.15); color:#60a5fa; font-weight:600; }
 
-    /* ── 통계 카드 ── */
     .stat-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-bottom:22px; }
     .stat-card { background:#fff; border:1px solid #e2e8f0; border-radius:12px; padding:18px; }
     .stat-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
@@ -46,26 +40,68 @@
     .stat-value { font-size:28px; font-weight:800; color:#1e293b; margin-bottom:2px; }
     .stat-desc  { font-size:11px; color:#94a3b8; }
 
-    /* ── 기간 필터 ── */
-    .period-bar {
+    /* ── 필터 영역 ── */
+    .filter-section {
       background:#fff; border:1px solid #e2e8f0; border-radius:12px;
-      padding:14px 18px; display:flex; align-items:center; gap:10px;
-      flex-wrap:wrap; margin-bottom:18px;
+      padding:18px; margin-bottom:18px;
     }
-    .period-bar label { font-size:12px; color:#64748b; font-weight:600; }
+    .filter-section-title {
+      font-size:13px; font-weight:700; color:#1e293b;
+      margin-bottom:14px; display:flex; align-items:center; gap:6px;
+    }
+    .filter-rows { display:flex; flex-direction:column; gap:12px; }
+    .filter-row  { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+    .filter-label { font-size:12px; color:#64748b; font-weight:600; width:60px; flex-shrink:0; }
+
     .period-btn {
       padding:7px 14px; border:1px solid #e2e8f0; border-radius:8px;
       background:#f8fafc; color:#64748b; font-size:12px; font-weight:600;
       cursor:pointer; font-family:inherit; transition:all .2s;
     }
     .period-btn.active { background:#1e293b; color:#fff; border-color:#1e293b; }
+
+    .filter-select {
+      padding:7px 12px; border:1px solid #e2e8f0; border-radius:8px;
+      font-size:12px; font-family:inherit; color:#1e293b;
+      background:#f8fafc; outline:none; transition:border-color .2s; cursor:pointer;
+    }
+    .filter-select:focus { border-color:#3b82f6; }
+
     .period-input {
       padding:7px 12px; border:1px solid #e2e8f0; border-radius:8px;
-      font-size:12px; font-family:inherit; outline:none;
+      font-size:12px; font-family:inherit; outline:none; background:#f8fafc;
     }
     .period-input:focus { border-color:#3b82f6; }
 
-    /* ── 차트 ── */
+    /* 사고유형 체크박스 버튼 */
+    .type-btn {
+      padding:6px 12px; border:1px solid #e2e8f0; border-radius:20px;
+      background:#f8fafc; color:#64748b; font-size:12px; font-weight:600;
+      cursor:pointer; font-family:inherit; transition:all .2s;
+    }
+    .type-btn.active { color:#fff; border-color:transparent; }
+    .type-btn[data-type="보호구미착용"].active  { background:#dc2626; }
+    .type-btn[data-type="중장비접근"].active    { background:#f97316; }
+    .type-btn[data-type="낙하물"].active        { background:#f59e0b; }
+    .type-btn[data-type="위험구역출입"].active  { background:#8b5cf6; }
+    .type-btn[data-type="자재걸림"].active      { background:#ec4899; }
+
+    .filter-reset-btn {
+      padding:7px 16px; border:1px solid #e2e8f0; border-radius:8px;
+      background:#fff; color:#64748b; font-size:12px; font-weight:600;
+      cursor:pointer; font-family:inherit; margin-left:auto;
+      display:flex; align-items:center; gap:5px; transition:all .2s;
+    }
+    .filter-reset-btn:hover { border-color:#94a3b8; color:#334155; }
+
+    /* 필터 적용 결과 배너 */
+    .filter-result-banner {
+      background:#eff6ff; border:1px solid #bfdbfe; border-radius:10px;
+      padding:10px 16px; display:none; align-items:center; gap:10px;
+      font-size:13px; color:#2563eb; font-weight:600; margin-bottom:16px;
+    }
+    .filter-result-banner.show { display:flex; }
+
     .chart-grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:18px; margin-bottom:18px; }
     .chart-card { background:#fff; border:1px solid #e2e8f0; border-radius:12px; padding:20px; margin-bottom:18px; }
     .chart-title { font-size:14px; font-weight:700; color:#1e293b; margin-bottom:16px; display:flex; align-items:center; gap:7px; }
@@ -91,8 +127,6 @@
       <a href="/upload"><i class="ri-camera-line"></i> 현장 모니터링</a>
       <a href="/video-upload"><i class="ri-video-upload-line"></i> 영상 분석</a>
       <a href="/reports"><i class="ri-file-chart-line"></i> AI 보고서</a>
-
-      <!-- 자료실 하위 메뉴 -->
       <div class="nav-group">
         <div class="nav-group-title open" id="navGroupTitle" onclick="toggleNav()">
           <i class="ri-folder-chart-line"></i> 자료실
@@ -162,17 +196,77 @@
         </div>
       </div>
 
-      <!-- 기간 필터 -->
-      <div class="period-bar">
-        <label>기간</label>
-        <button class="period-btn active" onclick="setPeriod(7,  this)">7일</button>
-        <button class="period-btn"        onclick="setPeriod(30, this)">30일</button>
-        <button class="period-btn"        onclick="setPeriod(90, this)">90일</button>
-        <button class="period-btn"        onclick="setPeriod(0,  this)">전체</button>
-        <span style="font-size:12px;color:#94a3b8;margin-left:8px;">직접 입력</span>
-        <input type="date" class="period-input" id="statFrom" onchange="applyCustomPeriod()" />
-        <span style="font-size:12px;color:#94a3b8;">~</span>
-        <input type="date" class="period-input" id="statTo" onchange="applyCustomPeriod()" />
+      <!-- ══ 통합 필터 영역 ══ -->
+      <div class="filter-section">
+        <div class="filter-section-title">
+          <i class="ri-filter-3-line"></i> 검색 필터
+          <button class="filter-reset-btn" onclick="resetAllFilters()" style="margin-left:auto;">
+            <i class="ri-refresh-line"></i> 필터 초기화
+          </button>
+        </div>
+        <div class="filter-rows">
+
+          <!-- 기간 -->
+          <div class="filter-row">
+            <span class="filter-label">기간</span>
+            <button class="period-btn active" onclick="setPeriod(7,  this)">7일</button>
+            <button class="period-btn"        onclick="setPeriod(30, this)">30일</button>
+            <button class="period-btn"        onclick="setPeriod(90, this)">90일</button>
+            <button class="period-btn"        onclick="setPeriod(0,  this)">전체</button>
+            <input type="date" class="period-input" id="statFrom" onchange="applyCustomPeriod()" />
+            <span style="font-size:12px;color:#94a3b8;">~</span>
+            <input type="date" class="period-input" id="statTo" onchange="applyCustomPeriod()" />
+          </div>
+
+          <!-- 위험도 -->
+          <div class="filter-row">
+            <span class="filter-label">위험도</span>
+            <select class="filter-select" id="filterGrade" onchange="applyFilters()">
+              <option value="">전체</option>
+              <option value="고위험">고위험</option>
+              <option value="관찰">관찰</option>
+              <option value="정상">정상</option>
+            </select>
+          </div>
+
+          <!-- 조치 상태 -->
+          <div class="filter-row">
+            <span class="filter-label">조치상태</span>
+            <select class="filter-select" id="filterAction" onchange="applyFilters()">
+              <option value="">전체</option>
+              <option value="미조치">미조치</option>
+              <option value="조치중">조치중</option>
+              <option value="조치완료">조치완료</option>
+            </select>
+          </div>
+
+          <!-- 담당자 -->
+          <div class="filter-row">
+            <span class="filter-label">담당자</span>
+            <select class="filter-select" id="filterPerson" onchange="applyFilters()">
+              <option value="">전체</option>
+              <option value="손광민">손광민</option>
+              <option value="정재학">정재학</option>
+            </select>
+          </div>
+
+          <!-- 사고 유형 -->
+          <div class="filter-row">
+            <span class="filter-label">사고유형</span>
+            <button class="type-btn" data-type="보호구미착용" onclick="toggleType(this)">⛑️ 보호구 미착용</button>
+            <button class="type-btn" data-type="중장비접근"   onclick="toggleType(this)">🚜 중장비 접근</button>
+            <button class="type-btn" data-type="낙하물"       onclick="toggleType(this)">📦 낙하물</button>
+            <button class="type-btn" data-type="위험구역출입" onclick="toggleType(this)">🚧 위험구역 출입</button>
+            <button class="type-btn" data-type="자재걸림"     onclick="toggleType(this)">⚠️ 자재 걸림</button>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- 필터 적용 결과 배너 -->
+      <div class="filter-result-banner" id="filterResultBanner">
+        <i class="ri-filter-line"></i>
+        <span id="filterResultText">필터 적용 중...</span>
       </div>
 
       <!-- 위험도별 + 조치상태 도넛 -->
@@ -207,9 +301,10 @@
     let allReports = [];
     let gradeChart, actionChart, typeChart, dailyChart;
     let currentPeriodDays = 7;
+    let activeTypes = new Set(); // 선택된 사고 유형
 
     const user = localStorage.getItem('username') || 'admin';
-    document.getElementById('sidebarUser').textContent = user === 'admin2' ? '관리자2 (admin2)' : '관리자 (admin)';
+    document.getElementById('sidebarUser').textContent = user === 'admin2' ? '정재학 (admin2)' : '손광민 (admin)';
 
     function updateDate() {
       const now = new Date();
@@ -219,7 +314,6 @@
     }
     updateDate();
 
-    // 사이드바 토글
     function toggleNav() {
       const sub   = document.getElementById('navSub');
       const arrow = document.getElementById('navArrow');
@@ -229,50 +323,126 @@
       title.classList.toggle('open');
     }
 
+    // ── 데이터 로드 ──────────────────────
     async function loadData() {
       try {
         const res  = await fetch(BASE_URL + '/api/reports');
         const data = await res.json();
         allReports = data.reports || [];
         renderStats(allReports);
-        applyPeriodFilter();
+        applyFilters();
       } catch (err) { console.error(err); }
     }
 
+    // ── 기간 버튼 ────────────────────────
     function setPeriod(days, btn) {
       currentPeriodDays = days;
       document.querySelectorAll('.period-btn').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
       document.getElementById('statFrom').value = '';
       document.getElementById('statTo').value   = '';
-      applyPeriodFilter();
+      applyFilters();
     }
 
     function applyCustomPeriod() {
       document.querySelectorAll('.period-btn').forEach(b => b.classList.remove('active'));
       currentPeriodDays = -1;
-      applyPeriodFilter();
+      applyFilters();
     }
 
-    function applyPeriodFilter() {
-      const from = document.getElementById('statFrom').value;
-      const to   = document.getElementById('statTo').value;
+    // ── 사고유형 토글 ────────────────────
+    function toggleType(btn) {
+      const type = btn.dataset.type;
+      if (activeTypes.has(type)) {
+        activeTypes.delete(type);
+        btn.classList.remove('active');
+      } else {
+        activeTypes.add(type);
+        btn.classList.add('active');
+      }
+      applyFilters();
+    }
+
+    // ── 전체 필터 적용 ───────────────────
+    function applyFilters() {
+      const from   = document.getElementById('statFrom').value;
+      const to     = document.getElementById('statTo').value;
+      const grade  = document.getElementById('filterGrade').value;
+      const action = document.getElementById('filterAction').value;
+      const person = document.getElementById('filterPerson').value;
+
       let filtered = allReports;
+
+      // 기간 필터
       if (currentPeriodDays > 0) {
         const cutoff = new Date();
         cutoff.setDate(cutoff.getDate() - currentPeriodDays);
-        filtered = allReports.filter(r => r.created_at && new Date(r.created_at) >= cutoff);
+        filtered = filtered.filter(r => r.created_at && new Date(r.created_at) >= cutoff);
       } else if (from || to) {
-        filtered = allReports.filter(r => {
+        filtered = filtered.filter(r => {
           const d = r.created_at ? r.created_at.slice(0,10) : '';
           if (from && d < from) return false;
           if (to   && d > to)   return false;
           return true;
         });
       }
+
+      // 위험도 필터
+      if (grade) filtered = filtered.filter(r => r.risk_grade === grade);
+
+      // 조치상태 필터
+      if (action) filtered = filtered.filter(r => (r.action_status || '미조치') === action);
+
+      // 담당자 필터
+      if (person) filtered = filtered.filter(r => r.action_person === person);
+
+      // 사고유형 필터 (선택된 유형 중 하나라도 포함된 보고서)
+      if (activeTypes.size > 0) {
+        filtered = filtered.filter(r => {
+          const types = r.danger_types || [];
+          return [...activeTypes].some(t =>
+            types.some(dt => dt.includes(t) || t.includes(dt))
+          );
+        });
+      }
+
+      // 필터 결과 배너
+      const banner = document.getElementById('filterResultBanner');
+      const hasFilter = grade || action || person || activeTypes.size > 0
+        || currentPeriodDays !== 7 || from || to;
+
+      if (hasFilter) {
+        banner.classList.add('show');
+        const filterLabels = [];
+        if (grade)  filterLabels.push(`위험도: ${grade}`);
+        if (action) filterLabels.push(`조치상태: ${action}`);
+        if (person) filterLabels.push(`담당자: ${person}`);
+        if (activeTypes.size > 0) filterLabels.push(`유형: ${[...activeTypes].join(', ')}`);
+        document.getElementById('filterResultText').textContent =
+          `필터 적용 중 · ${filtered.length}건 / 전체 ${allReports.length}건 · ${filterLabels.join(' · ')}`;
+      } else {
+        banner.classList.remove('show');
+      }
+
       renderCharts(filtered);
     }
 
+    // ── 필터 초기화 ──────────────────────
+    function resetAllFilters() {
+      currentPeriodDays = 7;
+      document.querySelectorAll('.period-btn').forEach((b,i) => b.classList.toggle('active', i===0));
+      document.getElementById('statFrom').value   = '';
+      document.getElementById('statTo').value     = '';
+      document.getElementById('filterGrade').value  = '';
+      document.getElementById('filterAction').value = '';
+      document.getElementById('filterPerson').value = '';
+      activeTypes.clear();
+      document.querySelectorAll('.type-btn').forEach(b => b.classList.remove('active'));
+      document.getElementById('filterResultBanner').classList.remove('show');
+      applyFilters();
+    }
+
+    // ── 통계 카드 ────────────────────────
     function renderStats(reports) {
       const total      = reports.length;
       const danger     = reports.filter(r => r.risk_grade === '고위험').length;
@@ -284,6 +454,7 @@
       document.getElementById('avgRisk').textContent         = avgRisk + '%';
     }
 
+    // ── 차트 렌더링 ──────────────────────
     function renderCharts(reports) {
       const danger     = reports.filter(r => r.risk_grade === '고위험').length;
       const warning    = reports.filter(r => r.risk_grade === '관찰').length;
@@ -310,7 +481,7 @@
       });
 
       const helmetVio = reports.reduce((s,r) => s+(r.helmet_violations||0), 0);
-      const vestVio   = reports.reduce((s,r) => s+(r.vest_violations||0),   0);
+      const vestVio   = reports.reduce((s,r) => s+(r.vest_violations||0), 0);
       typeChart = new Chart(document.getElementById('typeChart'), {
         type:'bar',
         data:{
