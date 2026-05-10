@@ -3,7 +3,7 @@ import os
 import cv2
 
 # 1. 설정
-MODEL_PATH = "safety2.pt"  # 학습시킨 Small 모델 경로
+MODEL_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "safety2.pt")  # 학습시킨 Small 모델 경로
 CONF_THRESHOLD = 0.3
 BATCH_SIZE = 16  # 한 번에 처리할 이미지 개수 (GPU 메모리에 따라 조절)
 
