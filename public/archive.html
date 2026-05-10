@@ -8,87 +8,44 @@
   <link rel="stylesheet" href="upload.css" />
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <style>
-    /* ── 사이드바 하위 메뉴 ── */
-    .nav-group-title {
-      display:flex; align-items:center; gap:10px;
-      padding:10px 16px; border-radius:8px;
-      color:#94a3b8; font-size:14px; font-weight:500;
-      cursor:pointer; transition:all .2s; user-select:none;
-    }
+    .nav-group-title { display:flex; align-items:center; gap:10px; padding:10px 16px; border-radius:8px; color:#94a3b8; font-size:14px; font-weight:500; cursor:pointer; transition:all .2s; user-select:none; }
     .nav-group-title:hover { background:rgba(255,255,255,.05); color:#fff; }
-    .nav-group-title.open  { color:#fff; }
+    .nav-group-title.open { color:#fff; }
     .nav-arrow { margin-left:auto; transition:transform .2s; font-size:16px; }
     .nav-arrow.open { transform:rotate(180deg); }
     .nav-sub { display:none; flex-direction:column; gap:2px; padding-left:14px; margin-top:2px; }
     .nav-sub.open { display:flex; }
-    .nav-sub a {
-      display:flex; align-items:center; gap:8px;
-      padding:8px 14px; border-radius:8px;
-      color:#94a3b8; font-size:13px; text-decoration:none; transition:all .2s;
-    }
-    .nav-sub a:hover  { background:rgba(255,255,255,.05); color:#fff; }
+    .nav-sub a { display:flex; align-items:center; gap:8px; padding:8px 14px; border-radius:8px; color:#94a3b8; font-size:13px; text-decoration:none; transition:all .2s; }
+    .nav-sub a:hover { background:rgba(255,255,255,.05); color:#fff; }
     .nav-sub a.active { background:rgba(59,130,246,.15); color:#60a5fa; font-weight:600; }
 
-    /* ── 필터 ── */
-    .filter-bar {
-      background:#fff; border:1px solid #e2e8f0; border-radius:12px;
-      padding:16px; display:flex; align-items:center; gap:10px;
-      flex-wrap:wrap; margin-bottom:16px;
-    }
+    .filter-bar { background:#fff; border:1px solid #e2e8f0; border-radius:12px; padding:16px; display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:16px; }
     .filter-bar label { font-size:12px; color:#64748b; font-weight:600; }
-    .filter-select, .filter-input {
-      padding:8px 12px; border:1px solid #e2e8f0; border-radius:8px;
-      font-size:13px; color:#1e293b; background:#f8fafc;
-      font-family:inherit; outline:none; transition:border-color .2s;
-    }
-    .filter-select:focus, .filter-input:focus { border-color:#3b82f6; }
-    .filter-reset {
-      padding:8px 14px; border:1px solid #e2e8f0; border-radius:8px;
-      background:#fff; color:#64748b; font-size:12px; font-weight:600;
-      cursor:pointer; font-family:inherit; margin-left:auto;
-    }
-    .filter-reset:hover { border-color:#94a3b8; }
+    .filter-select, .filter-input { padding:8px 12px; border:1px solid #e2e8f0; border-radius:8px; font-size:13px; color:#1e293b; background:#f8fafc; font-family:inherit; outline:none; }
+    .filter-reset { padding:8px 14px; border:1px solid #e2e8f0; border-radius:8px; background:#fff; color:#64748b; font-size:12px; font-weight:600; cursor:pointer; font-family:inherit; margin-left:auto; }
 
-    /* ── 테이블 ── */
     .report-table-wrap { background:#fff; border:1px solid #e2e8f0; border-radius:12px; overflow:hidden; }
-    .report-table-header {
-      padding:14px 18px; border-bottom:1px solid #f1f5f9;
-      display:flex; align-items:center; justify-content:space-between;
-    }
+    .report-table-header { padding:14px 18px; border-bottom:1px solid #f1f5f9; display:flex; align-items:center; justify-content:space-between; }
     .report-table-title { font-size:14px; font-weight:700; color:#1e293b; }
     .report-count { font-size:12px; color:#94a3b8; }
 
     table { width:100%; border-collapse:collapse; }
-    thead th {
-      padding:11px 16px; text-align:left;
-      font-size:11px; font-weight:700; color:#94a3b8;
-      background:#f8fafc; border-bottom:1px solid #f1f5f9;
-      text-transform:uppercase; letter-spacing:.4px;
-    }
+    thead th { padding:11px 16px; text-align:left; font-size:11px; font-weight:700; color:#94a3b8; background:#f8fafc; border-bottom:1px solid #f1f5f9; text-transform:uppercase; letter-spacing:.4px; }
     tbody tr { border-bottom:1px solid #f8fafc; transition:background .15s; }
     tbody tr:hover { background:#f8fafc; }
     tbody tr:last-child { border-bottom:none; }
     tbody td { padding:11px 16px; font-size:13px; color:#334155; }
 
-    .badge {
-      display:inline-block; padding:3px 10px; border-radius:20px;
-      font-size:11px; font-weight:700;
-    }
+    .badge { display:inline-block; padding:3px 10px; border-radius:20px; font-size:11px; font-weight:700; }
     .badge.고위험  { background:#fee2e2; color:#dc2626; }
-    .badge.관찰    { background:#fef3c7; color:#d97706; }
     .badge.정상    { background:#dcfce7; color:#16a34a; }
+    .badge.RISK    { background:#fee2e2; color:#dc2626; }
+    .badge.NORMAL  { background:#dcfce7; color:#16a34a; }
     .badge.미조치  { background:#fee2e2; color:#dc2626; }
-    .badge.조치중  { background:#fef3c7; color:#d97706; }
-    .badge.조치완료{ background:#dcfce7; color:#16a34a; }
+    .badge.조치완료 { background:#dcfce7; color:#16a34a; }
 
-    .btn-pdf {
-      padding:5px 10px; border:1px solid #e2e8f0; border-radius:7px;
-      background:#fff; color:#64748b; font-size:11px; font-weight:600;
-      cursor:pointer; font-family:inherit; transition:all .2s;
-      display:inline-flex; align-items:center; gap:4px;
-    }
+    .btn-pdf { padding:5px 10px; border:1px solid #e2e8f0; border-radius:7px; background:#fff; color:#64748b; font-size:11px; font-weight:600; cursor:pointer; font-family:inherit; transition:all .2s; display:inline-flex; align-items:center; gap:4px; }
     .btn-pdf:hover { background:#fee2e2; color:#dc2626; border-color:#fecaca; }
-
     .empty-row td { text-align:center; padding:48px; color:#94a3b8; font-size:14px; }
 
     .system-status { display:flex; align-items:center; gap:8px; background:#dcfce7; color:#16a34a; padding:6px 14px; border-radius:20px; font-size:13px; font-weight:600; }
@@ -101,17 +58,12 @@
   <aside>
     <div class="logo">
       <img src="https://public.readdy.ai/ai/img_res/f3ccc83c-cf23-4ebf-b376-21d351a806b7.png" alt="로고" />
-      <div class="logo-text">
-        <div class="title">스마트 현장</div>
-        <div class="sub">안전관제 시스템</div>
-      </div>
+      <div class="logo-text"><div class="title">스마트 현장</div><div class="sub">안전관제 시스템</div></div>
     </div>
     <nav>
       <a href="/upload"><i class="ri-camera-line"></i> 현장 모니터링</a>
       <a href="/video-upload"><i class="ri-video-upload-line"></i> 영상 분석</a>
       <a href="/reports"><i class="ri-file-chart-line"></i> AI 보고서</a>
-
-      <!-- 자료실 하위 메뉴 -->
       <div class="nav-group">
         <div class="nav-group-title open" id="navGroupTitle" onclick="toggleNav()">
           <i class="ri-folder-chart-line"></i> 자료실
@@ -131,9 +83,7 @@
           <div class="user-role">현장 관리자</div>
         </div>
       </div>
-      <button class="logout-btn" onclick="window.location.href='/'">
-        <i class="ri-logout-box-r-line"></i> 로그아웃
-      </button>
+      <button class="logout-btn" onclick="window.location.href='/'"><i class="ri-logout-box-r-line"></i> 로그아웃</button>
     </div>
   </aside>
 
@@ -145,33 +95,35 @@
       </div>
       <div class="date-text" id="dateText"></div>
 
-      <!-- 필터 -->
       <div class="filter-bar">
         <label>날짜</label>
         <input type="date" class="filter-input" id="filterDateFrom" />
         <span style="font-size:12px;color:#94a3b8;">~</span>
         <input type="date" class="filter-input" id="filterDateTo" />
-
         <label>위험등급</label>
         <select class="filter-select" id="filterGrade">
           <option value="">전체</option>
-          <option value="고위험">고위험</option>
-          <option value="관찰">관찰</option>
-          <option value="정상">정상</option>
+          <option value="RISK">위험</option>
+          <option value="NORMAL">정상</option>
         </select>
-
         <label>조치상태</label>
         <select class="filter-select" id="filterAction">
           <option value="">전체</option>
           <option value="미조치">미조치</option>
-          <option value="조치중">조치중</option>
           <option value="조치완료">조치완료</option>
         </select>
-
+        <label>사고유형</label>
+        <select class="filter-select" id="filterCase">
+          <option value="">전체</option>
+          <option value="보호구 미착용">보호구 미착용</option>
+          <option value="중장비 접근 사고">중장비 접근</option>
+          <option value="자재물 낙하/추락 위험">낙하물</option>
+          <option value="위험구역 출입 사고">위험구역 출입</option>
+          <option value="자재물로 인한 걸림/넘어짐">자재 걸림</option>
+        </select>
         <button class="filter-reset" onclick="resetFilter()">초기화</button>
       </div>
 
-      <!-- 테이블 -->
       <div class="report-table-wrap">
         <div class="report-table-header">
           <div class="report-table-title">보고서 목록</div>
@@ -181,15 +133,17 @@
           <thead>
             <tr>
               <th>보고서 ID</th>
+              <th>보고서 제목</th>
               <th>생성 일시</th>
               <th>위험 등급</th>
-              <th>주요 위험요소 감지결과</th>
+              <th>주요 사고 유형</th>
+              <th>작성자</th>
               <th>조치 상태</th>
               <th>PDF</th>
             </tr>
           </thead>
           <tbody id="reportTableBody">
-            <tr class="empty-row"><td colspan="6">데이터 불러오는 중...</td></tr>
+            <tr class="empty-row"><td colspan="8">데이터 불러오는 중...</td></tr>
           </tbody>
         </table>
       </div>
@@ -201,7 +155,7 @@
     let allReports = [];
 
     const user = localStorage.getItem('username') || 'admin';
-    document.getElementById('sidebarUser').textContent = user === 'admin2' ? '관리자2 (admin2)' : '관리자 (admin)';
+    document.getElementById('sidebarUser').textContent = user === 'admin2' ? '정재학 (admin2)' : '손광민 (admin)';
 
     function updateDate() {
       const now = new Date();
@@ -212,12 +166,9 @@
     updateDate();
 
     function toggleNav() {
-      const sub   = document.getElementById('navSub');
-      const arrow = document.getElementById('navArrow');
-      const title = document.getElementById('navGroupTitle');
-      sub.classList.toggle('open');
-      arrow.classList.toggle('open');
-      title.classList.toggle('open');
+      document.getElementById('navSub').classList.toggle('open');
+      document.getElementById('navArrow').classList.toggle('open');
+      document.getElementById('navGroupTitle').classList.toggle('open');
     }
 
     async function loadData() {
@@ -234,12 +185,20 @@
       const action = document.getElementById('filterAction').value;
       const from   = document.getElementById('filterDateFrom').value;
       const to     = document.getElementById('filterDateTo').value;
+      const caseF  = document.getElementById('filterCase').value;
 
       let filtered = allReports.filter(r => {
-        if (grade  && r.risk_grade !== grade)                         return false;
-        if (action && (r.action_status||'미조치') !== action)          return false;
-        if (from   && r.created_at && r.created_at.slice(0,10) < from) return false;
-        if (to     && r.created_at && r.created_at.slice(0,10) > to)   return false;
+        if (grade  && r.detection_status !== grade)                         return false;
+        if (action && (r.action_status || '미조치') !== action)              return false;
+        if (from   && r.created_at && r.created_at.slice(0,10) < from)      return false;
+        if (to     && r.created_at && r.created_at.slice(0,10) > to)        return false;
+        if (caseF  && r.case_name !== caseF) {
+          // report_content에서도 확인
+          try {
+            const cases = JSON.parse(r.report_content || '{}').detected_cases || [];
+            if (!cases.includes(caseF)) return false;
+          } catch(_) { return false; }
+        }
         return true;
       });
 
@@ -247,7 +206,7 @@
       const tbody = document.getElementById('reportTableBody');
 
       if (filtered.length === 0) {
-        tbody.innerHTML = '<tr class="empty-row"><td colspan="6">조건에 맞는 보고서가 없습니다.</td></tr>';
+        tbody.innerHTML = '<tr class="empty-row"><td colspan="8">조건에 맞는 보고서가 없습니다.</td></tr>';
         return;
       }
 
@@ -256,28 +215,26 @@
         const dts = dt
           ? `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')} ${String(dt.getHours()).padStart(2,'0')}:${String(dt.getMinutes()).padStart(2,'0')}`
           : '-';
-        const grade  = r.risk_grade    || '정상';
-        const action = r.action_status || '미조치';
-        const colorMap = {
-          '보호구미착용':'#dc2626','보호구 미착용':'#dc2626',
-          '중장비접근':'#f97316','중장비 접근':'#f97316',
-          '낙하물':'#f59e0b',
-          '위험구역출입':'#8b5cf6','위험구역 출입':'#8b5cf6',
-          '자재걸림':'#ec4899','자재 걸림':'#ec4899',
-        };
-        const types = r.danger_types || [];
-        const typesHtml = types.length > 0
-          ? types.map(t => { const c = colorMap[t]||'#64748b'; return `<span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700;background:${c}22;color:${c};margin:1px 2px;">${t}</span>`; }).join('')
-          : '<span style="color:#94a3b8;font-size:12px;">-</span>';
+        const grade  = r.detection_status || 'NORMAL';
+        const action = r.action_status    || '미조치';
+        const gradeLabel = grade === 'RISK' ? '위험' : '정상';
+
+        // 사고 유형
+        let cases = [];
+        try { cases = JSON.parse(r.report_content || '{}').detected_cases || []; } catch(_) {}
+        const caseText = r.case_name || cases[0] || '-';
+
         return `
           <tr>
             <td style="font-weight:700;cursor:pointer;" onclick="window.location.href='/reports/${r.report_id}'">#${r.report_id}</td>
+            <td style="cursor:pointer;max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" onclick="window.location.href='/reports/${r.report_id}'">${r.report_title || '-'}</td>
             <td style="cursor:pointer;" onclick="window.location.href='/reports/${r.report_id}'">${dts}</td>
-            <td style="cursor:pointer;" onclick="window.location.href='/reports/${r.report_id}'"><span class="badge ${grade}">${grade}</span></td>
-            <td style="cursor:pointer;" onclick="window.location.href='/reports/${r.report_id}'">${typesHtml}</td>
+            <td style="cursor:pointer;" onclick="window.location.href='/reports/${r.report_id}'"><span class="badge ${grade}">${gradeLabel}</span></td>
+            <td style="cursor:pointer;" onclick="window.location.href='/reports/${r.report_id}'">${caseText}</td>
+            <td style="cursor:pointer;" onclick="window.location.href='/reports/${r.report_id}'">${r.created_by_name || '-'}</td>
             <td style="cursor:pointer;" onclick="window.location.href='/reports/${r.report_id}'"><span class="badge ${action}">${action}</span></td>
             <td>
-              <button class="btn-pdf" onclick="downloadPdf(${r.report_id},'${grade}','${dts}','${action}')">
+              <button class="btn-pdf" onclick="downloadPdf(${r.report_id},'${gradeLabel}','${dts}','${action}','${r.report_title||''}','${caseText}')">
                 <i class="ri-file-pdf-line"></i> PDF
               </button>
             </td>
@@ -285,41 +242,35 @@
       }).join('');
     }
 
-    ['filterGrade','filterAction','filterDateFrom','filterDateTo'].forEach(id => {
+    ['filterGrade','filterAction','filterDateFrom','filterDateTo','filterCase'].forEach(id => {
       document.getElementById(id).addEventListener('change', renderTable);
     });
 
     function resetFilter() {
-      ['filterGrade','filterAction','filterDateFrom','filterDateTo'].forEach(id => document.getElementById(id).value = '');
+      ['filterGrade','filterAction','filterDateFrom','filterDateTo','filterCase'].forEach(id => document.getElementById(id).value = '');
       renderTable();
     }
 
-    async function downloadPdf(reportId, grade, dateStr, helmet, vest, actionStatus) {
+    async function downloadPdf(reportId, grade, dateStr, actionStatus, title, caseText) {
       try {
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF();
-        doc.setFontSize(18);
-        doc.setFont('helvetica','bold');
+        doc.setFontSize(18); doc.setFont('helvetica','bold');
         doc.text('Safety Inspection Report', 20, 25);
-        doc.setDrawColor(200,200,200);
-        doc.line(20, 30, 190, 30);
-        doc.setFontSize(11);
-        doc.setFont('helvetica','normal');
-        doc.text(`Report ID    : #${reportId}`,   20, 42);
-        doc.text(`Date         : ${dateStr}`,      20, 52);
-        doc.text(`Risk Grade   : ${grade}`,        20, 62);
-        doc.text(`Action Status: ${actionStatus}`, 20, 72);
-        doc.line(20, 78, 190, 78);
-        doc.text(`Helmet Violations : ${helmet}`,  20, 88);
-        doc.text(`Vest Violations   : ${vest}`,    20, 98);
-        doc.line(20, 104, 190, 104);
+        doc.setDrawColor(200,200,200); doc.line(20,30,190,30);
+        doc.setFontSize(11); doc.setFont('helvetica','normal');
+        doc.text(`Report ID    : #${reportId}`, 20, 42);
+        doc.text(`Title        : ${title}`,      20, 52);
+        doc.text(`Date         : ${dateStr}`,     20, 62);
+        doc.text(`Risk Grade   : ${grade}`,       20, 72);
+        doc.text(`Case         : ${caseText}`,    20, 82);
+        doc.text(`Action Status: ${actionStatus}`,20, 92);
+        doc.line(20,98,190,98);
         doc.setFontSize(10);
-        doc.text('Generated by Smart Safety Management System', 20, 115);
-        doc.text(`Downloaded : ${new Date().toLocaleString('ko-KR')}`, 20, 123);
+        doc.text('Generated by Smart Safety Management System', 20, 108);
+        doc.text(`Downloaded : ${new Date().toLocaleString('ko-KR')}`, 20, 116);
         doc.save(`report_${reportId}.pdf`);
-      } catch (err) {
-        alert('PDF 생성 중 오류가 발생했습니다.');
-      }
+      } catch (err) { alert('PDF 생성 중 오류가 발생했습니다.'); }
     }
 
     loadData();

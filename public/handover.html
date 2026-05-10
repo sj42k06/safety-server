@@ -7,88 +7,30 @@
   <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet" />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
     body {
       font-family: 'Pretendard', 'Apple SD Gothic Neo', -apple-system, sans-serif;
       background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
-      min-height: 100vh;
-      display: flex; align-items: center; justify-content: center;
-      padding: 20px;
+      min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px;
     }
+    .container { width: 100%; max-width: 520px; animation: fadeUp .4s ease; }
+    @keyframes fadeUp { from{opacity:0;transform:translateY(24px)} to{opacity:1;transform:translateY(0)} }
 
-    /* 배경 파티클 효과 */
-    body::before {
-      content: '';
-      position: fixed; inset: 0;
-      background:
-        radial-gradient(ellipse at 20% 50%, rgba(59,130,246,.08) 0%, transparent 60%),
-        radial-gradient(ellipse at 80% 20%, rgba(16,185,129,.06) 0%, transparent 60%);
-      pointer-events: none;
-    }
+    .card { background: #fff; border-radius: 24px; overflow: hidden; box-shadow: 0 32px 80px rgba(0,0,0,.4); }
 
-    .container {
-      width: 100%; max-width: 520px;
-      animation: fadeUp .4s ease;
-    }
-    @keyframes fadeUp {
-      from { opacity:0; transform:translateY(24px); }
-      to   { opacity:1; transform:translateY(0); }
-    }
-
-    /* ── 카드 ── */
-    .card {
-      background: #fff; border-radius: 24px;
-      overflow: hidden;
-      box-shadow: 0 32px 80px rgba(0,0,0,.4);
-    }
-
-    /* ── 헤더 ── */
-    .hw-header {
-      background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
-      padding: 28px 28px 22px; color: #fff;
-      position: relative; overflow: hidden;
-    }
-    .hw-header::after {
-      content: '🦺';
-      position: absolute; right: 24px; top: 50%; transform: translateY(-50%);
-      font-size: 64px; opacity: .08;
-    }
+    .hw-header { background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); padding: 28px 28px 22px; color: #fff; }
     .hw-header-top { display:flex; align-items:center; gap:14px; margin-bottom:14px; }
-    .hw-icon {
-      width: 48px; height: 48px; border-radius: 14px;
-      background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.15);
-      display: flex; align-items: center; justify-content: center; font-size: 24px;
-      flex-shrink: 0;
-    }
-    .hw-title-wrap {}
-    .hw-title    { font-size: 20px; font-weight: 800; margin-bottom: 2px; }
-    .hw-subtitle { font-size: 13px; color: #94a3b8; }
-
-    .hw-user-row {
-      display: flex; align-items: center; gap: 8px;
-      background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.1);
-      border-radius: 10px; padding: 10px 14px;
-    }
+    .hw-icon { width:48px; height:48px; border-radius:14px; background:rgba(255,255,255,.12); border:1px solid rgba(255,255,255,.15); display:flex; align-items:center; justify-content:center; font-size:24px; flex-shrink:0; }
+    .hw-title    { font-size:20px; font-weight:800; margin-bottom:2px; }
+    .hw-subtitle { font-size:13px; color:#94a3b8; }
+    .hw-user-row { display:flex; align-items:center; gap:8px; background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.1); border-radius:10px; padding:10px 14px; }
     .hw-user-dot { width:8px; height:8px; border-radius:50%; background:#22c55e; flex-shrink:0; animation:pulse 2s ease infinite; }
     @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
     .hw-user-name { font-size:13px; font-weight:600; }
     .hw-user-time { font-size:12px; color:#94a3b8; margin-left:auto; }
 
-    /* ── 본문 ── */
     .hw-body { padding: 24px 28px; }
-
-    /* 통계 카드 */
     .hw-stats { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:24px; }
-    .hw-stat {
-      border-radius: 14px; padding: 18px 16px;
-      display: flex; flex-direction: column; gap: 6px;
-      position: relative; overflow: hidden;
-    }
-    .hw-stat::after {
-      content: attr(data-icon);
-      position: absolute; right: 12px; bottom: 8px;
-      font-size: 36px; opacity: .15;
-    }
+    .hw-stat { border-radius:14px; padding:18px 16px; display:flex; flex-direction:column; gap:6px; }
     .hw-stat.danger { background:#fef2f2; border:1px solid #fecaca; }
     .hw-stat.safe   { background:#f0fdf4; border:1px solid #bbf7d0; }
     .hw-stat.info   { background:#eff6ff; border:1px solid #bfdbfe; }
@@ -99,113 +41,44 @@
     .hw-stat.info   .st-num { color:#2563eb; }
     .st-sub { font-size:11px; color:#94a3b8; }
 
-    /* 섹션 타이틀 */
-    .section-title {
-      font-size:12px; font-weight:700; color:#475569;
-      margin-bottom:10px; display:flex; align-items:center; gap:6px;
-      text-transform: uppercase; letter-spacing: .5px;
-    }
-
-    /* 미조치 목록 */
+    .section-title { font-size:12px; font-weight:700; color:#475569; margin-bottom:10px; display:flex; align-items:center; gap:6px; text-transform:uppercase; letter-spacing:.5px; }
     .report-list { display:flex; flex-direction:column; gap:8px; margin-bottom:24px; }
-    .report-item {
-      background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px;
-      padding:12px 14px; display:flex; align-items:center; gap:10px;
-      transition: border-color .2s;
-    }
-    .report-item:hover { border-color:#cbd5e1; }
-    .report-item .r-id {
-      font-size:11px; font-weight:800; color:#dc2626;
-      background:#fee2e2; border-radius:6px; padding:3px 8px; flex-shrink:0;
-    }
-    .report-item .r-grade {
-      font-size:11px; font-weight:700; padding:2px 7px; border-radius:6px; flex-shrink:0;
-    }
-    .r-grade.고위험 { background:#fee2e2; color:#dc2626; }
-    .r-grade.관찰   { background:#fef3c7; color:#d97706; }
-    .r-grade.정상   { background:#dcfce7; color:#16a34a; }
+    .report-item { background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:12px 14px; display:flex; align-items:center; gap:10px; }
+    .report-item .r-id { font-size:11px; font-weight:800; color:#dc2626; background:#fee2e2; border-radius:6px; padding:3px 8px; flex-shrink:0; }
+    .report-item .r-case { font-size:11px; font-weight:700; color:#64748b; flex-shrink:0; }
     .report-item .r-desc { font-size:12px; color:#334155; flex:1; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
     .report-item .r-time { font-size:11px; color:#94a3b8; flex-shrink:0; }
+    .list-empty { text-align:center; padding:20px; color:#94a3b8; font-size:13px; background:#f0fdf4; border:1px solid #bbf7d0; border-radius:12px; }
 
-    .list-empty {
-      text-align:center; padding:20px; color:#94a3b8; font-size:13px;
-      background:#f0fdf4; border:1px solid #bbf7d0; border-radius:12px;
-    }
+    .hw-divider { height:1px; background:#f1f5f9; margin-bottom:20px; }
 
-    /* 구분선 */
-    .divider { height:1px; background:#f1f5f9; margin-bottom:22px; }
-
-    /* 버튼 */
-    .btn-approve {
-      width:100%; padding:16px; border:none; border-radius:14px;
-      background:linear-gradient(135deg, #16a34a 0%, #15803d 100%);
-      color:#fff; font-size:16px; font-weight:800; cursor:pointer;
-      display:flex; align-items:center; justify-content:center; gap:10px;
-      font-family:inherit; transition:all .2s; margin-bottom:10px;
-      box-shadow: 0 4px 16px rgba(22,163,74,.35);
-      letter-spacing: .3px;
-    }
-    .btn-approve:hover  { transform:translateY(-2px); box-shadow:0 8px 24px rgba(22,163,74,.45); }
-    .btn-approve:active { transform:translateY(0); }
+    .btn-approve { width:100%; padding:16px; border:none; border-radius:14px; background:linear-gradient(135deg,#16a34a 0%,#15803d 100%); color:#fff; font-size:16px; font-weight:800; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:10px; font-family:inherit; transition:all .2s; margin-bottom:0; box-shadow:0 4px 16px rgba(22,163,74,.35); }
+    .btn-approve:hover { transform:translateY(-2px); box-shadow:0 8px 24px rgba(22,163,74,.45); }
     .btn-approve:disabled { opacity:.5; cursor:not-allowed; transform:none; box-shadow:none; }
 
-    .btn-skip {
-      width:100%; padding:13px; border:1px solid #e2e8f0; border-radius:14px;
-      background:#fff; color:#64748b; font-size:13px; font-weight:600;
-      cursor:pointer; font-family:inherit; transition:all .2s;
-    }
-    .btn-skip:hover { border-color:#94a3b8; color:#334155; }
-
-    /* 로딩 */
-    .loading-wrap {
-      padding: 40px 28px; text-align:center; color:#94a3b8;
-    }
+    .hw-loading { text-align:center; padding:40px; color:#94a3b8; font-size:13px; }
     .loading-icon { font-size:32px; animation:spin .8s linear infinite; display:block; margin-bottom:12px; }
     @keyframes spin { to { transform:rotate(360deg); } }
 
-    /* ── 완료 화면 ── */
-    .done-wrap {
-      display:none; flex-direction:column; align-items:center;
-      gap:14px; padding:40px 28px; text-align:center;
-    }
-    .done-wrap.show { display:flex; }
-    .done-circle {
-      width:80px; height:80px; border-radius:50%;
-      background:linear-gradient(135deg,#16a34a,#15803d);
-      display:flex; align-items:center; justify-content:center;
-      font-size:38px; box-shadow:0 8px 24px rgba(22,163,74,.4);
-      animation: popIn .4s cubic-bezier(.34,1.56,.64,1);
-    }
+    .hw-done { display:none; flex-direction:column; align-items:center; gap:14px; padding:40px 28px; text-align:center; }
+    .hw-done.show { display:flex; }
+    .done-circle { width:80px; height:80px; border-radius:50%; background:linear-gradient(135deg,#16a34a,#15803d); display:flex; align-items:center; justify-content:center; font-size:38px; box-shadow:0 8px 24px rgba(22,163,74,.4); animation:popIn .4s cubic-bezier(.34,1.56,.64,1); }
     @keyframes popIn { from{transform:scale(0)} to{transform:scale(1)} }
     .done-title { font-size:22px; font-weight:800; color:#16a34a; }
     .done-sub   { font-size:13px; color:#64748b; }
     .done-time  { font-size:12px; color:#94a3b8; }
-    .done-sms   {
-      font-size:12px; color:#2563eb; font-weight:600;
-      background:#eff6ff; border:1px solid #bfdbfe;
-      border-radius:8px; padding:8px 16px;
-      display:flex; align-items:center; gap:6px;
-    }
-    .btn-goto {
-      margin-top:4px; padding:14px 36px; border:none; border-radius:14px;
-      background:#1e293b; color:#fff; font-size:14px; font-weight:700;
-      cursor:pointer; font-family:inherit; transition:all .2s;
-    }
+    .btn-goto { margin-top:4px; padding:14px 36px; border:none; border-radius:14px; background:#1e293b; color:#fff; font-size:14px; font-weight:700; cursor:pointer; font-family:inherit; transition:all .2s; }
     .btn-goto:hover { background:#0f172a; transform:translateY(-1px); }
-
-    /* 카운트다운 */
     .countdown { font-size:12px; color:#94a3b8; }
   </style>
 </head>
 <body>
   <div class="container">
     <div class="card">
-
-      <!-- 헤더 -->
       <div class="hw-header">
         <div class="hw-header-top">
           <div class="hw-icon">📋</div>
-          <div class="hw-title-wrap">
+          <div>
             <div class="hw-title">인수인계 현황</div>
             <div class="hw-subtitle">교대 전 현황 확인 및 인수 승인</div>
           </div>
@@ -217,93 +90,77 @@
         </div>
       </div>
 
-      <!-- 로딩 -->
-      <div class="loading-wrap" id="hwLoading">
+      <div class="hw-loading" id="hwLoading">
         <i class="ri-loader-4-line loading-icon"></i>
         현황 불러오는 중...
       </div>
 
-      <!-- 본문 -->
       <div class="hw-body" id="hwBody" style="display:none;">
         <div class="hw-stats">
-          <div class="hw-stat danger" data-icon="⚠️">
-            <div class="st-label">미조치 보고서</div>
+          <div class="hw-stat danger" id="unresolvedStat">
+            <div class="st-label">⚠️ 미조치 보고서</div>
             <div class="st-num" id="hwUnresolved">0</div>
             <div class="st-sub">즉시 확인 필요</div>
           </div>
-          <div class="hw-stat info" data-icon="📄">
-            <div class="st-label">당일 보고서</div>
+          <div class="hw-stat info">
+            <div class="st-label">📄 당일 보고서</div>
             <div class="st-num" id="hwToday">0</div>
             <div class="st-sub">오늘 생성된 보고서</div>
           </div>
         </div>
 
-        <div class="section-title">
-          <i class="ri-alert-line"></i> 미조치 보고서 목록
-        </div>
+        <div class="section-title"><i class="ri-alert-line"></i> 미조치 보고서 목록</div>
         <div class="report-list" id="hwReportList"></div>
-
-        <div class="divider"></div>
+        <div class="hw-divider"></div>
 
         <button class="btn-approve" id="btnApprove" onclick="approve()">
           ✅ 인수 승인
         </button>
       </div>
 
-      <!-- 완료 -->
-      <div class="done-wrap" id="hwDone">
+      <div class="hw-done" id="hwDone">
         <div class="done-circle">✅</div>
         <div class="done-title">인수 승인 완료</div>
         <div class="done-sub" id="doneSub"></div>
         <div class="done-time" id="doneTime"></div>
-        <div class="done-sms" id="doneSms" style="display:none;">
-          <i class="ri-message-2-line"></i> SMS 발송 완료
-        </div>
-        <button class="btn-goto" onclick="goDashboard()">
-          대시보드로 이동 →
-        </button>
+        <button class="btn-goto" onclick="goDashboard()">대시보드로 이동 →</button>
         <div class="countdown" id="countdown"></div>
       </div>
-
     </div>
   </div>
 
   <script>
-    const BASE_URL = 'https://safety-server-oqza.onrender.com';
-    const username = localStorage.getItem('username') || 'admin';
-    const displayName = localStorage.getItem('username_display') || '관리자';
-
-    let unresolvedCount = 0, todayCount = 0;
+    const BASE_URL   = 'https://safety-server-oqza.onrender.com';
+    const username   = localStorage.getItem('username') || 'admin';
+    const displayName = username === 'admin2' ? '정재학 (admin2)' : '손광민 (admin)';
     let countdownTimer = null;
 
-    // 로그인 안 했으면 로그인 페이지로
-    if (!localStorage.getItem('username')) {
-      window.location.href = '/';
-    }
+    if (!localStorage.getItem('username')) window.location.href = '/';
 
-    // 현재 시각 표시
-    document.getElementById('hwUserName').textContent  = displayName;
-    document.getElementById('hwUserTime').textContent  = new Date().toLocaleString('ko-KR', { hour:'2-digit', minute:'2-digit' });
+    document.getElementById('hwUserName').textContent = displayName;
+    document.getElementById('hwUserTime').textContent = new Date().toLocaleString('ko-KR', { hour:'2-digit', minute:'2-digit' });
 
-    // 현황 로드
     window.onload = async () => {
       try {
         const res  = await fetch(BASE_URL + '/api/handover/summary');
         const data = await res.json();
 
-        unresolvedCount = data.unresolved_count || 0;
-        todayCount      = data.today_count      || 0;
+        const unresolvedCount = data.unresolved_count || 0;
+        const todayCount      = data.today_count      || 0;
 
         document.getElementById('hwUnresolved').textContent = unresolvedCount;
         document.getElementById('hwToday').textContent      = todayCount;
 
-        // 통계 카드 색상: 미조치 0건이면 초록으로
+        // 미조치 0건이면 바로 대시보드
         if (unresolvedCount === 0) {
-          document.querySelector('.hw-stat.danger').className = 'hw-stat safe';
-          document.querySelector('.hw-stat.safe').setAttribute('data-icon', '✅');
+          goDashboard();
+          return;
         }
 
-        // 미조치 목록
+        // 미조치 카드 색상
+        const stat = document.getElementById('unresolvedStat');
+        stat.className = unresolvedCount === 0 ? 'hw-stat safe' : 'hw-stat danger';
+
         const list   = data.unresolved_reports || [];
         const listEl = document.getElementById('hwReportList');
         if (list.length === 0) {
@@ -312,76 +169,50 @@
           listEl.innerHTML = list.map(r => `
             <div class="report-item">
               <span class="r-id">#${r.report_id}</span>
-              <span class="r-grade ${r.risk_grade || ''}">${r.risk_grade || '-'}</span>
-              <span class="r-desc">${r.summary || '안전 위반 감지'}</span>
+              <span class="r-case">${r.case_name || '-'}</span>
+              <span class="r-desc">${r.report_title || '안전 위반 감지'}</span>
               <span class="r-time">${formatDate(r.created_at)}</span>
             </div>
           `).join('');
         }
-
-      } catch (err) {
+      } catch (_) {
         document.getElementById('hwUnresolved').textContent = '-';
         document.getElementById('hwToday').textContent      = '-';
-        document.getElementById('hwReportList').innerHTML =
-          '<div class="list-empty" style="background:#fff0f0;border-color:#fecaca;">데이터를 불러오지 못했습니다.</div>';
+        document.getElementById('hwReportList').innerHTML   = '<div class="list-empty" style="background:#fff0f0;border-color:#fecaca;">데이터를 불러오지 못했습니다.</div>';
       }
 
       document.getElementById('hwLoading').style.display = 'none';
-
-      // 미조치 0건이면 바로 대시보드 이동
-      if (unresolvedCount === 0) {
-        goDashboard();
-        return;
-      }
-
-      document.getElementById('hwBody').style.display = 'block';
+      document.getElementById('hwBody').style.display    = 'block';
     };
 
-    // 인수 승인
     async function approve() {
       const btn = document.getElementById('btnApprove');
       btn.disabled = true;
       btn.innerHTML = '<i class="ri-loader-4-line" style="animation:spin .7s linear infinite;display:inline-block;"></i> 처리 중...';
 
       try {
-        const res = await fetch(BASE_URL + '/api/handover/approve', {
+        await fetch(BASE_URL + '/api/handover/approve', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            user:        username,
-            approved_at: new Date().toISOString()
-          })
+          body: JSON.stringify({ user: username, approved_at: new Date().toISOString() })
         });
-        const data = await res.json();
+      } catch (_) {}
 
-        // 완료 화면
-        document.getElementById('hwBody').style.display = 'none';
-        const done = document.getElementById('hwDone');
-        done.classList.add('show');
-        document.getElementById('doneSub').textContent  = `${displayName}이(가) 인수를 승인했습니다.`;
-        document.getElementById('doneTime').textContent = new Date().toLocaleString('ko-KR');
+      document.getElementById('hwBody').style.display = 'none';
+      const done = document.getElementById('hwDone');
+      done.classList.add('show');
+      document.getElementById('doneSub').textContent  = `${displayName}이(가) 인수를 승인했습니다.`;
+      document.getElementById('doneTime').textContent = new Date().toLocaleString('ko-KR');
 
-        if (data.sms_sent) {
-          document.getElementById('doneSms').style.display = 'flex';
-        }
-
-        // 3초 카운트다운 후 대시보드
-        let sec = 3;
-        document.getElementById('countdown').textContent = `${sec}초 후 자동 이동...`;
-        countdownTimer = setInterval(() => {
-          sec--;
-          if (sec <= 0) { clearInterval(countdownTimer); goDashboard(); }
-          else document.getElementById('countdown').textContent = `${sec}초 후 자동 이동...`;
-        }, 1000);
-
-      } catch (err) {
-        btn.disabled = false;
-        btn.innerHTML = '✅ 인수 승인';
-        alert('오류가 발생했습니다. 다시 시도해주세요.');
-      }
+      let sec = 3;
+      document.getElementById('countdown').textContent = `${sec}초 후 자동 이동...`;
+      countdownTimer = setInterval(() => {
+        sec--;
+        if (sec <= 0) { clearInterval(countdownTimer); goDashboard(); }
+        else document.getElementById('countdown').textContent = `${sec}초 후 자동 이동...`;
+      }, 1000);
     }
 
-    function skip()        { goDashboard(); }
     function goDashboard() {
       if (countdownTimer) clearInterval(countdownTimer);
       window.location.href = '/dashboard';
