@@ -24,7 +24,7 @@ from logic_collision import analyze_collision
 print("logic_collision 완료", file=sys.stderr)
 from logic_falling import analyze_falling
 print("logic_falling 완료", file=sys.stderr)
-from logic_trip import analyze_trip
+from logic_trip import detect_all as analyze_trip
 print("logic_trip 완료", file=sys.stderr)
 from safety_engine import integrate_analysis
 print("safety_engine 완료", file=sys.stderr)
