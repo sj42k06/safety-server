@@ -1,52 +1,72 @@
-# 통로영역 내에 자재방치
-import time
-from shapely.geometry import Point, Polygon
+from ultralytics import YOLO
+import os
+import cv2
 
-# 통로 ROI 설정(임의로 지정한 상태 -> 후에 변경 필요*)
-PATHWAY_COORDS = [(100, 500), (400, 500), (450, 800), (50, 800)]
-PATHWAY_ZONE = Polygon(PATHWAY_COORDS)
+# 1. 설정
+MODEL_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "safety2.pt")
+CONF_THRESHOLD = 0.3
+BATCH_SIZE = 16
 
-# 자재별 방치 시간을 추적하기 위한 전역 딕셔너리
-material_timers = {}
+# 모델 로드
+model = YOLO(MODEL_PATH)
 
-def analyze_trip(structured_frames):
+# 모델의 클래스 정보를 자동으로 가져와 소문자로 변환
+MODEL_NAMES = {k: v.lower() for k, v in model.names.items()}
+
+def detect_all(input_folder):
+    results_data = []
     
-    #통로 ROI 내 자재가 머문 시간을 분석하여 반환합니다.
+    if not os.path.exists(input_folder):
+        print(f"경고: 폴더를 찾을 수 없습니다. -> {input_folder}")
+        return results_data
+
+    valid_extensions = (".jpg", ".jpeg", ".png")
+    image_files = [f for f in os.listdir(input_folder) if f.lower().endswith(valid_extensions)]
     
-    trip_results = []
-
-    for frame in structured_frames:
-        frame_id = frame["frame"]
-        frame_data = {"frame": frame_id, "trip_events": []}
-        current_material_ids = []
-
-        for material in frame["materials"]:
-            mat_id = material.get("id", f"mat_{int(material['fx'])}_{int(material['fy'])}")
-            current_material_ids.append(mat_id)
+    for i in range(0, len(image_files), BATCH_SIZE):
+        batch_files = image_files[i : i + BATCH_SIZE]
+        batch_imgs = []
+        batch_paths = []
+        for filename in batch_files:
+            path = os.path.join(input_folder, filename)
+            img = cv2.imread(path)
+            if img is not None:
+                batch_imgs.append(img)
+                batch_paths.append(filename)
+        if not batch_imgs:
+            continue
+        try:
+            results = model(batch_imgs, conf=CONF_THRESHOLD, stream=False)
+            for idx, r in enumerate(results):
+                filename = batch_paths[idx]
+                h, w, _ = batch_imgs[idx].shape
+                detections = []
+                for box in r.boxes:
+                    conf = float(box.conf[0])
+                    cls_idx = int(box.cls[0])
+                    
+                    if cls_idx not in MODEL_NAMES:
+                        continue
+                        
+                    label = MODEL_NAMES[cls_idx]
+                    x1, y1, x2, y2 = map(int, box.xyxy[0])
+                    fx, fy = (x1 + x2) // 2, y2 
+                    detections.append({
+                        "type": label,
+                        "confidence": round(conf, 2),
+                        "bbox": [x1, y1, x2, y2], 
+                        "fx": fx, 
+                        "fy": fy
+                    })
             
-            mat_point = Point(material["fx"], material["fy"])
-            
-            if PATHWAY_ZONE.contains(mat_point):
-                if mat_id not in material_timers:
-                    material_timers[mat_id] = time.time()
-                
-                elapsed = time.time() - material_timers[mat_id]
-                
-                # 경과 시간 데이터만 기록하여 전달[cite: 1]
-                frame_data["trip_events"].append({
-                    "mat_id": mat_id,
-                    "type": material.get("sub_type", "material"),
-                    "bbox": material["bbox"],
-                    "elapsed_sec": round(elapsed, 1)
+                results_data.append({
+                    "frame": filename, 
+                    "width": w, 
+                    "height": h, 
+                    "detections": detections
                 })
-            else:
-                material_timers.pop(mat_id, None)
-
-        # 화면에서 사라진 자재 타이머 정리
-        for stored_id in list(material_timers.keys()):
-            if stored_id not in current_material_ids:
-                material_timers.pop(stored_id, None)
-
-        trip_results.append(frame_data)
-        
-    return trip_results
+                
+        except Exception as e: 
+            print(f"배치 처리 중 오류 발생: {e}")
+            
+    return results_data
