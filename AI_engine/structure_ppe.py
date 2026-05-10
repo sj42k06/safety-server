@@ -10,9 +10,9 @@ def structure_data(results_data):
         persons = []    # 사람
         helmets = []    # 안전모 관련 (Hardhat, NO-Hardhat)
         vests = []      # 조끼 관련 (Safety Vest, NO-Safety Vest)
-        machines = []   # 중장비 및 기계 (Excavator, machinery)
+        machines = []   # 중장비 및 기계 (vehicle, machinery)
         hooks = []      # 갈고리 (hook) 
-        materials = []  # 건설 자재 (board, brick, rebar, wood)
+        materials = []  # 건설 자재 
         
         for det in frame_data["detections"]:
             label = det["type"]  # detect_ppe.py에서 소문자로 처리된 라벨
@@ -38,7 +38,7 @@ def structure_data(results_data):
                 vests.append(obj_data)
                 
             # 4. 기계 장비 분류
-            elif label in ["excavator", "machinery"]:
+            elif label in ["machinery", "vehicle"]:
                 obj_data["sub_type"] = label
                 machines.append(obj_data)
 
@@ -47,7 +47,7 @@ def structure_data(results_data):
                 hooks.append(obj_data)
                 
             # 6. 건설 자재 분류
-            elif label in ["board", "brick", "rebar", "wood"]:
+            elif label == "material":
                 obj_data["sub_type"] = label
                 materials.append(obj_data)
 
