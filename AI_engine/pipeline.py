@@ -75,31 +75,50 @@ def call_openai(prompt):
         print(f"OpenAI 호출 실패: {e}", file=sys.stderr)
         return None
 
-def draw_bounding_boxes(image_path, workers, output_path):
+def draw_bounding_boxes_all(image_path, frame_structured, ppe_frame, output_path):
+    """PPE + 중장비 + 자재 + 후크 모두 바운딩박스 그리기"""
     img = cv2.imread(image_path)
     if img is None:
         return image_path
 
-    for worker in workers:
-        bbox = worker['bbox']
-        x1, y1, x2, y2 = bbox
-
+    # 1. 작업자 PPE 박스
+    for worker in ppe_frame.get('workers', []):
+        x1, y1, x2, y2 = worker['bbox']
         if worker['risk'] == 'HIGH':
-            color = (0, 0, 255)
+            color = (0, 0, 255)      # 빨강
         elif worker['risk'] == 'MEDIUM':
-            color = (0, 165, 255)
+            color = (0, 165, 255)    # 주황
         else:
-            color = (0, 255, 0)
-
+            color = (0, 255, 0)      # 초록
         cv2.rectangle(img, (x1, y1), (x2, y2), color, 2)
         label = f"{worker['helmet']} | {worker['vest']}"
-        cv2.putText(img, label, (x1, y1 - 10),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+        cv2.putText(img, label, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+
+    # 2. 중장비/차량 박스 (노란색)
+    for machine in frame_structured.get('machines', []):
+        x1, y1, x2, y2 = machine['bbox']
+        cv2.rectangle(img, (x1, y1), (x2, y2), (0, 255, 255), 2)
+        cv2.putText(img, machine.get('sub_type', 'machinery'), (x1, y1 - 10),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 2)
+
+    # 3. 자재 박스 (보라색)
+    for mat in frame_structured.get('materials', []):
+        x1, y1, x2, y2 = mat['bbox']
+        cv2.rectangle(img, (x1, y1), (x2, y2), (255, 0, 255), 2)
+        cv2.putText(img, 'material', (x1, y1 - 10),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 255), 2)
+
+    # 4. 후크 박스 (하늘색)
+    for hook in frame_structured.get('hooks', []):
+        x1, y1, x2, y2 = hook['bbox']
+        cv2.rectangle(img, (x1, y1), (x2, y2), (255, 255, 0), 2)
+        cv2.putText(img, 'hook', (x1, y1 - 10),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 0), 2)
 
     cv2.imwrite(output_path, img)
     return output_path
 
-def create_annotated_video(frames_folder, ppe_risks, output_path):
+def create_annotated_video(frames_folder, structured, ppe_risks, output_path):
     frames = sorted([f for f in os.listdir(frames_folder) if f.endswith('.jpg') and '_boxed' not in f])
     if not frames:
         return None
@@ -112,41 +131,61 @@ def create_annotated_video(frames_folder, ppe_risks, output_path):
     fourcc = cv2.VideoWriter_fourcc(*'mp4v')
     out = cv2.VideoWriter(output_path, fourcc, 1.0, (w, h))
 
-    risk_map = {r['frame']: r for r in ppe_risks}
+    ppe_map = {r['frame']: r for r in ppe_risks}
+    struct_map = {s['frame']: s for s in structured}
 
     for frame_file in frames:
         img = cv2.imread(os.path.join(frames_folder, frame_file))
         if img is None:
             continue
 
-        if frame_file in risk_map:
-            for worker in risk_map[frame_file].get('workers', []):
-                x1, y1, x2, y2 = worker['bbox']
-                if worker['risk'] == 'HIGH':
-                    color = (0, 0, 255)
-                elif worker['risk'] == 'MEDIUM':
-                    color = (0, 165, 255)
-                else:
-                    color = (0, 255, 0)
-                cv2.rectangle(img, (x1, y1), (x2, y2), color, 2)
-                label = f"{worker['helmet']} | {worker['vest']}"
-                cv2.putText(img, label, (x1, y1 - 10),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+        ppe_frame = ppe_map.get(frame_file, {'workers': []})
+        struct_frame = struct_map.get(frame_file, {})
+
+        # 작업자
+        for worker in ppe_frame.get('workers', []):
+            x1, y1, x2, y2 = worker['bbox']
+            color = (0, 0, 255) if worker['risk'] == 'HIGH' else (0, 165, 255) if worker['risk'] == 'MEDIUM' else (0, 255, 0)
+            cv2.rectangle(img, (x1, y1), (x2, y2), color, 2)
+            cv2.putText(img, f"{worker['helmet']}|{worker['vest']}", (x1, y1-10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+
+        # 중장비
+        for machine in struct_frame.get('machines', []):
+            x1, y1, x2, y2 = machine['bbox']
+            cv2.rectangle(img, (x1, y1), (x2, y2), (0, 255, 255), 2)
+            cv2.putText(img, machine.get('sub_type', 'machinery'), (x1, y1-10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 2)
+
+        # 자재
+        for mat in struct_frame.get('materials', []):
+            x1, y1, x2, y2 = mat['bbox']
+            cv2.rectangle(img, (x1, y1), (x2, y2), (255, 0, 255), 2)
+
+        # 후크
+        for hook in struct_frame.get('hooks', []):
+            x1, y1, x2, y2 = hook['bbox']
+            cv2.rectangle(img, (x1, y1), (x2, y2), (255, 255, 0), 2)
 
         out.write(img)
 
     out.release()
     return output_path
 
-def generate_ai_report(ppe_risks, collision_risks, falling_risks, trip_risks, final_result, video_name):
-    helmet_violated = False
-    vest_violated = False
+# ══════════════════════════════════════════════════
+# 핵심 수정: structured 데이터도 받아서 중장비/자재 단독 감지
+# ══════════════════════════════════════════════════
+def generate_ai_report(structured, ppe_risks, collision_risks, falling_risks, trip_risks, final_result, video_name):
+    helmet_violated   = False
+    vest_violated     = False
     collision_detected = False
-    falling_detected = False
-    trip_detected = False
-    emergency_exists = False
-    warning_exists = False
+    falling_detected  = False
+    trip_detected     = False
+    machine_detected  = False  # 중장비 단독 감지
+    material_detected = False  # 자재 단독 감지
+    hook_detected     = False  # 후크 단독 감지
+    emergency_exists  = False
+    warning_exists    = False
 
+    # PPE 위반 확인
     for frame in ppe_risks:
         for worker in frame.get('workers', []):
             if 'NO' in str(worker.get('helmet', '')).upper():
@@ -154,18 +193,31 @@ def generate_ai_report(ppe_risks, collision_risks, falling_risks, trip_risks, fi
             if 'NO' in str(worker.get('vest', '')).upper():
                 vest_violated = True
 
+    # 중장비 접근 감지 (작업자 + 중장비)
     for frame in collision_risks:
         if frame.get('alerts'):
             collision_detected = True
 
+    # 낙하물 감지
     for frame in falling_risks:
         if frame.get('falling_alerts'):
             falling_detected = True
 
+    # 자재 방치 감지
     for frame in trip_risks:
         if frame.get('trip_events'):
             trip_detected = True
 
+    # ★ 중장비/자재/후크 단독 감지 (작업자 없어도)
+    for frame in structured:
+        if frame.get('machines'):
+            machine_detected = True
+        if frame.get('materials'):
+            material_detected = True
+        if frame.get('hooks'):
+            hook_detected = True
+
+    # final_result 위험도
     for frame in final_result:
         for report in frame.get('worker_reports', []):
             if report.get('final_risk') == 'EMERGENCY':
@@ -176,21 +228,26 @@ def generate_ai_report(ppe_risks, collision_risks, falling_risks, trip_risks, fi
             if report.get('risk_level') == 'WARNING':
                 warning_exists = True
 
+    # ★ 위험도 판단 (중장비 단독도 관찰 이상)
     if emergency_exists:
         risk_grade = "고위험"
         risk_score = 95
     elif warning_exists or helmet_violated:
         risk_grade = "고위험"
         risk_score = 85
-    elif vest_violated or collision_detected or falling_detected or trip_detected:
+    elif (vest_violated or collision_detected or falling_detected or
+          trip_detected or machine_detected or hook_detected):
         risk_grade = "관찰"
         risk_score = 55
+    elif material_detected:
+        risk_grade = "관찰"
+        risk_score = 40
     else:
         risk_grade = "정상"
         risk_score = 15
 
     helmet_violations = 1 if helmet_violated else 0
-    vest_violations = 1 if vest_violated else 0
+    vest_violations   = 1 if vest_violated   else 0
 
     prompt = f"""
 당신은 산업현장 안전관리 전문가입니다. 아래 AI 분석 결과를 바탕으로 안전 보고서를 작성해주세요.
@@ -199,9 +256,10 @@ def generate_ai_report(ppe_risks, collision_risks, falling_risks, trip_risks, fi
 - 분석 영상: {video_name}
 - 안전모 미착용: {"있음" if helmet_violated else "없음"}
 - 안전조끼 미착용: {"있음" if vest_violated else "없음"}
-- 중장비 접근 감지: {"있음" if collision_detected else "없음"}
-- 낙하물 위험 감지: {"있음" if falling_detected else "없음"}
-- 통로 자재 방치 감지: {"있음" if trip_detected else "없음"}
+- 중장비/차량 감지: {"있음" if machine_detected else "없음"}
+- 중장비 근접 접근: {"있음" if collision_detected else "없음"}
+- 낙하물/후크 위험: {"있음" if (falling_detected or hook_detected) else "없음"}
+- 자재 방치 감지: {"있음" if (trip_detected or material_detected) else "없음"}
 - 위험도: {risk_score}%
 - 위험 등급: {risk_grade}
 
@@ -232,6 +290,10 @@ def generate_ai_report(ppe_risks, collision_risks, falling_risks, trip_risks, fi
                 "risk_score": risk_score,
                 "helmet_violations": helmet_violations,
                 "vest_violations": vest_violations,
+                "machine_detected": machine_detected,
+                "collision_detected": collision_detected,
+                "falling_detected": falling_detected or hook_detected,
+                "trip_detected": trip_detected or material_detected,
                 "law_references": parsed.get("law_references", ""),
                 "recommendations": parsed.get("recommendations", []),
                 "summary_eval": parsed.get("summary_eval", "")
@@ -239,29 +301,26 @@ def generate_ai_report(ppe_risks, collision_risks, falling_risks, trip_risks, fi
         except:
             pass
 
+    # OpenAI 실패 시 기본 보고서
     law_refs = []
-    if helmet_violated:
-        law_refs.append("산업안전보건법 제38조제1항 - 안전모 착용 의무 위반")
-    if vest_violated:
-        law_refs.append("산업안전보건법 제39조 - 안전조끼 착용 의무 위반")
-    if collision_detected:
+    if helmet_violated:    law_refs.append("산업안전보건법 제38조제1항 - 안전모 착용 의무 위반")
+    if vest_violated:      law_refs.append("산업안전보건법 제39조 - 안전조끼 착용 의무 위반")
+    if machine_detected or collision_detected:
         law_refs.append("산업안전보건법 제38조 - 중장비 작업 반경 안전 의무 위반")
-    if falling_detected:
+    if falling_detected or hook_detected:
         law_refs.append("산업안전보건법 제38조 - 낙하물 위험 방지 의무 위반")
-    if trip_detected:
+    if trip_detected or material_detected:
         law_refs.append("산업안전보건법 제38조 - 통로 안전 확보 의무 위반")
 
     recommendations = []
-    if helmet_violated:
-        recommendations.append("안전모 미착용 감지 — 즉시 작업 중지 후 착용 확인")
-    if vest_violated:
-        recommendations.append("안전조끼 미착용 감지 — 현장 출입 통제 조치")
-    if collision_detected:
-        recommendations.append("중장비 접근 감지 — 즉시 작업 반경 이탈")
-    if falling_detected:
-        recommendations.append("낙하물 위험 감지 — 즉시 해당 구역 대피")
-    if trip_detected:
-        recommendations.append("통로 자재 방치 감지 — 즉시 자재 정리")
+    if helmet_violated:    recommendations.append("안전모 미착용 감지 — 즉시 작업 중지 후 착용 확인")
+    if vest_violated:      recommendations.append("안전조끼 미착용 감지 — 현장 출입 통제 조치")
+    if machine_detected:   recommendations.append("중장비 감지 — 작업 반경 내 안전 거리 확보")
+    if collision_detected: recommendations.append("중장비 근접 접근 감지 — 즉시 작업 반경 이탈")
+    if falling_detected or hook_detected:
+        recommendations.append("낙하물/후크 위험 감지 — 즉시 해당 구역 대피")
+    if trip_detected or material_detected:
+        recommendations.append("자재 방치 감지 — 즉시 자재 정리 및 통로 확보")
     if not recommendations:
         recommendations.append("현재 특이사항 없음. 지속적 모니터링 유지")
 
@@ -270,6 +329,10 @@ def generate_ai_report(ppe_risks, collision_risks, falling_risks, trip_risks, fi
         "risk_score": risk_score,
         "helmet_violations": helmet_violations,
         "vest_violations": vest_violations,
+        "machine_detected": machine_detected,
+        "collision_detected": collision_detected,
+        "falling_detected": falling_detected or hook_detected,
+        "trip_detected": trip_detected or material_detected,
         "law_references": " | ".join(law_refs) if law_refs else "해당 없음",
         "recommendations": recommendations,
         "summary_eval": f"위험등급: {risk_grade} ({risk_score}%). 위반 확인."
@@ -336,18 +399,24 @@ def run_pipeline(video_path):
         raw_ppe = detect_all(frames_folder)
         print(f"PPE 탐지 완료: {len(raw_ppe)}프레임", file=sys.stderr)
 
-        structured = structure_data(raw_ppe)
-        ppe_risks = analyze_ppe(structured)
+        structured      = structure_data(raw_ppe)
+        ppe_risks       = analyze_ppe(structured)
         collision_risks = analyze_collision(structured, ppe_risks)
-        falling_risks = analyze_falling(structured, ppe_risks)
-        trip_risks = analyze_trip(structured)
-        final_result = integrate_analysis(ppe_risks, collision_risks, falling_risks, trip_risks)
-        ai_report = generate_ai_report(ppe_risks, collision_risks, falling_risks, trip_risks, final_result, video_name)
+        falling_risks   = analyze_falling(structured, ppe_risks)
+        trip_risks      = analyze_trip(structured)
+        final_result    = integrate_analysis(ppe_risks, collision_risks, falling_risks, trip_risks)
+
+        # ★ structured도 전달
+        ai_report = generate_ai_report(
+            structured, ppe_risks, collision_risks,
+            falling_risks, trip_risks, final_result, video_name
+        )
 
         print(f"보고서 생성 완료: {ai_report['risk_grade']}", file=sys.stderr)
 
+        # ★ 바운딩박스 영상 (중장비/자재/후크 포함)
         annotated_video_path = os.path.join(frames_folder, "annotated.mp4")
-        create_annotated_video(frames_folder, ppe_risks, annotated_video_path)
+        create_annotated_video(frames_folder, structured, ppe_risks, annotated_video_path)
 
         annotated_video_url = ''
         if os.path.exists(annotated_video_path):
@@ -362,18 +431,27 @@ def run_pipeline(video_path):
             except Exception as e:
                 print(f"영상 업로드 실패: {e}", file=sys.stderr)
 
+        # ★ 프레임 저장: PPE 위반 + 중장비 + 자재 + 후크 모두 저장
+        struct_map = {s['frame']: s for s in structured}
+
         for ppe_frame in ppe_risks:
-            if not ppe_frame.get('workers'):
-                continue
-            has_violation = any(w['risk'] in ['HIGH', 'MEDIUM'] for w in ppe_frame['workers'])
-            if not has_violation:
-                continue
-
             frame_filename = ppe_frame['frame']
-            f_path = os.path.join(frames_folder, frame_filename)
+            struct_frame   = struct_map.get(frame_filename, {})
 
+            has_ppe_violation = any(w['risk'] in ['HIGH', 'MEDIUM'] for w in ppe_frame.get('workers', []))
+            has_machine  = bool(struct_frame.get('machines'))
+            has_material = bool(struct_frame.get('materials'))
+            has_hook     = bool(struct_frame.get('hooks'))
+
+            # 위반/감지된 프레임만 저장
+            if not (has_ppe_violation or has_machine or has_material or has_hook):
+                continue
+
+            f_path    = os.path.join(frames_folder, frame_filename)
             boxed_path = f_path.replace('.jpg', '_boxed.jpg')
-            draw_bounding_boxes(f_path, ppe_frame['workers'], boxed_path)
+
+            # 바운딩박스 그리기 (전체)
+            draw_bounding_boxes_all(f_path, struct_frame, ppe_frame, boxed_path)
 
             cloudinary_url = ''
             if os.path.exists(boxed_path):
@@ -388,14 +466,40 @@ def run_pipeline(video_path):
             )
             frame_id = cursor.lastrowid
 
-            for worker in ppe_frame['workers']:
-                risk_map = {"HIGH": "위험", "MEDIUM": "주의", "LOW": "정상"}
-                current_status = risk_map.get(worker['risk'], "정상")
+            # ★ PPE 위반 저장
+            for worker in ppe_frame.get('workers', []):
+                if worker['risk'] in ['HIGH', 'MEDIUM']:
+                    risk_map = {"HIGH": "위험", "MEDIUM": "주의", "LOW": "정상"}
+                    cursor.execute("""
+                        INSERT INTO report_items (report_id, frame_id, event_time, status, description)
+                        VALUES (%s, %s, %s, %s, %s)
+                    """, (report_id, frame_id, datetime.now(),
+                          risk_map.get(worker['risk'], '정상'),
+                          f"보호구미착용: 안전모={worker['helmet']}, 조끼={worker['vest']}"))
+
+            # ★ 중장비 감지 저장
+            for machine in struct_frame.get('machines', []):
                 cursor.execute("""
                     INSERT INTO report_items (report_id, frame_id, event_time, status, description)
                     VALUES (%s, %s, %s, %s, %s)
-                """, (report_id, frame_id, datetime.now(), current_status,
-                      f"보호구: {worker['helmet']}, 조끼: {worker['vest']}"))
+                """, (report_id, frame_id, datetime.now(), '주의',
+                      f"중장비접근: {machine.get('sub_type', 'machinery')} 감지"))
+
+            # ★ 자재 감지 저장
+            for mat in struct_frame.get('materials', []):
+                cursor.execute("""
+                    INSERT INTO report_items (report_id, frame_id, event_time, status, description)
+                    VALUES (%s, %s, %s, %s, %s)
+                """, (report_id, frame_id, datetime.now(), '주의',
+                      f"자재걸림: material 감지"))
+
+            # ★ 후크 감지 저장
+            for hook in struct_frame.get('hooks', []):
+                cursor.execute("""
+                    INSERT INTO report_items (report_id, frame_id, event_time, status, description)
+                    VALUES (%s, %s, %s, %s, %s)
+                """, (report_id, frame_id, datetime.now(), '위험',
+                      f"낙하물: hook 감지"))
 
         cursor.execute("""
             UPDATE reports SET
