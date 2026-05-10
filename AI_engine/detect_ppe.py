@@ -13,7 +13,7 @@ model = YOLO(MODEL_PATH)
 # 모델의 클래스 정보를 자동으로 가져와 소문자로 변환 (클래스 매핑 안전성 확보)
 # 예: {0: 'hardhat', 1: 'person', ...}
 MODEL_NAMES = {k: v.lower() for k, v in model.names.items()}
-
+print(f"[모델 클래스] {MODEL_NAMES}", file=__import__('sys').stderr)
 def detect_all(input_folder):
     results_data = []
     
