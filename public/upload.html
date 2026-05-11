@@ -397,54 +397,59 @@
       if (isCreatingReport) return;
       isAnalyzing = true;
 
-      const canvas = document.createElement('canvas');
-      canvas.width  = cameraVideo.videoWidth  || 640;
-      canvas.height = cameraVideo.videoHeight || 480;
-      canvas.getContext('2d').drawImage(cameraVideo, 0, 0);
+      try {
+        // canvas 캡처
+        const canvas = document.createElement('canvas');
+        canvas.width  = cameraVideo.videoWidth  || 640;
+        canvas.height = cameraVideo.videoHeight || 480;
+        canvas.getContext('2d').drawImage(cameraVideo, 0, 0);
 
-      canvas.toBlob(async (blob) => {
+        // toBlob을 Promise로 감싸서 await 가능하게
+        const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.7));
         const formData = new FormData();
         formData.append('video', blob, 'capture.jpg');
 
-        try {
-          const res  = await fetch(BASE_URL + '/analyze-quick', { method:'POST', body:formData });
-          const data = await res.json();
+        const res  = await fetch(BASE_URL + '/analyze-quick', { method:'POST', body:formData });
 
-          analyzeCount++;
-          document.getElementById('analyzeCount').textContent = analyzeCount;
-          document.getElementById('lastDetected').textContent = new Date().toLocaleTimeString('ko-KR');
-
-          // 바운딩박스 그리기
-          drawAll(data.boxes || []);
-
-          // 위험 감지 판단
-          if (data.danger && !isCreatingReport) {
-            // 위험 감지 → 감지 중지 후 보고서 생성
-            cameraSection.classList.add('camera-border-danger');
-            cameraDot.classList.add('danger');
-            document.getElementById('currentStatus').textContent = '위험 감지!';
-            document.getElementById('currentStatus').className   = 'status-value danger';
-
-            showAlert(data.ppe_violation ? '보호구 미착용' : '위험구역 진입');
-            showDetectedList(data.boxes);
-
-            // 감지 중지 후 전체 보고서 생성
-            stopDetectionForReport();
-            await createFullReport();
-          } else {
-            cameraSection.classList.remove('camera-border-danger');
-            cameraDot.classList.remove('danger');
-            document.getElementById('currentStatus').textContent = '감지 중...';
-            document.getElementById('currentStatus').className   = 'status-value';
-          }
-        } catch (err) {
-          console.error('빠른 분석 오류:', err.message);
+        // 서버가 HTML 반환 시 무시
+        const contentType = res.headers.get('content-type') || '';
+        if (!contentType.includes('application/json')) {
+          console.warn('서버 응답이 JSON이 아님, 스킵');
+          return;
         }
 
-        isAnalyzing = false;
-        // 빠른 분석 모드: 카운트다운 없이 즉시 다음 분석
+        const data = await res.json();
 
-      }, 'image/jpeg', 0.8);
+        analyzeCount++;
+        document.getElementById('analyzeCount').textContent = analyzeCount;
+        document.getElementById('lastDetected').textContent = new Date().toLocaleTimeString('ko-KR');
+
+        // 바운딩박스 그리기
+        drawAll(data.boxes || []);
+
+        // 위험 감지 판단
+        if (data.danger && !isCreatingReport) {
+          cameraSection.classList.add('camera-border-danger');
+          cameraDot.classList.add('danger');
+          document.getElementById('currentStatus').textContent = '위험 감지!';
+          document.getElementById('currentStatus').className   = 'status-value danger';
+
+          showAlert(data.ppe_violation ? '보호구 미착용' : '위험구역 진입');
+          showDetectedList(data.boxes);
+
+          stopDetectionForReport();
+          await createFullReport();
+        } else {
+          cameraSection.classList.remove('camera-border-danger');
+          cameraDot.classList.remove('danger');
+          document.getElementById('currentStatus').textContent = '감지 중...';
+          document.getElementById('currentStatus').className   = 'status-value';
+        }
+      } catch (err) {
+        console.error('빠른 분석 오류:', err.message);
+      } finally {
+        isAnalyzing = false;
+      }
     }
 
     // ── 감지된 객체 목록 표시 ────────────────
