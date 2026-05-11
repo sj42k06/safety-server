@@ -8,37 +8,86 @@
   <link rel="stylesheet" href="upload.css" />
   <style>
     .upload-wrap { display: flex; flex-direction: column; gap: 16px; }
-    .upload-box { background: #fff; border: 2px dashed #e2e8f0; border-radius: 16px; padding: 40px; text-align: center; cursor: pointer; transition: border-color 0.2s; }
+
+    .upload-box {
+      background: #fff; border: 2px dashed #e2e8f0; border-radius: 16px;
+      padding: 40px; text-align: center; cursor: pointer; transition: border-color .2s;
+    }
     .upload-box:hover { border-color: #1e293b; }
     .upload-box i { font-size: 48px; color: #94a3b8; margin-bottom: 12px; display: block; }
     .upload-box p { font-size: 15px; color: #475569; font-weight: 600; margin-bottom: 6px; }
     .upload-box span { font-size: 13px; color: #94a3b8; }
-    .upload-btn { background: #1e293b; color: #fff; border: none; padding: 14px; border-radius: 10px; font-size: 15px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; }
+
+    .upload-btn { background: #1e293b; color: #fff; border: none; padding: 14px; border-radius: 10px; font-size: 15px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; font-family: inherit; }
     .upload-btn:disabled { background: #94a3b8; cursor: not-allowed; }
+    .upload-btn:hover:not(:disabled) { background: #0f172a; }
+
     .progress-box { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; display: none; }
     .progress-title { font-size: 14px; font-weight: 700; color: #1e293b; margin-bottom: 12px; }
     .progress-bar-bg { background: #f1f5f9; border-radius: 8px; height: 8px; overflow: hidden; margin-bottom: 8px; }
-    .progress-bar { background: #1e293b; height: 100%; border-radius: 8px; width: 0%; transition: width 0.3s; }
+    .progress-bar { background: #1e293b; height: 100%; border-radius: 8px; width: 0%; transition: width .3s; }
     .progress-status { font-size: 13px; color: #94a3b8; }
-    .preview-box { background: #000; border-radius: 12px; overflow: hidden; display: none; }
-    .preview-box video, .preview-box img { width: 100%; max-height: 300px; object-fit: contain; }
+    .progress-status.success { color: #16a34a; font-weight: 700; }
+    .progress-status.error   { color: #dc2626; }
+
     .file-info { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 14px; display: none; }
     .file-info-row { display: flex; justify-content: space-between; font-size: 13px; }
     .file-info-label { color: #94a3b8; }
     .file-info-value { color: #1e293b; font-weight: 600; }
+
+    /* ── 미리보기 (바운딩박스 오버레이) ── */
+    .preview-section {
+      position: relative; background: #000; border-radius: 12px;
+      overflow: hidden; display: none;
+    }
+    .preview-section video,
+    .preview-section img {
+      width: 100%; max-height: 340px; object-fit: contain; display: block;
+    }
+    #previewCanvas {
+      position: absolute; inset: 0; width: 100%; height: 100%;
+      pointer-events: none; z-index: 5;
+    }
+    .preview-badge {
+      position: absolute; top: 10px; right: 10px; z-index: 10;
+      background: rgba(0,0,0,.7); color: #fff;
+      padding: 4px 12px; border-radius: 20px; font-size: 12px;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .preview-badge .dot { width: 8px; height: 8px; border-radius: 50%; background: #22c55e; animation: blink 1s infinite; }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+
+    /* ── 분석 결과 패널 ── */
+    .result-section {
+      background: #fff; border: 1px solid #e2e8f0; border-radius: 12px;
+      overflow: hidden; display: none;
+    }
+    .result-section.show { display: block; }
+    .result-header { padding: 14px 18px; font-size: 14px; font-weight: 700; border-bottom: 1px solid #f1f5f9; display: flex; align-items: center; gap: 8px; }
+    .result-header.danger { background: #fef2f2; color: #dc2626; }
+    .result-header.normal { background: #f0fdf4; color: #16a34a; }
+    .result-body { padding: 16px 18px; display: flex; flex-direction: column; gap: 10px; }
+    .result-case { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 10px; background: #f8fafc; border: 1px solid #e2e8f0; font-size: 13px; }
+    .result-case .rc-icon  { font-size: 18px; }
+    .result-case .rc-label { font-weight: 600; color: #1e293b; flex: 1; }
+    .result-footer { padding: 0 18px 16px; }
+    .go-report-btn { width: 100%; padding: 12px; background: #1e293b; color: #fff; border: none; border-radius: 10px; font-size: 14px; font-weight: 700; cursor: pointer; font-family: inherit; display: flex; align-items: center; justify-content: center; gap: 8px; }
+    .go-report-btn:hover { background: #0f172a; }
+
+    /* 바운딩박스 범례 */
+    .legend { display: flex; gap: 12px; flex-wrap: wrap; padding: 10px 14px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; }
+    .legend-item { display: flex; align-items: center; gap: 5px; font-size: 11px; color: #475569; }
+    .legend-dot { width: 10px; height: 10px; border-radius: 2px; }
   </style>
 </head>
 <body>
   <aside>
     <div class="logo">
       <img src="https://public.readdy.ai/ai/img_res/f3ccc83c-cf23-4ebf-b376-21d351a806b7.png" alt="로고" />
-      <div class="logo-text">
-        <div class="title">스마트 현장</div>
-        <div class="sub">안전관제 시스템</div>
-      </div>
+      <div class="logo-text"><div class="title">스마트 현장</div><div class="sub">안전관제 시스템</div></div>
     </div>
     <nav>
-      <a href="/dashboard"><i class="ri-dashboard-line"></i> 대시보드</a>
+      <a href="/dashboard"><i class="ri-dashboard-line"></i> 자료실</a>
       <a href="/upload"><i class="ri-camera-line"></i> 현장 모니터링</a>
       <a href="/video-upload" class="active"><i class="ri-video-upload-line"></i> 영상 분석</a>
       <a href="/reports"><i class="ri-file-chart-line"></i> AI 보고서</a>
@@ -47,28 +96,22 @@
       <div class="user-info">
         <div class="user-avatar"><i class="ri-user-line"></i></div>
         <div>
-          <div class="user-name">관리자 (admin)</div>
+          <div class="user-name" id="sidebarUser">관리자</div>
           <div class="user-role">현장 관리자</div>
         </div>
       </div>
-      <button class="logout-btn" onclick="window.location.href='/'">
-        <i class="ri-logout-box-r-line"></i> 로그아웃
-      </button>
+      <button class="logout-btn" onclick="window.location.href='/'"><i class="ri-logout-box-r-line"></i> 로그아웃</button>
     </div>
   </aside>
 
   <main>
     <div class="inner">
-      <div class="page-tag">
-        <i class="ri-video-upload-line"></i>
-        <span>영상/사진 분석</span>
-      </div>
+      <div class="page-tag"><i class="ri-video-upload-line"></i><span>영상/사진 분석</span></div>
       <h2>영상 분석</h2>
-      <p class="page-desc">
-        영상 또는 사진을 업로드하면 AI가 자동으로 위험 요소를 분석하고 보고서를 생성합니다.
-      </p>
+      <p class="page-desc">영상 또는 사진을 업로드하면 AI가 자동으로 위험 요소를 분석하고 보고서를 생성합니다.</p>
 
       <div class="upload-wrap">
+
         <!-- 업로드 박스 -->
         <div class="upload-box" onclick="document.getElementById('fileInput').click()">
           <i class="ri-upload-cloud-2-line"></i>
@@ -83,25 +126,49 @@
             <span class="file-info-label">파일명</span>
             <span class="file-info-value" id="fileName">-</span>
           </div>
-          <div class="file-info-row" style="margin-top: 6px;">
+          <div class="file-info-row" style="margin-top:6px;">
             <span class="file-info-label">파일 크기</span>
             <span class="file-info-value" id="fileSize">-</span>
           </div>
         </div>
 
-        <!-- 미리보기 -->
-        <div class="preview-box" id="previewBox">
-          <video id="previewVideo" controls style="display:none;"></video>
-          <img id="previewImage" style="display:none;" />
+        <!-- 미리보기 (바운딩박스 오버레이 포함) -->
+        <div class="preview-section" id="previewSection">
+          <video id="previewVideo" controls style="display:none;" crossorigin="anonymous"></video>
+          <img    id="previewImage"         style="display:none;" crossorigin="anonymous" />
+          <canvas id="previewCanvas"></canvas>
+          <div class="preview-badge">
+            <div class="dot" id="previewDot" style="background:#94a3b8;animation:none;"></div>
+            <span id="previewStatus">미리보기</span>
+          </div>
+        </div>
+
+        <!-- 바운딩박스 범례 -->
+        <div class="legend" id="legend" style="display:none;">
+          <div class="legend-item"><div class="legend-dot" style="background:#ef4444;"></div> 안전모 미착용</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#f97316;"></div> 조끼 미착용</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#3b82f6;"></div> 작업자</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#f59e0b;"></div> 중장비/차량</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#a855f7;"></div> 후크</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#ec4899;"></div> 자재</div>
         </div>
 
         <!-- 분석 진행 -->
         <div class="progress-box" id="progressBox">
           <div class="progress-title">AI 분석 중...</div>
-          <div class="progress-bar-bg">
-            <div class="progress-bar" id="progressBar"></div>
-          </div>
+          <div class="progress-bar-bg"><div class="progress-bar" id="progressBar"></div></div>
           <div class="progress-status" id="progressStatus">서버로 전송 중...</div>
+        </div>
+
+        <!-- 분석 결과 패널 -->
+        <div class="result-section" id="resultSection">
+          <div class="result-header danger" id="resultHeader">🔴 위험 감지됨</div>
+          <div class="result-body" id="resultBody"></div>
+          <div class="result-footer">
+            <button class="go-report-btn" onclick="goToReport()">
+              <i class="ri-file-chart-line"></i> 보고서 상세 보기 →
+            </button>
+          </div>
         </div>
 
         <!-- 분석 버튼 -->
@@ -113,87 +180,244 @@
   </main>
 
   <script>
+    const BASE_URL = 'https://safety-server-oqza.onrender.com';
     let selectedFile = null;
+    let lastReportId = null;
+    let frameTimer   = null;
+
+    const user = localStorage.getItem('username') || 'admin';
+    document.getElementById('sidebarUser').textContent = user === 'admin2' ? '정재학 (admin2)' : '손광민 (admin)';
+
+    const COLOR_MAP = {
+      'hardhat':        '#22c55e',
+      'no-hardhat':     '#ef4444',
+      'safety vest':    '#22c55e',
+      'no-safety vest': '#f97316',
+      'person':         '#3b82f6',
+      'machinery':      '#f59e0b',
+      'vehicle':        '#f59e0b',
+      'hook':           '#a855f7',
+      'material':       '#ec4899',
+    };
+    const LABEL_KR = {
+      'hardhat':        '안전모 착용',
+      'no-hardhat':     '안전모 미착용',
+      'safety vest':    '조끼 착용',
+      'no-safety vest': '조끼 미착용',
+      'person':         '작업자',
+      'machinery':      '중장비',
+      'vehicle':        '차량',
+      'hook':           '후크',
+      'material':       '자재',
+    };
 
     function onFileSelect(event) {
       const file = event.target.files[0];
       if (!file) return;
       selectedFile = file;
 
-      // 파일 정보 표시
       document.getElementById('fileName').textContent = file.name;
-      document.getElementById('fileSize').textContent = (file.size / 1024 / 1024).toFixed(2) + ' MB';
-      document.getElementById('fileInfo').style.display = 'block';
+      document.getElementById('fileSize').textContent = (file.size/1024/1024).toFixed(2) + ' MB';
+      document.getElementById('fileInfo').style.display    = 'block';
+      document.getElementById('previewSection').style.display = 'block';
+      document.getElementById('legend').style.display     = 'flex';
+      document.getElementById('resultSection').classList.remove('show');
 
-      // 미리보기
-      const previewBox = document.getElementById('previewBox');
-      const previewVideo = document.getElementById('previewVideo');
-      const previewImage = document.getElementById('previewImage');
-      previewBox.style.display = 'block';
+      const video = document.getElementById('previewVideo');
+      const img   = document.getElementById('previewImage');
 
       if (file.type.startsWith('video/')) {
-        previewVideo.style.display = 'block';
-        previewImage.style.display = 'none';
-        previewVideo.src = URL.createObjectURL(file);
+        video.style.display = 'block';
+        img.style.display   = 'none';
+        video.src = URL.createObjectURL(file);
+
+        // 영상 재생 중 프레임마다 빠른 분석
+        video.ontimeupdate = () => {
+          if (frameTimer) return;
+          frameTimer = setTimeout(() => {
+            analyzeVideoFrame(video);
+            frameTimer = null;
+          }, 200); // 0.2초마다 분석 (빠른 바운딩박스)
+        };
       } else {
-        previewImage.style.display = 'block';
-        previewVideo.style.display = 'none';
-        previewImage.src = URL.createObjectURL(file);
+        img.style.display   = 'block';
+        video.style.display = 'none';
+        img.src = URL.createObjectURL(file);
+
+        // 이미지 로드 후 즉시 빠른 분석
+        img.onload = () => analyzeImageFrame(img);
       }
 
       document.getElementById('uploadBtn').disabled = false;
+      document.getElementById('previewDot').style.background = '#22c55e';
+      document.getElementById('previewDot').style.animation  = 'blink 1s infinite';
+      document.getElementById('previewStatus').textContent   = '미리보기 분석 중';
     }
 
+    // ── 영상 프레임 빠른 분석 ────────────────
+    async function analyzeVideoFrame(video) {
+      const canvas = document.createElement('canvas');
+      canvas.width  = video.videoWidth  || 640;
+      canvas.height = video.videoHeight || 360;
+      canvas.getContext('2d').drawImage(video, 0, 0);
+
+      canvas.toBlob(async (blob) => {
+        const formData = new FormData();
+        formData.append('video', blob, 'frame.jpg');
+        try {
+          const res  = await fetch(BASE_URL + '/analyze-quick', { method:'POST', body:formData });
+          const data = await res.json();
+          drawPreviewBoxes(data.boxes || [], video.videoWidth || 640, video.videoHeight || 360);
+        } catch(_) {}
+      }, 'image/jpeg', 0.7);
+    }
+
+    // ── 이미지 빠른 분석 ────────────────────
+    async function analyzeImageFrame(img) {
+      const canvas = document.createElement('canvas');
+      canvas.width  = img.naturalWidth  || img.width;
+      canvas.height = img.naturalHeight || img.height;
+      canvas.getContext('2d').drawImage(img, 0, 0);
+
+      canvas.toBlob(async (blob) => {
+        const formData = new FormData();
+        formData.append('video', blob, 'image.jpg');
+        try {
+          const res  = await fetch(BASE_URL + '/analyze-quick', { method:'POST', body:formData });
+          const data = await res.json();
+          drawPreviewBoxes(data.boxes || [], canvas.width, canvas.height);
+        } catch(_) {}
+      }, 'image/jpeg', 0.85);
+    }
+
+    // ── 미리보기 캔버스에 바운딩박스 그리기 ──
+    function drawPreviewBoxes(boxes, srcW, srcH) {
+      const previewCanvas = document.getElementById('previewCanvas');
+      const ctx = previewCanvas.getContext('2d');
+
+      // canvas 크기를 실제 표시 크기에 맞춤
+      const section  = document.getElementById('previewSection');
+      const display  = section.querySelector('video:not([style*="none"]), img:not([style*="none"])');
+      const dispW    = display ? display.offsetWidth  : section.offsetWidth;
+      const dispH    = display ? display.offsetHeight : section.offsetHeight;
+
+      previewCanvas.width  = dispW;
+      previewCanvas.height = dispH;
+      ctx.clearRect(0, 0, dispW, dispH);
+
+      if (!boxes || boxes.length === 0) return;
+
+      boxes.forEach(box => {
+        const color = COLOR_MAP[box.label] || '#94a3b8';
+        const px = box.x * dispW;
+        const py = box.y * dispH;
+        const pw = box.w * dispW;
+        const ph = box.h * dispH;
+
+        ctx.strokeStyle = color;
+        ctx.lineWidth   = 2.5;
+        ctx.strokeRect(px, py, pw, ph);
+
+        const labelKr = LABEL_KR[box.label] || box.label;
+        const conf    = box.confidence ? ` ${Math.round(box.confidence*100)}%` : '';
+        const text    = labelKr + conf;
+        ctx.font      = 'bold 12px sans-serif';
+        const tw = ctx.measureText(text).width + 10;
+        ctx.fillStyle = color;
+        ctx.fillRect(px, py - 20, tw, 20);
+        ctx.fillStyle = '#fff';
+        ctx.fillText(text, px + 5, py - 5);
+      });
+    }
+
+    // ── 전체 보고서 생성 ────────────────────
     async function uploadFile() {
       if (!selectedFile) return;
 
-      const btn = document.getElementById('uploadBtn');
-      const progressBox = document.getElementById('progressBox');
-      const progressBar = document.getElementById('progressBar');
+      const btn            = document.getElementById('uploadBtn');
+      const progressBox    = document.getElementById('progressBox');
+      const progressBar    = document.getElementById('progressBar');
       const progressStatus = document.getElementById('progressStatus');
 
       btn.disabled = true;
       btn.innerHTML = '<i class="ri-loader-4-line"></i> 분석 중...';
       progressBox.style.display = 'block';
+      document.getElementById('resultSection').classList.remove('show');
 
-      // 진행 애니메이션
       let progress = 0;
       const progressInterval = setInterval(() => {
         progress += 2;
         if (progress > 90) clearInterval(progressInterval);
         progressBar.style.width = progress + '%';
-        if (progress < 30) progressStatus.textContent = '서버로 전송 중...';
+        if      (progress < 30) progressStatus.textContent = '서버로 전송 중...';
         else if (progress < 60) progressStatus.textContent = 'YOLO AI 분석 중...';
-        else progressStatus.textContent = '보고서 생성 중...';
+        else                    progressStatus.textContent = '보고서 생성 중...';
       }, 600);
 
       const formData = new FormData();
       formData.append('video', selectedFile);
 
       try {
-        const res = await fetch('https://safety-server-oqza.onrender.com/analyze', {
-          method: 'POST',
-          body: formData
-        });
+        const res  = await fetch(BASE_URL + '/analyze', { method:'POST', body:formData });
         const data = await res.json();
 
         clearInterval(progressInterval);
         progressBar.style.width = '100%';
 
         if (data.report_id) {
-          progressStatus.textContent = '분석 완료! 보고서로 이동합니다.';
-          setTimeout(() => window.location.href = '/reports/' + data.report_id, 1500);
+          lastReportId = data.report_id;
+          progressStatus.textContent = '✅ 분석 완료!';
+          progressStatus.className   = 'progress-status success';
+
+          // 결과 패널 표시
+          showResultPanel(data);
         } else {
           progressStatus.textContent = '분석 실패: ' + (data.error || '오류 발생');
+          progressStatus.className   = 'progress-status error';
           btn.disabled = false;
           btn.innerHTML = '<i class="ri-shield-flash-line"></i> AI 분석 시작';
         }
       } catch (err) {
         clearInterval(progressInterval);
         progressStatus.textContent = '서버 오류: ' + err.message;
+        progressStatus.className   = 'progress-status error';
         btn.disabled = false;
         btn.innerHTML = '<i class="ri-shield-flash-line"></i> AI 분석 시작';
       }
+    }
+
+    function showResultPanel(data) {
+      const section = document.getElementById('resultSection');
+      const header  = document.getElementById('resultHeader');
+      const body    = document.getElementById('resultBody');
+
+      // report_content에서 케이스 파싱 (서버에서 반환 시)
+      const cases = [];
+
+      header.textContent = '✅ 보고서 생성 완료';
+      header.className   = 'result-header normal';
+
+      body.innerHTML = `
+        <div class="result-case">
+          <span class="rc-icon">📋</span>
+          <span class="rc-label">보고서 #${data.report_id} 생성됨</span>
+        </div>
+        <div class="result-case">
+          <span class="rc-icon">🔍</span>
+          <span class="rc-label">상세 보고서에서 결과를 확인하세요</span>
+        </div>
+      `;
+
+      section.classList.add('show');
+
+      // 버튼 복구
+      const btn = document.getElementById('uploadBtn');
+      btn.disabled  = false;
+      btn.innerHTML = '<i class="ri-shield-flash-line"></i> AI 분석 시작';
+    }
+
+    function goToReport() {
+      if (lastReportId) window.location.href = '/reports/' + lastReportId;
     }
   </script>
 </body>
