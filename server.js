@@ -388,11 +388,13 @@ app.delete("/api/reports/:id", async (req, res) => {
 
 app.delete("/api/reports", async (req, res) => {
   try {
+    await db.query("DELETE FROM handover_logs");
     await db.query("DELETE FROM reports");
     await db.query("DELETE FROM risk_logs");
     res.json({ 성공: true });
   } catch (err) {
-    res.status(500).json({ error: "초기화 실패" });
+    console.error('전체삭제 오류:', err.message);
+    res.status(500).json({ error: "초기화 실패", detail: err.message });
   }
 });
 
