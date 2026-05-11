@@ -274,6 +274,9 @@
     const timerText        = document.getElementById('timerText');
 
     const user = localStorage.getItem('username') || 'admin';
+
+    function safeSet(id, val) { var el = document.getElementById(id); if (el) el.textContent = val; }
+    function safeClass(id, cls) { var el = document.getElementById(id); if (el) el.className = cls; }
     document.getElementById('sidebarUser').textContent = user === 'admin2' ? '정재학 (admin2)' : '손광민 (admin)';
 
     let analyzeCount = 0;
@@ -499,14 +502,14 @@
 
         // Flask 아직 준비 안됨 - 3초 대기
         if (data.not_ready) {
-          document.getElementById('currentStatus').textContent = 'AI 준비 중...';
+          safeSet('currentStatus', 'AI 준비 중...');
           await new Promise(r => setTimeout(r, 3000));
           return;
         }
 
         analyzeCount++;
-        document.getElementById('analyzeCount').textContent = analyzeCount;
-        document.getElementById('lastDetected').textContent = new Date().toLocaleTimeString('ko-KR');
+        safeSet('analyzeCount', analyzeCount);
+        safeSet('lastDetected', new Date().toLocaleTimeString('ko-KR'));
 
         // 바운딩박스 계속 표시
         drawAll(data.boxes || []);
@@ -514,8 +517,8 @@
         if (data.danger) {
           cameraSection.classList.add('camera-border-danger');
           cameraDot.classList.add('danger');
-          document.getElementById('currentStatus').textContent = '🔴 위험 감지!';
-          document.getElementById('currentStatus').className   = 'status-value danger';
+          safeSet('currentStatus', '🔴 위험 감지!');
+          safeClass('currentStatus', 'status-value danger');
 
           if (!isCreatingReport) {
             // 감지 루프 중지
@@ -536,8 +539,8 @@
         } else {
           cameraSection.classList.remove('camera-border-danger');
           cameraDot.classList.remove('danger');
-          document.getElementById('currentStatus').textContent = '감지 중...';
-          document.getElementById('currentStatus').className   = 'status-value';
+          safeSet('currentStatus', '감지 중...');
+          safeClass('currentStatus', 'status-value');
         }
       } catch (err) {
         console.error('빠른 분석 오류:', err.message);
@@ -668,20 +671,24 @@
     function selectActionStatus(status) {
       selectedActionStatus = status;
 
-      document.getElementById('btnPopupUnresolved').className = 'action-btn' + (status === '미조치'   ? ' selected-unresolved' : '');
-      document.getElementById('btnPopupInprogress').className = 'action-btn' + (status === '조치중'   ? ' selected-inprogress' : '');
+      document.getElementById('btnPopupUnresolved').className = 'action-btn' + (status === '즉각조치' ? ' selected-unresolved' : '');
+      document.getElementById('btnPopupInprogress').className = 'action-btn' + (status === '사후조치' ? ' selected-inprogress' : '');
       document.getElementById('btnPopupResolved').className   = 'action-btn' + (status === '조치완료' ? ' selected-resolved'   : '');
 
       const noteWrap  = document.getElementById('actionNoteWrap');
       const noteLabel = document.getElementById('actionNoteLabel');
-      if (status === '미조치') {
+      const afterFields = document.getElementById('afterActionFields');
+      if (status === '즉각조치') {
         noteWrap.classList.add('show');
-        noteLabel.textContent = '미조치 사유 (선택)';
-      } else if (status === '조치중') {
+        noteLabel.textContent = '즉각 조치 내용 (선택)';
+        if (afterFields) afterFields.style.display = 'none';
+      } else if (status === '사후조치') {
         noteWrap.classList.add('show');
-        noteLabel.textContent = '처리 예정 내용 (선택)';
+        noteLabel.textContent = '사후 조치 계획 내용 (선택)';
+        if (afterFields) afterFields.style.display = 'block';
       } else {
         noteWrap.classList.remove('show');
+        if (afterFields) afterFields.style.display = 'none';
       }
 
       document.getElementById('actionConfirmBtn').disabled = false;
@@ -689,12 +696,21 @@
 
     async function confirmActionAndReport() {
       if (!selectedActionStatus) return;
-      const note = document.getElementById('actionNoteInput').value.trim();
+      let note = document.getElementById('actionNoteInput').value.trim();
+
+      // 사후조치인 경우 추가 정보 포함
+      if (selectedActionStatus === '사후조치') {
+        const unreason = (document.getElementById('unreasonInput') || {}).value || '';
+        const manager  = (document.getElementById('managerInput') || {}).value || '';
+        const schedule = (document.getElementById('scheduleInput') || {}).value || '';
+        if (unreason) note += (note ? '\n' : '') + '미조치 사유: ' + unreason;
+        if (manager)  note += (note ? '\n' : '') + '담당자: ' + manager;
+        if (schedule) note += (note ? '\n' : '') + '처리 예정: ' + new Date(schedule).toLocaleString('ko-KR');
+      }
 
       document.getElementById('actionSelectPopup').classList.remove('show');
       document.getElementById('actionConfirmBtn').disabled = true;
 
-      // 보고서 생성 (선택한 조치 상태 포함)
       await createFullReport(pendingDangerData, selectedActionStatus, note);
     }
 
@@ -704,7 +720,7 @@
       stopBtn.style.display   = 'flex';
       resultPanel.classList.remove('show');
       isCreatingReport = false;
-      document.getElementById('currentStatus').textContent = '감지 중...';
+      safeSet('currentStatus', '감지 중...');
 
       document.getElementById('resultViewBtn').style.display = 'none';
       drawFenceOnly(); // 가상펜스 유지
@@ -735,8 +751,8 @@
       stopBtn.style.display   = 'none';
       analyzingOverlay.style.display = 'none';
 
-      document.getElementById('currentStatus').textContent = '대기 중';
-      document.getElementById('currentStatus').className   = 'status-value';
+      safeSet('currentStatus', '대기 중');
+      safeClass('currentStatus', 'status-value');
       cameraSection.classList.remove('camera-border-danger');
       cameraDot.classList.remove('danger');
 
