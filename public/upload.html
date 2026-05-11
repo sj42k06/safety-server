@@ -12,10 +12,10 @@
     /* ── 카메라 섹션 ── */
     .camera-section {
       background: #000; border-radius: 16px; overflow: hidden;
-      position: relative; width: 100%; height: 42vh;
+      position: relative; width: 100%; height: 65vh;
       border: 2px solid #1e293b; transition: border-color .3s;
     }
-    .camera-section video { width:100%; height:100%; object-fit:cover; display:block; }
+    .camera-section video { width:100%; height:100%; object-fit:contain; display:block; }
     .camera-border-danger { border-color: #ef4444 !important; box-shadow: 0 0 20px rgba(239,68,68,.4); }
 
     /* ── canvas (바운딩박스 + 가상펜스) ── */
@@ -364,7 +364,7 @@
 
     // ── 빠른 분석 (바운딩박스만) ────────────
     async function analyzeQuick() {
-      if (isAnalyzing || isCreatingReport) return;
+      if (isCreatingReport) return;
       isAnalyzing = true;
 
       const canvas = document.createElement('canvas');
@@ -497,28 +497,30 @@
       document.getElementById('currentStatus').textContent = '감지 중...';
       bboxCtx.clearRect(0, 0, bboxCanvas.width, bboxCanvas.height);
 
-      analyzeQuick();
-      // 분석 완료 즉시 다음 분석 시작 (500ms 간격)
-      intervalId = setInterval(() => {
-        if (!isAnalyzing && !isCreatingReport) analyzeQuick();
-      }, 500);
+      intervalId = true; // 실행 중 플래그
+      loopAnalyze();     // 분석 루프 시작
+    }
+
+    // ── 분석 루프 (이전 분석 끝나면 즉시 다음 분석) ──
+    async function loopAnalyze() {
+      while (intervalId && !isCreatingReport) {
+        await analyzeQuick();
+        if (!intervalId || isCreatingReport) break;
+        // 분석 완료 후 100ms 대기 후 다음 분석
+        await new Promise(r => setTimeout(r, 100));
+      }
     }
 
     // ── 감지 중지 (보고서 생성용) ────────────
     function stopDetectionForReport() {
-      clearInterval(intervalId);
-      clearInterval(countdownId);
-      intervalId = null;
-      timerText.textContent = '';
+      intervalId = null; // 루프 종료 플래그
       detectBtn.style.display = 'flex';
       stopBtn.style.display   = 'none';
     }
 
     // ── 감지 중지 (수동) ────────────────────
     function stopDetection() {
-      clearInterval(intervalId);
-      clearInterval(countdownId);
-      intervalId   = null;
+      intervalId   = null; // 루프 종료 플래그
       isAnalyzing  = false;
       isCreatingReport = false;
 
