@@ -150,4 +150,4 @@ def detect_all_endpoint():
 if __name__ == '__main__':
     port = int(os.environ.get('AI_PORT', 5001))
     print(f"[AI 서버] 포트 {port}에서 시작", file=sys.stderr)
-    app.run(host='0.0.0.0', port=port, debug=False, threaded=True)
+    app.run(host='0.0.0.0', port=port, debug=False, threaded=True, processes=1)
