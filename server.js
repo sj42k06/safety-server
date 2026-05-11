@@ -183,10 +183,11 @@ app.post("/api/login", async (req, res) => {
 // ────────────────────────────────────────
 // AI 파이프라인
 // ────────────────────────────────────────
-function runPipeline(videoPath, userId) {
+function runPipeline(videoPath, userId, dangerTypes = []) {
   return new Promise((resolve, reject) => {
     const pipelinePath = path.join(__dirname, "AI_engine", "pipeline.py");
-    const pyProcess = spawn("python3", [pipelinePath, videoPath, String(userId || 1)]);
+    const env = { ...process.env, DANGER_TYPES: JSON.stringify(dangerTypes) };
+    const pyProcess = spawn("python3", [pipelinePath, videoPath, String(userId || 1)], { env });
     let output = "", errorOutput = "";
     pyProcess.stdout.on("data", (data) => { output += data.toString(); });
     pyProcess.stderr.on("data", (data) => { errorOutput += data.toString(); console.log(`[AI 로그]: ${data}`); });
@@ -208,6 +209,11 @@ const AI_SERVER = process.env.AI_SERVER_URL || 'http://localhost:5001';
 
 app.post("/analyze-quick", upload.single("video"), async (req, res) => {
   if (!req.file) return res.status(400).json({ boxes: [], danger: false });
+  // Flask 아직 준비 안됐으면 빈 결과 반환 (에러 말고)
+  if (!flaskReady) {
+    if (req.file && req.file.path && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+    return res.json({ boxes: [], danger: false, ppe_violation: false, not_ready: true });
+  }
   const tempPath = path.resolve(req.file.path);
   const newPath  = tempPath + '.jpg';
   fs.renameSync(tempPath, newPath);
@@ -239,9 +245,11 @@ app.post("/analyze", upload.single("video"), async (req, res) => {
 
   // 로그인한 사용자 ID (헤더나 바디에서 받거나 기본값 1)
   const userId = req.body.user_id || req.headers['x-user-id'] || 1;
+  let dangerTypes = [];
+  try { dangerTypes = JSON.parse(req.body.danger_types || '[]'); } catch(e) {}
 
   try {
-    const result = await runPipeline(newPath, userId);
+    const result = await runPipeline(newPath, userId, dangerTypes);
     if (fs.existsSync(newPath)) fs.unlinkSync(newPath);
     res.status(200).json({
       성공: true,
@@ -527,8 +535,29 @@ app.get("/health", (req, res) => {
   res.json({ status: "running", uptime: process.uptime(), db_connected: true });
 });
 
-// ── Flask AI 서버 자동 시작 ──────────────
+// ── Flask AI 서버 자동 시작 + 헬스체크 ──
+let flaskReady = false;
+
+async function waitFlaskReady() {
+  const maxTry = 30;
+  for (let i = 0; i < maxTry; i++) {
+    try {
+      const res = await axios.get('http://localhost:5001/health', { timeout: 2000 });
+      if (res.status === 200 || res.status === 404) {
+        flaskReady = true;
+        console.log('[Flask AI] 준비 완료!');
+        return;
+      }
+    } catch(e) {}
+    console.log(`[Flask AI] 준비 대기 중... (${i+1}/${maxTry})`);
+    await new Promise(r => setTimeout(r, 2000));
+  }
+  console.log('[Flask AI] 준비 타임아웃 - 계속 진행');
+  flaskReady = true;
+}
+
 function startFlaskServer() {
+  flaskReady = false;
   const flaskPath = path.join(__dirname, "AI_engine", "app.py");
   const flask = spawn("python3", [flaskPath], {
     detached: false,
@@ -537,10 +566,12 @@ function startFlaskServer() {
   flask.stdout.on("data", d => console.log("[Flask AI]", d.toString().trim()));
   flask.stderr.on("data", d => console.log("[Flask AI]", d.toString().trim()));
   flask.on("close", (code) => {
+    flaskReady = false;
     console.log(`[Flask AI] 종료됨 (코드 ${code}) - 3초 후 재시작`);
     setTimeout(startFlaskServer, 3000);
   });
   console.log("[Flask AI] 서버 시작됨");
+  waitFlaskReady();
 }
 
 server.listen(PORT, async () => {
