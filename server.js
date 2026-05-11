@@ -82,6 +82,48 @@ async function sendHandoverSms(approvedBy, unresolvedCount, todayCount) {
   }
 }
 
+// ── 위험 감지 SMS (양쪽 모두 발송) ─────────
+async function sendDangerSms(reportId, dangerType, detectedBy) {
+  try {
+    const from      = process.env.COOLSMS_FROM;
+    const apiKey    = process.env.COOLSMS_API_KEY;
+    const apiSecret = process.env.COOLSMS_API_SECRET;
+    const now       = new Date().toLocaleString('ko-KR');
+    const text      = `[🚨 위험 감지 알림]\n유형: ${dangerType}\n감지자: ${detectedBy}\n시각: ${now}\n보고서 #${reportId}가 생성되었습니다.\n즉시 확인 바랍니다.`;
+
+    if (!from || !apiKey || !apiSecret) {
+      console.warn('⚠️  SMS 설정 누락');
+      return;
+    }
+
+    // 손광민(admin)에게만 발송
+    const phones = [process.env.ADMIN_PHONE].filter(Boolean);
+    for (const toPhone of phones) {
+      const date      = new Date().toISOString();
+      const salt      = crypto.randomBytes(16).toString('hex');
+      const signature = crypto.createHmac('sha256', apiSecret).update(date + salt).digest('hex');
+      await axios.post(
+        'https://api.solapi.com/messages/v4/send',
+        { message: { to: toPhone, from, text } },
+        { headers: {
+            'Authorization': `HMAC-SHA256 apiKey=${apiKey}, date=${date}, salt=${salt}, signature=${signature}`,
+            'Content-Type': 'application/json'
+        }}
+      );
+      console.log(`✅ 위험 감지 SMS 발송 → ${toPhone}`);
+    }
+  } catch (err) {
+    console.error('❌ 위험 SMS 오류:', err.response?.data || err.message);
+  }
+}
+
+// ── 위험 감지 SMS API ────────────────────
+app.post('/api/danger-sms', async (req, res) => {
+  const { report_id, danger_type, user } = req.body;
+  await sendDangerSms(report_id, danger_type || '위험 감지', user || 'admin');
+  res.json({ success: true });
+});
+
 // ── 미들웨어 ─────────────────────────────
 app.use(cors({ origin: "*", credentials: true }));
 app.use(express.urlencoded({ extended: true }));
