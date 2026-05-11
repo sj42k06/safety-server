@@ -202,9 +202,10 @@
 
   <script>
     const BASE_URL = 'https://safety-server-oqza.onrender.com';
-    let selectedFile = null;
-    let lastReportId = null;
-    let frameTimer   = null;
+    let selectedFile     = null;
+    let lastReportId     = null;
+    let frameTimer       = null;
+    let videoLoopRunning = false;
 
     const user = localStorage.getItem('username') || 'admin';
     document.getElementById('sidebarUser').textContent = user === 'admin2' ? '정재학 (admin2)' : '손광민 (admin)';
@@ -253,12 +254,10 @@
         video.src = URL.createObjectURL(file);
 
         // 영상 재생 중 프레임마다 빠른 분석
-        video.ontimeupdate = () => {
-          if (frameTimer) return;
-          frameTimer = setTimeout(() => {
-            analyzeVideoFrame(video);
-            frameTimer = null;
-          }, 200); // 0.2초마다 분석 (빠른 바운딩박스)
+        // 영상 재생 중 분석 루프 시작
+        video.onplay = () => { startVideoLoop(video); };
+        video.onpause = () => { stopVideoLoop(); };
+        video.onended = () => { stopVideoLoop(); };
         };
       } else {
         img.style.display   = 'block';
@@ -273,6 +272,23 @@
       document.getElementById('previewDot').style.background = '#22c55e';
       document.getElementById('previewDot').style.animation  = 'blink 1s infinite';
       document.getElementById('previewStatus').textContent   = '미리보기 분석 중';
+    }
+
+    // ── 영상 분석 루프 ──────────────────────
+    function startVideoLoop(video) {
+      videoLoopRunning = true;
+      videoLoop(video);
+    }
+
+    function stopVideoLoop() {
+      videoLoopRunning = false;
+    }
+
+    async function videoLoop(video) {
+      while (videoLoopRunning && !video.paused && !video.ended) {
+        await analyzeVideoFrame(video);
+        await new Promise(r => setTimeout(r, 100)); // 분석 완료 후 100ms 대기
+      }
     }
 
     // ── 영상 프레임 빠른 분석 ────────────────

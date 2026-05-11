@@ -381,7 +381,7 @@
 
       document.getElementById('loadingState').style.display = 'none';
       document.getElementById('content').style.display = 'block';
-      document.getElementById('pageTitle').textContent = r.report_title || `보고서 #${r.report_id}`;
+      setEl('pageTitle', r.report_title || `보고서 #${r.report_id}`);
 
       // 대표 이미지
       if (r.image_path) {
@@ -398,10 +398,10 @@
 
       // 위험도 카드
       document.getElementById('riskCard').className = 'card grade-' + grade;
-      document.getElementById('riskScore').textContent     = score;
-      document.getElementById('riskScoreText').textContent = score;
-      document.getElementById('riskGradeText').textContent = grade;
-      document.getElementById('riskBadge').textContent     = grade + ' 등급';
+      setEl('riskScore', score);
+      setEl('riskScoreText', score);
+      setEl('riskGradeText', grade);
+      setEl('riskBadge', grade + ' 등급');
 
       // 감지 케이스 뱃지
       const cases = content.detected_cases || [];
@@ -417,10 +417,13 @@
       }
 
       // 보고서 정보
-      document.getElementById('reportTitle').textContent = r.report_title || '-';
-      document.getElementById('reportDate').textContent  = formatDate(r.detected_at || r.created_at);
-      document.getElementById('createdBy').textContent   = r.created_by_name || '-';
-      document.getElementById('caseName').textContent    = r.case_name || (cases.join(', ') || '-');
+      const titleText = r.report_title || `보고서 #${r.report_id}`;
+      const dateText  = formatDate(r.detected_at || r.created_at);
+      setEl('reportTitle', titleText);
+      setEl('reportDate', dateText);
+      setEl('caseName', r.case_name || (cases.join(', ') || '-'));
+      setEl('overviewTitle', titleText);
+      setEl('overviewDate', dateText);
 
       // ── AI 주요 위험요소 감지 결과 ──────────
       const detections = content.detections || [];
@@ -433,9 +436,13 @@
         '자재물로 인한 걸림/넘어짐': { icon:'⚠️', grade:'관찰', desc:'AI가 작업 통로 내 자재 방치로 인한 걸림·넘어짐 위험 상황을 감지하였습니다. 통로 내 장애물 즉시 제거 및 정리정돈이 필요하며 재발 방지를 위한 자재 보관 구역 지정이 요구됩니다.' },
       };
 
-      const allCases = cases.length > 0 ? cases : (r.case_name ? [r.case_name] : []);
+      // case_name이 쉼표로 여러 케이스일 수 있음 (예: "보호구 미착용, 위험구역 출입 사고")
+      let allCases = cases.length > 0 ? cases : [];
+      if (allCases.length === 0 && r.case_name) {
+        allCases = r.case_name.split(',').map(c => c.trim()).filter(Boolean);
+      }
       if (allCases.length > 0) {
-        detEl.innerHTML = allCases.map(c => {
+        if(detEl) detEl.innerHTML = allCases.map(c => {
           const info = caseIconMap[c] || { icon:'⚠️', grade:'주의', desc:c };
           const det = detections.find(d => d.case === c) || {};
           return `
@@ -449,7 +456,7 @@
             </div>`;
         }).join('');
       } else {
-        detEl.innerHTML = '<p style="color:#94a3b8;font-size:14px;">감지된 위험요소 없음</p>';
+        if(detEl) detEl.innerHTML = '<p style="color:#94a3b8;font-size:14px;">감지된 위험요소 없음</p>';
       }
 
       // ── 관련 법규 ─────────────────────────
@@ -480,7 +487,7 @@
       const lawRefs = content.law_references || [];
       const lawCases = allCases.length > 0 ? allCases : (lawRefs.length > 0 ? lawRefs : []);
       if (lawCases.length > 0) {
-        lawEl.innerHTML = lawCases.map(c => {
+        if(lawEl) lawEl.innerHTML = lawCases.map(c => {
           const laws = lawMap[c];
           if (Array.isArray(laws)) {
             return laws.map(law => `
@@ -493,7 +500,7 @@
           return `<div class="law-item"><div class="law-item-header">⚖️ ${law.name}</div><div class="law-item-body">${law.content}</div></div>`;
         }).join('');
       } else {
-        lawEl.innerHTML = `<div class="law-item"><div class="law-item-header">⚖️ ${r.law_name || '관련 법규'}</div><div class="law-item-body">${r.law_content || '해당 없음'}</div></div>`;
+        if(lawEl) lawEl.innerHTML = `<div class="law-item"><div class="law-item-header">⚖️ ${r.law_name || '관련 법규'}</div><div class="law-item-body">${r.law_content || '해당 없음'}</div></div>`;
       }
 
       // ── 권고사항 ──────────────────────────
@@ -511,7 +518,7 @@
         cRecs.forEach(rec => { if (!allRecs.includes(rec)) allRecs.push(rec); });
       });
       if (r.recommendation && !allRecs.includes(r.recommendation)) allRecs.push(r.recommendation);
-      recEl.innerHTML = allRecs.length > 0
+      if(recEl) recEl.innerHTML = allRecs.length > 0
         ? allRecs.map(rec => `<div class="rec-item"><div class="rec-dot"></div><div class="rec-text">${rec}</div></div>`).join('')
         : '<p style="color:#94a3b8;font-size:14px;">권고사항 없음</p>';
 
@@ -522,7 +529,7 @@
         '정상': '현재 정상 상태이나 안전 규정을 지속적으로 준수하여 사고를 예방하십시오.',
       };
       const evalText = content.summary_eval || r.description || evalMap[grade] || evalMap['정상'];
-      document.getElementById('summaryEval').textContent = evalText;
+      setEl('summaryEval', evalText);
 
       // 조치 상태
       const actionStatus = r.action_status || '미조치';

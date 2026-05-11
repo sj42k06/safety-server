@@ -603,9 +603,9 @@
       resultPanel.classList.remove('show');
       isCreatingReport = false;
       document.getElementById('currentStatus').textContent = '감지 중...';
-      bboxCtx.clearRect(0, 0, bboxCanvas.width, bboxCanvas.height);
 
       document.getElementById('resultViewBtn').style.display = 'none';
+      drawFenceOnly(); // 가상펜스 유지
       intervalId = true; // 실행 중 플래그
       loopAnalyze();     // 분석 루프 시작
     }
