@@ -558,11 +558,16 @@
       if (hasDangerZone) dangerTypes.push('위험구역 출입 사고');
       if (dangerTypes.length === 0) dangerTypes.push('위험 감지');
 
-      // 사진 캡처
+      // 바운딩박스 포함 사진 캡처 (비디오 + 캔버스 합성)
       var canvas = document.createElement('canvas');
       canvas.width  = cameraVideo.videoWidth  || 640;
       canvas.height = cameraVideo.videoHeight || 480;
-      canvas.getContext('2d').drawImage(cameraVideo, 0, 0);
+      var ctx = canvas.getContext('2d');
+      ctx.drawImage(cameraVideo, 0, 0);
+      // 바운딩박스 캔버스 합성
+      if (bboxCanvas.width > 0 && bboxCanvas.height > 0) {
+        ctx.drawImage(bboxCanvas, 0, 0, canvas.width, canvas.height);
+      }
 
       canvas.toBlob(function(blob) {
         var formData = new FormData();
