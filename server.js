@@ -363,7 +363,7 @@ app.put("/api/reports/:id/action", async (req, res) => {
   const { id } = req.params;
   const { action_status, action_note } = req.body;
 
-  if (!['조치완료', '미조치'].includes(action_status)) {
+  if (!['조치완료', '미조치', '조치중', '즉각조치', '사후조치'].includes(action_status)) {
     return res.status(400).json({ error: "유효하지 않은 조치 상태입니다." });
   }
 
