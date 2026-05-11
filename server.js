@@ -177,7 +177,7 @@ app.post("/analyze-quick", upload.single("video"), async (req, res) => {
 
     const response = await axios.post(AI_SERVER + '/analyze-quick', form, {
       headers: form.getHeaders(),
-      timeout: 15000
+      timeout: 30000
     });
 
     if (fs.existsSync(newPath)) fs.unlinkSync(newPath);
