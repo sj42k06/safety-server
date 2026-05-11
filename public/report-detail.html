@@ -5,345 +5,225 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>AI 안전 분석 보고서</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/remixicon/4.2.0/remixicon.min.css" />
-  <link rel="stylesheet" href="/reports.css" />
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { background: #f1f5f9; font-family: 'Pretendard', 'Apple SD Gothic Neo', sans-serif; }
-    .report-wrap { max-width: 780px; margin: 0 auto; padding: 24px 16px 60px; }
+    * { box-sizing:border-box; margin:0; padding:0; }
+    body { background:#f1f5f9; font-family:'Pretendard','Apple SD Gothic Neo',sans-serif; }
+    .wrap { max-width:780px; margin:0 auto; padding:24px 16px 60px; }
     .top-bar { display:flex; align-items:center; gap:12px; margin-bottom:20px; }
     .back-btn { background:#fff; border:1px solid #e2e8f0; padding:8px 14px; border-radius:8px; cursor:pointer; font-size:13px; color:#475569; display:flex; align-items:center; gap:6px; }
-    .report-title { font-size:15px; font-weight:700; color:#1e293b; }
-    .main-image { width:100%; border-radius:16px; margin-bottom:20px; background:#e2e8f0; overflow:hidden; }
-    .main-image img { width:100%; height:auto; object-fit:contain; display:block; max-height:400px; }
-    .no-image { color:#94a3b8; font-size:14px; text-align:center; }
+    .report-title-text { font-size:15px; font-weight:700; color:#1e293b; }
     .card { background:#fff; border:1px solid #e2e8f0; border-radius:16px; padding:22px; margin-bottom:16px; }
     .card-title { display:flex; align-items:center; gap:8px; font-size:15px; font-weight:700; color:#1e293b; margin-bottom:16px; }
     .card-num { width:26px; height:26px; background:#1e293b; color:#fff; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:700; flex-shrink:0; }
+    .main-img { width:100%; border-radius:16px; margin-bottom:20px; background:#e2e8f0; overflow:hidden; min-height:200px; display:flex; align-items:center; justify-content:center; }
+    .main-img img { width:100%; height:auto; object-fit:contain; display:block; }
+    .no-img { color:#94a3b8; font-size:14px; text-align:center; padding:40px; }
+    .loading { text-align:center; padding:60px; color:#94a3b8; font-size:14px; }
+    .error-msg { text-align:center; padding:40px; color:#dc2626; font-size:14px; font-weight:600; }
 
-    /* 위험도 섹션 */
-    .risk-big { display:flex; align-items:center; gap:20px; margin-bottom:16px; }
-    .risk-circle { width:90px; height:90px; border-radius:50%; display:flex; flex-direction:column; align-items:center; justify-content:center; flex-shrink:0; }
-    .risk-score { font-size:26px; font-weight:800; }
-    .risk-pct { font-size:11px; font-weight:600; margin-top:2px; }
-    .risk-info h3 { font-size:16px; font-weight:700; color:#1e293b; margin-bottom:4px; }
-    .risk-info p { font-size:13px; color:#64748b; }
+    /* 위험도 */
+    .risk-row { display:flex; align-items:center; gap:20px; margin-bottom:16px; }
+    .risk-circle { width:90px; height:90px; border-radius:50%; background:#fee2e2; display:flex; flex-direction:column; align-items:center; justify-content:center; flex-shrink:0; }
+    .risk-circle.정상 { background:#dcfce7; }
+    .risk-circle.관찰 { background:#fef3c7; }
+    .risk-num { font-size:26px; font-weight:800; color:#dc2626; }
+    .risk-circle.정상 .risk-num { color:#16a34a; }
+    .risk-circle.관찰 .risk-num { color:#d97706; }
+    .risk-pct { font-size:11px; color:#94a3b8; }
     .risk-badge { display:inline-block; font-size:12px; font-weight:700; padding:3px 12px; border-radius:20px; margin-top:6px; }
-    .grade-고위험 .risk-circle { background:#fee2e2; }
-    .grade-고위험 .risk-score  { color:#dc2626; }
-    .grade-고위험 .risk-pct    { color:#dc2626; }
-    .grade-고위험 .risk-badge  { background:#fee2e2; color:#dc2626; }
-    .grade-관찰 .risk-circle   { background:#fef3c7; }
-    .grade-관찰 .risk-score    { color:#d97706; }
-    .grade-관찰 .risk-pct      { color:#d97706; }
-    .grade-관찰 .risk-badge    { background:#fef3c7; color:#d97706; }
-    .grade-정상 .risk-circle   { background:#dcfce7; }
-    .grade-정상 .risk-score    { color:#16a34a; }
-    .grade-정상 .risk-pct      { color:#16a34a; }
-    .grade-정상 .risk-badge    { background:#dcfce7; color:#16a34a; }
-
-    /* 감지 케이스 뱃지 */
-    .case-badges { display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; }
-    .case-badge {
-      padding:5px 14px; border-radius:20px; font-size:12px; font-weight:700;
-      display:flex; align-items:center; gap:5px;
-    }
-    .case-badge.보호구  { background:#fee2e2; color:#dc2626; }
-    .case-badge.중장비  { background:#fff7ed; color:#ea580c; }
-    .case-badge.낙하물  { background:#fef3c7; color:#d97706; }
-    .case-badge.위험구역 { background:#f3e8ff; color:#9333ea; }
-    .case-badge.자재    { background:#fdf2f8; color:#db2777; }
-
-    /* 보고서 정보 그리드 */
-    .info-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:12px; }
+    .badge-고위험 { background:#fee2e2; color:#dc2626; }
+    .badge-관찰   { background:#fef3c7; color:#d97706; }
+    .badge-정상   { background:#dcfce7; color:#16a34a; }
+    .case-badges { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:16px; }
+    .case-badge { font-size:12px; font-weight:600; padding:4px 12px; border-radius:20px; background:#fee2e2; color:#dc2626; }
+    .info-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
     .info-item { background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:12px; }
     .info-label { font-size:11px; color:#94a3b8; margin-bottom:4px; }
-    .info-value { font-size:14px; font-weight:700; color:#1e293b; }
-
-    /* 권고사항 */
-    .rec-item { display:flex; gap:10px; align-items:flex-start; padding:10px 0; border-bottom:1px solid #f1f5f9; }
-    .rec-item:last-child { border-bottom:none; }
-    .rec-dot { width:8px; height:8px; background:#f59e0b; border-radius:50%; flex-shrink:0; margin-top:5px; }
-    .rec-text { font-size:13px; color:#334155; line-height:1.6; }
-
-    /* 종합평가 */
-    .eval-text { font-size:14px; color:#475569; line-height:1.8; margin-bottom:16px; }
-    .law-box { background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:14px; }
-    .law-title { font-size:12px; color:#94a3b8; margin-bottom:8px; display:flex; align-items:center; gap:6px; }
-    .law-content { font-size:13px; color:#334155; line-height:1.7; }
-
-    /* ── 조치 상태 UI ── */
-    .action-current-badge {
-      margin-left:auto; font-size:12px; font-weight:700;
-      padding:4px 12px; border-radius:20px;
-      display:flex; align-items:center; gap:5px;
-    }
-    .action-current-badge .dot { width:7px; height:7px; border-radius:50%; background:currentColor; animation:blink 1.6s ease-in-out infinite; }
-    .action-current-badge.미조치  { background:#fee2e2; color:#dc2626; }
-    .action-current-badge.조치중  { background:#fef3c7; color:#d97706; }
-    .action-current-badge.조치완료 { background:#dcfce7; color:#16a34a; }
-    .action-current-badge.조치완료 .dot { animation:none; }
-    .action-current-badge.조치완료 .dot { animation:none; }
-    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
-
-    .status-btn-group { display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; margin-bottom:16px; }
-    .status-btn {
-      border:2px solid #e2e8f0; border-radius:12px; background:#f8fafc;
-      cursor:pointer; padding:14px 8px;
-      display:flex; flex-direction:column; align-items:center; gap:7px;
-      transition:all .2s; font-family:inherit;
-    }
-    .status-btn:hover { transform:translateY(-2px); box-shadow:0 4px 12px rgba(0,0,0,.08); }
-    .status-btn .sb-icon  { font-size:24px; }
-    .status-btn .sb-label { font-size:13px; font-weight:700; color:#1e293b; }
-    .status-btn .sb-sub   { font-size:11px; color:#94a3b8; }
-    .status-btn.btn-unresolved.active { border-color:#dc2626; background:#fee2e2; }
-    .status-btn.btn-unresolved.active .sb-label { color:#dc2626; }
-    .status-btn.btn-resolved.active   { border-color:#16a34a; background:#dcfce7; }
-    .status-btn.btn-resolved.active .sb-label { color:#16a34a; }
-    .status-btn.btn-inprogress.active { border-color:#d97706; background:#fef3c7; }
-    .status-btn.btn-inprogress.active .sb-label { color:#d97706; }
-
-    .action-panel {
-      display:none; flex-direction:column; gap:12px;
-      background:#f8fafc; border:1px solid #e2e8f0;
-      border-radius:12px; padding:16px; margin-bottom:16px;
-      animation:fadeIn .2s ease;
-    }
-    .action-panel.visible { display:flex; }
-    @keyframes fadeIn { from{opacity:0;transform:translateY(-6px)} to{opacity:1;transform:translateY(0)} }
-
-    .panel-title { font-size:13px; font-weight:700; padding-bottom:10px; border-bottom:1px solid #e2e8f0; display:flex; align-items:center; gap:6px; }
-    .panel-title.red   { color:#dc2626; }
-    .panel-title.green { color:#16a34a; }
-
-    .form-group { display:flex; flex-direction:column; gap:5px; }
-    .form-label { font-size:12px; color:#64748b; font-weight:600; }
-    .form-textarea {
-      background:#fff; border:1px solid #e2e8f0; border-radius:8px;
-      padding:9px 12px; font-size:13px; font-family:inherit; color:#1e293b;
-      outline:none; transition:border-color .2s; resize:vertical; min-height:72px;
-    }
-    .form-textarea:focus { border-color:#3b82f6; }
-
-    .action-save-row { display:flex; align-items:center; gap:10px; }
-    .save-btn {
-      background:#1e293b; color:#fff; border:none; border-radius:10px;
-      padding:11px 24px; font-size:13px; font-weight:700; cursor:pointer;
-      font-family:inherit; display:flex; align-items:center; gap:7px; transition:all .2s;
-    }
-    .save-btn:hover { background:#0f172a; transform:translateY(-1px); }
-    .save-btn:disabled { opacity:.5; cursor:not-allowed; transform:none; }
-    .save-msg { font-size:12px; font-weight:600; opacity:0; transition:opacity .3s; }
-    .save-msg.ok  { color:#16a34a; opacity:1; }
-    .save-msg.err { color:#dc2626; opacity:1; }
-
-    .bottom-msg { background:#1e293b; border-radius:16px; padding:20px; text-align:center; color:#fff; font-size:14px; font-style:italic; margin-top:8px; }
-
-    /* 보고 개요 */
-    .overview-list { display:flex; flex-direction:column; gap:10px; }
-    .overview-item { display:flex; gap:12px; font-size:13px; padding:8px 0; border-bottom:1px solid #f1f5f9; }
-    .overview-item:last-child { border-bottom:none; }
-    .ov-label { color:#94a3b8; font-weight:600; width:90px; flex-shrink:0; }
-    .ov-value { color:#1e293b; flex:1; line-height:1.5; }
+    .info-value { font-size:13px; font-weight:600; color:#1e293b; }
 
     /* 감지 방식 */
-    .method-list { display:flex; flex-direction:column; gap:10px; }
-    .method-item { display:flex; align-items:flex-start; gap:8px; font-size:13px; color:#475569; line-height:1.6; }
-    .method-item i { font-size:16px; flex-shrink:0; margin-top:1px; }
+    .method-item { display:flex; align-items:flex-start; gap:8px; font-size:13px; color:#475569; line-height:1.6; margin-bottom:8px; }
+    .method-item i { color:#22c55e; flex-shrink:0; margin-top:2px; }
 
-    /* 위험요소 감지 결과 */
-    .det-result-item { background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:14px 16px; margin-bottom:10px; }
-    .det-result-item:last-child { margin-bottom:0; }
-    .det-result-header { display:flex; align-items:center; gap:10px; margin-bottom:8px; }
-    .det-result-icon { font-size:20px; }
-    .det-result-name { font-size:14px; font-weight:700; color:#1e293b; flex:1; }
-    .det-result-grade { font-size:11px; font-weight:700; padding:3px 10px; border-radius:12px; }
-    .det-result-grade.고위험 { background:#fee2e2; color:#dc2626; }
-    .det-result-grade.주의   { background:#fef3c7; color:#d97706; }
-    .det-result-grade.관찰   { background:#e0f2fe; color:#0369a1; }
-    .det-result-desc { font-size:12px; color:#64748b; line-height:1.6; }
+    /* 보고 개요 */
+    .overview-item { display:flex; gap:12px; font-size:13px; padding:8px 0; border-bottom:1px solid #f1f5f9; }
+    .overview-item:last-child { border-bottom:none; }
+    .ov-label { color:#94a3b8; font-weight:600; width:80px; flex-shrink:0; }
+    .ov-value { color:#1e293b; flex:1; line-height:1.5; }
+
+    /* 위험요소 */
+    .det-item { background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:14px; margin-bottom:10px; }
+    .det-header { display:flex; align-items:center; gap:10px; margin-bottom:8px; }
+    .det-icon { font-size:20px; }
+    .det-name { font-size:14px; font-weight:700; color:#1e293b; flex:1; }
+    .det-grade { font-size:11px; font-weight:700; padding:3px 10px; border-radius:12px; }
+    .det-grade.고위험 { background:#fee2e2; color:#dc2626; }
+    .det-grade.주의   { background:#fef3c7; color:#d97706; }
+    .det-grade.관찰   { background:#e0f2fe; color:#0369a1; }
+    .det-desc { font-size:12px; color:#64748b; line-height:1.6; }
 
     /* 법규 */
     .law-item { border:1px solid #e2e8f0; border-radius:12px; overflow:hidden; margin-bottom:10px; }
-    .law-item:last-child { margin-bottom:0; }
-    .law-item-header { background:#f1f5f9; padding:10px 14px; display:flex; align-items:center; gap:8px; font-size:13px; font-weight:700; color:#1e293b; }
-    .law-item-body { padding:12px 14px; font-size:12px; color:#475569; line-height:1.7; }
-    .loading { text-align:center; padding:60px; color:#94a3b8; }
-    .error   { text-align:center; padding:60px; color:#ef4444; }
-      /* 자료실 하위 메뉴 */
-    .nav-group-title { display:flex; align-items:center; gap:10px; padding:10px 16px; color:#94a3b8; font-size:13px; cursor:pointer; transition:all .2s; user-select:none; }
-    .nav-group-title:hover { background:rgba(255,255,255,.05); color:#fff; }
-    .nav-group-title.open { color:#fff; }
-    .nav-arrow { margin-left:auto; transition:transform .2s; font-size:14px; }
-    .nav-arrow.open { transform:rotate(180deg); }
-    .nav-sub { display:none; flex-direction:column; gap:2px; padding-left:14px; margin-top:2px; }
-    .nav-sub.open { display:flex; }
-    .nav-sub a { display:flex; align-items:center; gap:8px; padding:8px 14px; border-radius:8px; color:#94a3b8; font-size:12px; text-decoration:none; transition:all .2s; }
-    .nav-sub a:hover { background:rgba(255,255,255,.05); color:#fff; }
-    .nav-sub a.active { background:rgba(59,130,246,.15); color:#60a5fa; font-weight:600; }
+    .law-header { background:#f1f5f9; padding:10px 14px; font-size:13px; font-weight:700; color:#1e293b; }
+    .law-body { padding:12px 14px; font-size:12px; color:#475569; line-height:1.7; }
+
+    /* 권고사항 */
+    .rec-item { display:flex; align-items:flex-start; gap:10px; padding:10px 0; border-bottom:1px solid #f1f5f9; }
+    .rec-item:last-child { border-bottom:none; }
+    .rec-dot { width:6px; height:6px; background:#1e293b; border-radius:50%; flex-shrink:0; margin-top:6px; }
+    .rec-text { font-size:13px; color:#475569; line-height:1.6; }
+
+    /* 조치 상태 */
+    .status-btn-group { display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; margin-bottom:16px; }
+    .status-btn { background:#f8fafc; border:2px solid #e2e8f0; border-radius:12px; padding:14px 8px; cursor:pointer; text-align:center; font-family:inherit; transition:all .2s; }
+    .status-btn .sb-icon  { font-size:20px; margin-bottom:4px; }
+    .status-btn .sb-label { font-size:12px; font-weight:700; color:#475569; display:block; }
+    .status-btn .sb-sub   { font-size:10px; color:#94a3b8; display:block; margin-top:2px; }
+    .status-btn.active.btn-unresolved { border-color:#dc2626; background:#fee2e2; }
+    .status-btn.active.btn-inprogress { border-color:#d97706; background:#fef3c7; }
+    .status-btn.active.btn-resolved   { border-color:#16a34a; background:#dcfce7; }
+    .action-panel { display:none; background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:16px; margin-bottom:16px; }
+    .action-panel.visible { display:block; }
+    .panel-title { font-size:13px; font-weight:700; color:#1e293b; margin-bottom:10px; }
+    .form-label { font-size:12px; font-weight:600; color:#475569; margin-bottom:6px; display:block; }
+    .form-textarea { width:100%; border:1px solid #e2e8f0; border-radius:8px; padding:10px; font-size:13px; font-family:inherit; resize:none; height:80px; }
+    .save-row { display:flex; align-items:center; gap:12px; }
+    .save-btn { background:#1e293b; color:#fff; border:none; padding:10px 20px; border-radius:8px; font-size:13px; font-weight:700; cursor:pointer; font-family:inherit; display:flex; align-items:center; gap:6px; }
+    .save-btn:disabled { background:#94a3b8; cursor:not-allowed; }
+    .save-msg { font-size:12px; }
+    .save-msg.success { color:#16a34a; }
+    .save-msg.error   { color:#dc2626; }
+    .current-badge { display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:700; padding:4px 12px; border-radius:20px; margin-left:auto; }
+    .current-badge.미조치  { background:#fee2e2; color:#dc2626; }
+    .current-badge.조치중  { background:#fef3c7; color:#d97706; }
+    .current-badge.조치완료 { background:#dcfce7; color:#16a34a; }
+    .dot { width:6px; height:6px; border-radius:50%; background:currentColor; animation:blink 1s infinite; }
+    .조치완료 .dot { animation:none; }
+    @keyframes blink { 0%,100%{opacity:1}50%{opacity:.3} }
+
+    .eval-text { font-size:14px; color:#475569; line-height:1.8; }
+    .bottom-msg { background:#1e293b; border-radius:16px; padding:20px; text-align:center; color:#fff; font-size:13px; font-style:italic; margin-top:8px; }
+    .empty-text { color:#94a3b8; font-size:13px; }
   </style>
 </head>
 <body>
-<div class="report-wrap">
+<div class="wrap">
   <div class="top-bar">
     <button class="back-btn" onclick="history.back()"><i class="ri-arrow-left-line"></i> 목록으로</button>
-    <span class="report-title" id="pageTitle">AI 안전 분석 보고서</span>
+    <span class="report-title-text" id="pageTitle">AI 안전 분석 보고서</span>
   </div>
 
   <div id="loadingState" class="loading">보고서를 불러오는 중...</div>
-  <div id="errorState" class="error" style="display:none"></div>
+  <div id="errorState" class="error-msg" style="display:none"></div>
+
   <div id="content" style="display:none">
 
     <!-- 대표 이미지 -->
-    <div class="main-image" id="mainImageWrap">
-      <div class="no-image"><i class="ri-image-line" style="font-size:32px;display:block;margin-bottom:8px;"></i>대표 스냅샷</div>
+    <div class="main-img" id="mainImg">
+      <div class="no-img"><i class="ri-image-line" style="font-size:32px;display:block;margin-bottom:8px;"></i>대표 스냅샷</div>
     </div>
 
-    <!-- 보고 개요 카드 -->
+    <!-- 보고 개요 -->
     <div class="card">
-      <div class="card-title"><span class="card-num">📋</span> 보고 개요</div>
-      <div class="overview-list">
-        <div class="overview-item"><span class="ov-label">보고서 제목</span><span class="ov-value" id="overviewTitle">-</span></div>
-        <div class="overview-item"><span class="ov-label">분석 일시</span><span class="ov-value" id="overviewDate">-</span></div>
-        <div class="overview-item"><span class="ov-label">감지 방식</span><span class="ov-value">AI 기반 실시간 영상 분석 시스템 (YOLO v8)</span></div>
-        <div class="overview-item"><span class="ov-label">분석 목적</span><span class="ov-value">작업자 보호구 착용 여부, 위험구역 침범, 중장비 접근 등 복합 위험 판단</span></div>
-      </div>
+      <div class="card-title"><span>📋</span> 보고 개요</div>
+      <div class="overview-item"><span class="ov-label">보고서 제목</span><span class="ov-value" id="ovTitle">-</span></div>
+      <div class="overview-item"><span class="ov-label">분석 일시</span><span class="ov-value" id="ovDate">-</span></div>
+      <div class="overview-item"><span class="ov-label">감지 방식</span><span class="ov-value">AI 기반 실시간 영상 분석 (YOLO v8)</span></div>
+      <div class="overview-item"><span class="ov-label">분석 목적</span><span class="ov-value">작업자 보호구 착용 여부, 위험구역 침범, 중장비 접근 등 복합 위험 판단</span></div>
     </div>
 
-    <!-- 감지 방식 카드 -->
+    <!-- 감지 방식 -->
     <div class="card">
-      <div class="card-title"><span class="card-num">🔍</span> 감지 방식</div>
-      <div class="method-list">
-        <div class="method-item"><i class="ri-checkbox-circle-line" style="color:#22c55e;"></i> AI 기반 실시간 영상 분석 시스템 (YOLO v8 객체 감지)</div>
-        <div class="method-item"><i class="ri-checkbox-circle-line" style="color:#22c55e;"></i> 가상 펜스(Virtual Fence) 기반 위험구역 침범 실시간 판단</div>
-        <div class="method-item"><i class="ri-checkbox-circle-line" style="color:#22c55e;"></i> 안전모·안전조끼 착용 여부 자동 식별 및 미착용자 감지</div>
-        <div class="method-item"><i class="ri-checkbox-circle-line" style="color:#22c55e;"></i> 중장비·차량 근접 여부 거리 기반 분석</div>
-        <div class="method-item"><i class="ri-checkbox-circle-line" style="color:#22c55e;"></i> 위험 감지 시 관리자에게 자동 SMS 알림 발송</div>
-      </div>
+      <div class="card-title"><span>🔍</span> 감지 방식</div>
+      <div class="method-item"><i class="ri-checkbox-circle-line"></i> AI 기반 실시간 영상 분석 시스템 (YOLO v8 객체 감지)</div>
+      <div class="method-item"><i class="ri-checkbox-circle-line"></i> 가상 펜스(Virtual Fence) 기반 위험구역 침범 실시간 판단</div>
+      <div class="method-item"><i class="ri-checkbox-circle-line"></i> 안전모·안전조끼 착용 여부 자동 식별 및 미착용자 감지</div>
+      <div class="method-item"><i class="ri-checkbox-circle-line"></i> 중장비·차량 근접 여부 거리 기반 분석</div>
+      <div class="method-item"><i class="ri-checkbox-circle-line"></i> 위험 감지 시 관리자에게 자동 SMS 알림 발송</div>
     </div>
 
-    <!-- 카드 1: AI 등급 평가 -->
+    <!-- 1. AI 사고예측 및 등급 평가 -->
     <div class="card" id="riskCard">
       <div class="card-title"><span class="card-num">1</span> AI 사고예측 및 등급 평가</div>
-      <div class="risk-big">
-        <div class="risk-circle">
-          <span class="risk-score" id="riskScore">-</span>
+      <div class="risk-row">
+        <div class="risk-circle" id="riskCircle">
+          <span class="risk-num" id="riskScore">-</span>
           <span class="risk-pct">%</span>
         </div>
-        <div class="risk-info">
-          <h3>예측된 위험도: <span id="riskScoreText">-</span>%</h3>
-          <p>현재 등급: <span id="riskGradeText">-</span></p>
+        <div>
+          <div style="font-size:16px;font-weight:700;color:#1e293b;margin-bottom:4px;">예측된 위험도: <span id="riskScoreText">-</span>%</div>
+          <div style="font-size:13px;color:#64748b;">현재 등급: <span id="riskGradeText">-</span></div>
           <span class="risk-badge" id="riskBadge">-</span>
         </div>
       </div>
-
-      <!-- 감지된 사고 케이스 -->
       <div class="case-badges" id="caseBadges"></div>
-
-      <!-- 보고서 정보 -->
       <div class="info-grid">
-        <div class="info-item">
-          <div class="info-label">보고서 제목</div>
-          <div class="info-value" id="reportTitle" style="font-size:12px;">-</div>
-        </div>
-        <div class="info-item">
-          <div class="info-label">분석 일시</div>
-          <div class="info-value" id="reportDate" style="font-size:12px;">-</div>
-        </div>
-        <div class="info-item">
-          <div class="info-label">사고 케이스</div>
-          <div class="info-value" id="caseName">-</div>
-        </div>
+        <div class="info-item"><div class="info-label">보고서 제목</div><div class="info-value" id="infoTitle">-</div></div>
+        <div class="info-item"><div class="info-label">분석 일시</div><div class="info-value" id="infoDate">-</div></div>
+        <div class="info-item"><div class="info-label">사고 케이스</div><div class="info-value" id="infoCase">-</div></div>
       </div>
     </div>
 
-    <!-- 카드 2: AI 주요 위험요소 감지 결과 -->
+    <!-- 2. AI 주요 위험요소 감지 결과 -->
     <div class="card">
       <div class="card-title"><span class="card-num">2</span> AI 주요 위험요소 감지 결과</div>
-      <div id="detectionResultList"></div>
+      <div id="detList"><p class="empty-text">감지된 위험요소 없음</p></div>
     </div>
 
-    <!-- 카드 3: 관련 법규 -->
+    <!-- 3. 관련 법규 -->
     <div class="card">
       <div class="card-title"><span class="card-num">3</span> 관련 법규</div>
-      <div id="lawList"></div>
+      <div id="lawList"><p class="empty-text">해당 없음</p></div>
     </div>
 
-    <!-- 카드 4: 권고 및 대응 조치사항 -->
+    <!-- 4. 권고 및 대응 조치사항 -->
     <div class="card">
       <div class="card-title"><span class="card-num">4</span> 권고 및 대응 조치사항</div>
-      <div id="recList"></div>
+      <div id="recList"><p class="empty-text">권고사항 없음</p></div>
     </div>
 
-    <!-- 카드 5: 종합평가 -->
+    <!-- 5. 종합평가 -->
     <div class="card">
       <div class="card-title"><span class="card-num">5</span> 종합평가</div>
-      <p class="eval-text" id="summaryEval">-</p>
+      <p class="eval-text" id="evalText">-</p>
     </div>
 
-    <!-- 카드 4: 조치 상태 -->
+    <!-- 6. 조치 상태 관리 -->
     <div class="card">
       <div class="card-title">
         <span class="card-num">6</span> 조치 상태 관리
-        <div class="action-current-badge 미조치" id="currentBadge">
-          <div class="dot"></div>
-          <span id="currentBadgeText">미조치</span>
-        </div>
+        <span class="current-badge 미조치" id="currentBadge"><span class="dot"></span><span id="currentBadgeText">미조치</span></span>
       </div>
-
       <div class="status-btn-group">
         <button class="status-btn btn-unresolved" id="btnUnresolved" onclick="selectStatus('미조치')">
-          <span class="sb-icon">🚨</span>
-          <span class="sb-label">미조치</span>
-          <span class="sb-sub">처리 전</span>
+          <div class="sb-icon">🚨</div><span class="sb-label">미조치</span><span class="sb-sub">처리 전</span>
         </button>
         <button class="status-btn btn-inprogress" id="btnInprogress" onclick="selectStatus('조치중')">
-          <span class="sb-icon">⏳</span>
-          <span class="sb-label">조치 중</span>
-          <span class="sb-sub">처리 예정</span>
+          <div class="sb-icon">⏳</div><span class="sb-label">조치 중</span><span class="sb-sub">처리 예정</span>
         </button>
         <button class="status-btn btn-resolved" id="btnResolved" onclick="selectStatus('조치완료')">
-          <span class="sb-icon">✅</span>
-          <span class="sb-label">조치 완료</span>
-          <span class="sb-sub">처리 완료</span>
+          <div class="sb-icon">✅</div><span class="sb-label">조치 완료</span><span class="sb-sub">처리 완료</span>
         </button>
       </div>
-
-      <!-- 미조치 패널 -->
       <div class="action-panel" id="panelUnresolved">
-        <div class="panel-title red">🚨 미조치 사유 입력</div>
-        <div class="form-group">
-          <label class="form-label">미조치 사유</label>
-          <textarea class="form-textarea" id="unresNote" placeholder="조치하지 못한 이유를 입력하세요..."></textarea>
-        </div>
+        <div class="panel-title" style="color:#dc2626;">🚨 미조치 사유</div>
+        <label class="form-label">사유 입력 (선택)</label>
+        <textarea class="form-textarea" id="unresNote" placeholder="미조치 사유를 입력하세요..."></textarea>
       </div>
-
-      <!-- 조치중 패널 -->
       <div class="action-panel" id="panelInprogress">
-        <div class="panel-title" style="color:#d97706;">⏳ 처리 예정 내용 입력</div>
-        <div class="form-group">
-          <label class="form-label">처리 예정 내용</label>
-          <textarea class="form-textarea" id="inprogNote" placeholder="나중에 처리할 내용이나 계획을 입력하세요...&#10;예) 내일 오전 안전관리자와 협의 후 조치 예정"></textarea>
-        </div>
-        <div class="form-group">
-          <label class="form-label">예상 처리 기한</label>
-          <input type="date" class="form-textarea" id="inprogDate" style="min-height:auto;padding:8px 12px;" />
-        </div>
+        <div class="panel-title" style="color:#d97706;">⏳ 처리 예정 내용</div>
+        <label class="form-label">처리 예정 내용</label>
+        <textarea class="form-textarea" id="inprogNote" placeholder="처리 예정 내용을 입력하세요..."></textarea>
+        <label class="form-label" style="margin-top:10px;">예상 처리 기한</label>
+        <input type="date" class="form-textarea" id="inprogDate" style="min-height:auto;padding:8px 12px;height:auto;" />
       </div>
-
-      <!-- 조치완료 패널 -->
       <div class="action-panel" id="panelResolved">
-        <div class="panel-title green">✅ 조치 완료 내용</div>
-        <div class="form-group">
-          <label class="form-label">조치 완료 내용</label>
-          <textarea class="form-textarea" id="resNote" placeholder="수행한 조치 내용을 상세히 입력하세요..."></textarea>
-        </div>
+        <div class="panel-title" style="color:#16a34a;">✅ 조치 내용</div>
+        <label class="form-label">조치 내용 입력 (선택)</label>
+        <textarea class="form-textarea" id="resNote" placeholder="조치 내용을 입력하세요..."></textarea>
       </div>
-
-      <div class="action-save-row">
-        <button class="save-btn" id="saveBtn" onclick="saveAction()">
-          <i class="ri-save-line"></i> 저장
-        </button>
+      <div class="save-row">
+        <button class="save-btn" id="saveBtn" onclick="saveAction()"><i class="ri-save-line"></i> 저장</button>
         <span class="save-msg" id="saveMsg"></span>
       </div>
     </div>
@@ -353,269 +233,255 @@
 </div>
 
 <script>
-  const BASE_URL = 'https://safety-server-oqza.onrender.com';
-  const reportId = location.pathname.split('/').pop();
-  let selectedStatus = null;
-  let reportData = null;
+  function setEl(id, val) { var el = document.getElementById(id); if (el) el.textContent = (val != null) ? val : '-'; }
+var BASE_URL = 'https://safety-server-oqza.onrender.com';
+var reportId = location.pathname.split('/').pop();
+var selectedStatus = null;
+var reportData = null;
 
-  const CASE_ICONS = {
-    '보호구 미착용':        { icon:'⛑️', cls:'보호구' },
-    '중장비 접근 사고':     { icon:'🚜', cls:'중장비' },
-    '자재물 낙하/추락 위험': { icon:'📦', cls:'낙하물' },
-    '위험구역 출입 사고':   { icon:'🚧', cls:'위험구역' },
-    '자재물로 인한 걸림/넘어짐': { icon:'⚠️', cls:'자재' },
-  };
+var CASE_ICONS = {
+  '보호구 미착용': '⛑️',
+  '중장비 접근 사고': '🚜',
+  '자재물 낙하/추락 위험': '📦',
+  '위험구역 출입 사고': '🚧',
+  '자재물로 인한 걸림/넘어짐': '⚠️'
+};
 
-  function formatDate(str) {
-    if (!str) return '-';
-    return new Date(str).toLocaleString('ko-KR');
-  }
+var CASE_DESC = {
+  '보호구 미착용': { grade:'고위험', desc:'AI가 작업자의 안전모 및 안전조끼 미착용 상태를 감지하였습니다. 머리 및 신체 부상 위험이 높은 상태로 즉각적인 착용 지도가 필요합니다.' },
+  '중장비 접근 사고': { grade:'고위험', desc:'AI가 중장비 운행 구역 내 작업자 접근을 감지하였습니다. 충돌·협착 사고 위험이 매우 높습니다. 즉시 작업 중지 및 작업자 대피가 필요합니다.' },
+  '자재물 낙하/추락 위험': { grade:'주의', desc:'AI가 불안정하게 적재된 자재 또는 고소 작업 환경에서의 낙하·추락 위험 요소를 감지하였습니다.' },
+  '위험구역 출입 사고': { grade:'고위험', desc:'AI가 가상펜스를 통해 작업자의 위험구역 무단 침범을 감지하였습니다. 즉각적인 퇴거 조치가 필요합니다.' },
+  '자재물로 인한 걸림/넘어짐': { grade:'관찰', desc:'AI가 작업 통로 내 자재 방치로 인한 걸림·넘어짐 위험 상황을 감지하였습니다.' }
+};
 
-  async function load() {
-    try {
-      const res  = await fetch(BASE_URL + '/api/reports/' + reportId);
-      if (!res.ok) throw new Error('서버 오류 ' + res.status);
-      const data = await res.json();
-      const r    = data.report;
+var LAW = {
+  '보호구 미착용': [
+    { name:'산업안전보건법 제38조 (보호구 착용)', body:'사업주는 작업자에게 안전모, 안전화, 안전조끼 등 적정한 보호구를 지급하고 착용하도록 하여야 한다.' },
+    { name:'산업안전보건기준에 관한 규칙 제32조', body:'사업주는 보호구를 작업자 수 이상으로 지급하고 항상 사용 가능한 상태로 유지·관리하여야 한다.' },
+    { name:'산업안전보건법 제173조 (벌칙)', body:'보호구 착용 의무를 위반한 경우 5년 이하의 징역 또는 5천만원 이하의 벌금에 처한다.' }
+  ],
+  '중장비 접근 사고': [
+    { name:'산업안전보건기준에 관한 규칙 제200조', body:'차량계 건설기계를 사용하는 작업 시 운행경로, 작업방법을 정하고 작업자 출입을 통제하여야 한다.' },
+    { name:'산업안전보건기준에 관한 규칙 제201조', body:'차량계 건설기계와 작업자 간 접촉 위험이 있는 경우 유도자를 배치하고 안전거리를 확보하여야 한다.' }
+  ],
+  '자재물 낙하/추락 위험': [
+    { name:'산업안전보건기준에 관한 규칙 제14조', body:'낙하물에 의한 위험을 방지하기 위해 낙하물 방지망, 수직보호망 등을 설치하여야 한다.' },
+    { name:'산업안전보건기준에 관한 규칙 제43조', body:'높이 10m 이상에서의 작업 시 추락 방호망을 설치하여야 한다.' }
+  ],
+  '위험구역 출입 사고': [
+    { name:'산업안전보건법 제42조 (위험구역 출입 금지)', body:'사업주는 위험구역에 관계자 외 출입을 금지하여야 한다.' },
+    { name:'산업안전보건기준에 관한 규칙 제38조', body:'위험구역 경계에는 안전난간, 울타리, 경고 표지 등을 설치하여야 한다.' }
+  ],
+  '자재물로 인한 걸림/넘어짐': [
+    { name:'산업안전보건기준에 관한 규칙 제3조', body:'작업장 내 통로는 항상 정리정돈하여 걸림/넘어짐 위험 요소를 제거하여야 한다.' },
+    { name:'산업안전보건기준에 관한 규칙 제22조', body:'작업장 통로에는 75럭스 이상의 조명을 설치하고 장애물을 제거하여야 한다.' }
+  ]
+};
+
+var REC = {
+  '보호구 미착용': ['안전모 및 안전조끼 상시 착용 의무화', '작업 전 보호구 착용 여부 점검 체크리스트 운영', '보호구 미착용자 즉시 작업 중지 및 시정 조치'],
+  '중장비 접근 사고': ['중장비 작업 구역 접근 제한선 설치', '중장비 작업 시 신호수 배치 의무화', '작업자-중장비 안전거리(2m 이상) 준수'],
+  '자재물 낙하/추락 위험': ['자재 적재 높이 기준 준수 (2m 이하)', '낙하물 방지망 설치', '작업 구역 하부 출입 통제'],
+  '위험구역 출입 사고': ['위험구역 표지판 및 차단 바리케이드 설치', '출입 허가제 운영', '위험구역 CCTV 모니터링 강화'],
+  '자재물로 인한 걸림/넘어짐': ['통로 내 자재 즉시 정리', '자재 보관 구역 별도 지정', '작업 종료 후 정리정돈 체크리스트 운영']
+};
+
+function g(id) { return document.getElementById(id); }
+function setText(id, val) { var el = g(id); if (el) el.textContent = val || '-'; }
+function setHtml(id, val) { var el = g(id); if (el) el.innerHTML = val || ''; }
+function fmtDate(s) { if (!s) return '-'; return new Date(s).toLocaleString('ko-KR'); }
+
+function load() {
+  fetch(BASE_URL + '/api/reports/' + reportId)
+    .then(function(res) { return res.json(); })
+    .then(function(data) {
+      var r = data.report;
+      if (!r) throw new Error('보고서를 찾을 수 없습니다.');
       reportData = r;
 
-      document.getElementById('loadingState').style.display = 'none';
-      document.getElementById('content').style.display = 'block';
-      setEl('pageTitle', r.report_title || `보고서 #${r.report_id}`);
+      g('loadingState').style.display = 'none';
+      g('content').style.display = 'block';
 
-      // 대표 이미지
+      // 제목
+      var title = r.report_title || ('보고서 #' + r.report_id);
+      setText('pageTitle', title);
+      setText('ovTitle', title);
+      setText('ovDate', fmtDate(r.detected_at || r.created_at));
+      setText('infoTitle', title);
+      setText('infoDate', fmtDate(r.detected_at || r.created_at));
+
+      // 이미지
       if (r.image_path) {
-        document.getElementById('mainImageWrap').innerHTML =
-          `<img src="${r.image_path}" alt="분석 이미지"/>`;
+        g('mainImg').innerHTML = '<img src="' + r.image_path + '" alt="분석 이미지"/>';
       }
 
-      // 보고서 내용 파싱
-      let content = {};
-      try { content = JSON.parse(r.report_content || '{}'); } catch(_) {}
+      // report_content 파싱
+      var content = {};
+      try { content = JSON.parse(r.report_content || '{}'); } catch(e) {}
 
-      const grade = content.risk_grade || '정상';
-      const score = content.risk_score || 0;
+      var grade = content.risk_grade || (r.detection_status === 'RISK' ? '고위험' : '정상');
+      var score = content.risk_score || (r.detection_status === 'RISK' ? 85 : 15);
 
-      // 위험도 카드
-      document.getElementById('riskCard').className = 'card grade-' + grade;
-      setEl('riskScore', score);
-      setEl('riskScoreText', score);
-      setEl('riskGradeText', grade);
-      setEl('riskBadge', grade + ' 등급');
+      // 위험도
+      var circle = g('riskCircle');
+      if (circle) { circle.className = 'risk-circle ' + grade; }
+      setText('riskScore', score);
+      setText('riskScoreText', score);
+      setText('riskGradeText', grade);
+      var badge = g('riskBadge');
+      if (badge) { badge.textContent = grade + ' 등급'; badge.className = 'risk-badge badge-' + grade; }
 
-      // 감지 케이스 뱃지
-      const cases = content.detected_cases || [];
-      const badgesEl = document.getElementById('caseBadges');
-      if (cases.length > 0) {
-        badgesEl.innerHTML = cases.map(c => {
-          const info = CASE_ICONS[c] || { icon:'⚠️', cls:'자재' };
-          return `<span class="case-badge ${info.cls}">${info.icon} ${c}</span>`;
-        }).join('');
+      // 케이스 목록
+      var cases = [];
+      if (content.detected_cases && content.detected_cases.length > 0) {
+        cases = content.detected_cases;
       } else if (r.case_name) {
-        const info = CASE_ICONS[r.case_name] || { icon:'⚠️', cls:'자재' };
-        badgesEl.innerHTML = `<span class="case-badge ${info.cls}">${info.icon} ${r.case_name}</span>`;
+        cases = r.case_name.split(',').map(function(c) { return c.trim(); }).filter(Boolean);
+      }
+      setText('infoCase', cases.join(', ') || '-');
+
+      // 케이스 뱃지
+      if (cases.length > 0) {
+        setHtml('caseBadges', cases.map(function(c) {
+          return '<span class="case-badge">' + (CASE_ICONS[c] || '⚠️') + ' ' + c + '</span>';
+        }).join(''));
       }
 
-      // 보고서 정보
-      const titleText = r.report_title || `보고서 #${r.report_id}`;
-      const dateText  = formatDate(r.detected_at || r.created_at);
-      setEl('reportTitle', titleText);
-      setEl('reportDate', dateText);
-      setEl('caseName', r.case_name || (cases.join(', ') || '-'));
-      setEl('overviewTitle', titleText);
-      setEl('overviewDate', dateText);
-
-      // ── AI 주요 위험요소 감지 결과 ──────────
-      const detections = content.detections || [];
-      const detEl = document.getElementById('detectionResultList');
-      const caseIconMap = {
-        '보호구 미착용': { icon:'⛑️', grade:'고위험', desc:'AI가 작업자의 안전모 및 안전조끼 미착용 상태를 감지하였습니다. 머리 및 신체 부상 위험이 높은 상태로 즉각적인 착용 지도가 필요합니다. 보호구 미착용 작업자가 식별되었으며 현장 작업 중지 및 착용 후 재개가 요구됩니다.' },
-        '중장비 접근 사고': { icon:'🚜', grade:'고위험', desc:'AI가 중장비 운행 구역 내 작업자 접근을 감지하였습니다. 중장비와 작업자 간 안전거리(2m 이상)가 확보되지 않은 상태로 충돌·협착 사고 위험이 매우 높습니다. 즉시 작업 중지 및 작업자 대피가 필요합니다.' },
-        '자재물 낙하/추락 위험': { icon:'📦', grade:'주의', desc:'AI가 불안정하게 적재된 자재 또는 고소 작업 환경에서의 낙하·추락 위험 요소를 감지하였습니다. 자재 고정 상태를 즉시 점검하고 낙하물 방지망 설치 여부를 확인해야 합니다.' },
-        '위험구역 출입 사고': { icon:'🚧', grade:'고위험', desc:'AI가 가상펜스(Virtual Fence)를 통해 작업자의 위험구역 무단 침범을 감지하였습니다. 지정 위험구역에 허가되지 않은 인원이 진입한 상태로 즉각적인 퇴거 조치 및 출입 통제 강화가 필요합니다.' },
-        '자재물로 인한 걸림/넘어짐': { icon:'⚠️', grade:'관찰', desc:'AI가 작업 통로 내 자재 방치로 인한 걸림·넘어짐 위험 상황을 감지하였습니다. 통로 내 장애물 즉시 제거 및 정리정돈이 필요하며 재발 방지를 위한 자재 보관 구역 지정이 요구됩니다.' },
-      };
-
-      // case_name이 쉼표로 여러 케이스일 수 있음 (예: "보호구 미착용, 위험구역 출입 사고")
-      let allCases = cases.length > 0 ? cases : [];
-      if (allCases.length === 0 && r.case_name) {
-        allCases = r.case_name.split(',').map(c => c.trim()).filter(Boolean);
-      }
-      if (allCases.length > 0) {
-        if(detEl) detEl.innerHTML = allCases.map(c => {
-          const info = caseIconMap[c] || { icon:'⚠️', grade:'주의', desc:c };
-          const det = detections.find(d => d.case === c) || {};
-          return `
-            <div class="det-result-item">
-              <div class="det-result-header">
-                <span class="det-result-icon">${info.icon}</span>
-                <span class="det-result-name">${c}</span>
-                <span class="det-result-grade ${info.grade}">${info.grade}</span>
-              </div>
-              <div class="det-result-desc">${det.description || info.desc}</div>
-            </div>`;
-        }).join('');
-      } else {
-        if(detEl) detEl.innerHTML = '<p style="color:#94a3b8;font-size:14px;">감지된 위험요소 없음</p>';
+      // 위험요소 감지 결과
+      if (cases.length > 0) {
+        setHtml('detList', cases.map(function(c) {
+          var info = CASE_DESC[c] || { grade:'주의', desc:c };
+          return '<div class="det-item">' +
+            '<div class="det-header">' +
+            '<span class="det-icon">' + (CASE_ICONS[c] || '⚠️') + '</span>' +
+            '<span class="det-name">' + c + '</span>' +
+            '<span class="det-grade ' + info.grade + '">' + info.grade + '</span>' +
+            '</div><div class="det-desc">' + info.desc + '</div></div>';
+        }).join(''));
       }
 
-      // ── 관련 법규 ─────────────────────────
-      const lawMap = {
-        '보호구 미착용': [
-          { name:'산업안전보건법 제38조 (보호구 착용)', content:'사업주는 작업자에게 안전모, 안전화, 안전조끼 등 적정한 보호구를 지급하고 착용하도록 하여야 한다.' },
-          { name:'산업안전보건기준에 관한 규칙 제32조 (보호구 지급 및 관리)', content:'사업주는 보호구를 작업자 수 이상으로 지급하고, 항상 사용 가능한 상태로 유지·관리하여야 한다.' },
-          { name:'산업안전보건법 제173조 (벌칙)', content:'보호구 착용 의무를 위반한 경우 5년 이하의 징역 또는 5천만원 이하의 벌금에 처한다.' },
-        ],
-        '중장비 접근 사고': [
-          { name:'산업안전보건기준에 관한 규칙 제200조 (차량계 건설기계)', content:'차량계 건설기계를 사용하는 작업 시 운행경로, 작업방법을 정하고 작업자 출입을 통제하여야 한다.' },
-          { name:'산업안전보건기준에 관한 규칙 제201조 (접촉 방지)', content:'차량계 건설기계와 작업자 간 접촉 위험이 있는 경우 유도자를 배치하고 안전거리를 확보하여야 한다.' },
-        ],
-        '자재물 낙하/추락 위험': [
-          { name:'산업안전보건기준에 관한 규칙 제14조 (낙하물 방지)', content:'낙하물에 의한 위험을 방지하기 위해 낙하물 방지망, 수직보호망 또는 방호선반 등을 설치하여야 한다.' },
-          { name:'산업안전보건기준에 관한 규칙 제43조 (추락 방호망)', content:'높이 10m 이상에서의 작업 시 추락 방호망을 설치하여야 한다.' },
-        ],
-        '위험구역 출입 사고': [
-          { name:'산업안전보건법 제42조 (위험구역 출입 금지)', content:'사업주는 위험물질 보관 장소, 기계 작동 구역 등 위험구역에 관계자 외 출입을 금지하여야 한다.' },
-          { name:'산업안전보건기준에 관한 규칙 제38조 (안전난간 설치)', content:'위험구역 경계에는 안전난간, 울타리, 경고 표지 등을 설치하여 출입을 통제하여야 한다.' },
-        ],
-        '자재물로 인한 걸림/넘어짐': [
-          { name:'산업안전보건기준에 관한 규칙 제3조 (정리정돈)', content:'작업장 내 통로는 항상 정리정돈하여 걸림/넘어짐 위험 요소를 즉시 제거하여야 한다.' },
-          { name:'산업안전보건기준에 관한 규칙 제22조 (통로의 조명)', content:'작업장 통로에는 75럭스 이상의 조명을 설치하고 장애물을 제거하여 안전한 보행을 확보하여야 한다.' },
-        ],
-      };
-      const lawEl = document.getElementById('lawList');
-      const lawRefs = content.law_references || [];
-      const lawCases = allCases.length > 0 ? allCases : (lawRefs.length > 0 ? lawRefs : []);
-      if (lawCases.length > 0) {
-        if(lawEl) lawEl.innerHTML = lawCases.map(c => {
-          const laws = lawMap[c];
-          if (Array.isArray(laws)) {
-            return laws.map(law => `
-              <div class="law-item">
-                <div class="law-item-header">⚖️ ${law.name}</div>
-                <div class="law-item-body">${law.content}</div>
-              </div>`).join('');
-          }
-          const law = laws || { name: r.law_name || '관련 법규', content: r.law_content || '해당 없음' };
-          return `<div class="law-item"><div class="law-item-header">⚖️ ${law.name}</div><div class="law-item-body">${law.content}</div></div>`;
-        }).join('');
-      } else {
-        if(lawEl) lawEl.innerHTML = `<div class="law-item"><div class="law-item-header">⚖️ ${r.law_name || '관련 법규'}</div><div class="law-item-body">${r.law_content || '해당 없음'}</div></div>`;
+      // 법규
+      if (cases.length > 0) {
+        var lawHtml = '';
+        cases.forEach(function(c) {
+          var laws = LAW[c] || [];
+          laws.forEach(function(l) {
+            lawHtml += '<div class="law-item"><div class="law-header">⚖️ ' + l.name + '</div><div class="law-body">' + l.body + '</div></div>';
+          });
+        });
+        if (lawHtml) setHtml('lawList', lawHtml);
+      } else if (r.law_name) {
+        setHtml('lawList', '<div class="law-item"><div class="law-header">⚖️ ' + r.law_name + '</div><div class="law-body">' + (r.law_content || '-') + '</div></div>');
       }
 
-      // ── 권고사항 ──────────────────────────
-      const recMap = {
-        '보호구 미착용': ['안전모 및 안전조끼 상시 착용 의무화', '작업 전 보호구 착용 여부 점검 체크리스트 운영', '보호구 미착용자 즉시 작업 중지 및 시정 조치'],
-        '중장비 접근 사고': ['중장비 작업 구역 접근 제한선 설치', '중장비 작업 시 신호수 배치 의무화', '작업자-중장비 안전거리(2m 이상) 준수'],
-        '자재물 낙하/추락 위험': ['자재 적재 높이 기준 준수 (2m 이하)', '낙하물 방지망 설치', '작업 구역 하부 출입 통제'],
-        '위험구역 출입 사고': ['위험구역 표지판 및 차단 바리케이드 설치', '출입 허가제 운영', '위험구역 CCTV 모니터링 강화'],
-        '자재물로 인한 걸림/넘어짐': ['통로 내 자재 즉시 정리', '자재 보관 구역 별도 지정', '작업 종료 후 정리정돈 체크리스트 운영'],
-      };
-      const recEl = document.getElementById('recList');
-      const allRecs = [];
-      allCases.forEach(c => {
-        const cRecs = recMap[c] || (content.recommendations || []);
-        cRecs.forEach(rec => { if (!allRecs.includes(rec)) allRecs.push(rec); });
-      });
-      if (r.recommendation && !allRecs.includes(r.recommendation)) allRecs.push(r.recommendation);
-      if(recEl) recEl.innerHTML = allRecs.length > 0
-        ? allRecs.map(rec => `<div class="rec-item"><div class="rec-dot"></div><div class="rec-text">${rec}</div></div>`).join('')
-        : '<p style="color:#94a3b8;font-size:14px;">권고사항 없음</p>';
+      // 권고사항
+      var recs = [];
+      cases.forEach(function(c) { (REC[c] || []).forEach(function(rec) { if (recs.indexOf(rec) < 0) recs.push(rec); }); });
+      if (r.recommendation && recs.indexOf(r.recommendation) < 0) recs.push(r.recommendation);
+      if (recs.length > 0) {
+        setHtml('recList', recs.map(function(rec) {
+          return '<div class="rec-item"><div class="rec-dot"></div><div class="rec-text">' + rec + '</div></div>';
+        }).join(''));
+      }
 
-      // ── 종합평가 ──────────────────────────
-      const evalMap = {
+      // 종합평가
+      var evalMap = {
         '고위험': '즉각적인 작업 중지 및 안전 조치가 필요합니다. 현장 관리자에게 즉시 보고하고 위험 요소를 제거하기 전까지 해당 구역 출입을 통제하십시오.',
-        '관찰': '현장 상황을 지속적으로 모니터링하고, 위험 요소가 악화되지 않도록 예방 조치를 시행하십시오.',
-        '정상': '현재 정상 상태이나 안전 규정을 지속적으로 준수하여 사고를 예방하십시오.',
+        '관찰': '현장 상황을 지속적으로 모니터링하고 위험 요소가 악화되지 않도록 예방 조치를 시행하십시오.',
+        '정상': '현재 정상 상태이나 안전 규정을 지속적으로 준수하여 사고를 예방하십시오.'
       };
-      const evalText = content.summary_eval || r.description || evalMap[grade] || evalMap['정상'];
-      setEl('summaryEval', evalText);
+      setText('evalText', content.summary_eval || r.description || evalMap[grade] || evalMap['정상']);
 
       // 조치 상태
-      const actionStatus = r.action_status || '미조치';
-      initActionPanel(actionStatus, r.action_note);
+      initAction(r.action_status || '미조치', r.action_note);
+    })
+    .catch(function(err) {
+      g('loadingState').style.display = 'none';
+      g('errorState').style.display = 'block';
+      g('errorState').textContent = '오류: ' + err.message;
+    });
+}
 
-    } catch (err) {
-      document.getElementById('loadingState').style.display = 'none';
-      document.getElementById('errorState').style.display = 'block';
-      document.getElementById('errorState').textContent = '오류: ' + err.message;
-    }
+function initAction(status, note) {
+  selectedStatus = status;
+  var badge = g('currentBadge');
+  if (badge) { badge.className = 'current-badge ' + status; }
+  setText('currentBadgeText', status);
+
+  ['btnUnresolved','btnInprogress','btnResolved'].forEach(function(id) {
+    var btn = g(id); if (btn) btn.classList.remove('active');
+  });
+  ['panelUnresolved','panelInprogress','panelResolved'].forEach(function(id) {
+    var p = g(id); if (p) p.classList.remove('visible');
+  });
+
+  if (status === '미조치')   { if (g('btnUnresolved')) g('btnUnresolved').classList.add('active'); if (g('panelUnresolved')) g('panelUnresolved').classList.add('visible'); }
+  if (status === '조치중')   { if (g('btnInprogress')) g('btnInprogress').classList.add('active'); if (g('panelInprogress')) g('panelInprogress').classList.add('visible'); }
+  if (status === '조치완료') { if (g('btnResolved'))   g('btnResolved').classList.add('active');   if (g('panelResolved'))   g('panelResolved').classList.add('visible'); }
+
+  if (note) {
+    if (g('unresNote'))  g('unresNote').value  = note;
+    if (g('inprogNote')) g('inprogNote').value = note;
+    if (g('resNote'))    g('resNote').value    = note;
   }
+}
 
-  function initActionPanel(status, note) {
-    const badge = document.getElementById('currentBadge');
-    badge.className = 'action-current-badge ' + status;
-    document.getElementById('currentBadgeText').textContent = status;
+function selectStatus(status) {
+  selectedStatus = status;
+  ['btnUnresolved','btnInprogress','btnResolved'].forEach(function(id) {
+    var btn = g(id); if (btn) btn.classList.remove('active');
+  });
+  ['panelUnresolved','panelInprogress','panelResolved'].forEach(function(id) {
+    var p = g(id); if (p) p.classList.remove('visible');
+  });
+  if (status === '미조치')   { if (g('btnUnresolved')) g('btnUnresolved').classList.add('active'); if (g('panelUnresolved')) g('panelUnresolved').classList.add('visible'); }
+  if (status === '조치중')   { if (g('btnInprogress')) g('btnInprogress').classList.add('active'); if (g('panelInprogress')) g('panelInprogress').classList.add('visible'); }
+  if (status === '조치완료') { if (g('btnResolved'))   g('btnResolved').classList.add('active');   if (g('panelResolved'))   g('panelResolved').classList.add('visible'); }
+}
 
-    if (note) {
-      document.getElementById('unresNote').value   = note;
-      document.getElementById('inprogNote').value  = note;
-      document.getElementById('resNote').value     = note;
-    }
-    selectStatus(status, false);
+function saveAction() {
+  if (!selectedStatus || !reportData) return;
+  var btn = g('saveBtn');
+  if (btn) { btn.disabled = true; btn.innerHTML = '<i class="ri-loader-4-line"></i> 저장 중...'; }
+
+  var note = '';
+  if (selectedStatus === '미조치')   note = (g('unresNote')  && g('unresNote').value)  || '';
+  if (selectedStatus === '조치중') {
+    note = (g('inprogNote') && g('inprogNote').value) || '';
+    var deadline = (g('inprogDate') && g('inprogDate').value) || '';
+    if (deadline) note += (note ? '\n' : '') + '처리 기한: ' + deadline;
   }
+  if (selectedStatus === '조치완료') note = (g('resNote') && g('resNote').value) || '';
 
-  function selectStatus(status, updateUI = true) {
-    selectedStatus = status;
-    document.getElementById('btnUnresolved').classList.toggle('active',  status === '미조치');
-    document.getElementById('btnInprogress').classList.toggle('active',  status === '조치중');
-    document.getElementById('btnResolved').classList.toggle('active',    status === '조치완료');
-    document.getElementById('panelUnresolved').classList.toggle('visible', status === '미조치');
-    document.getElementById('panelInprogress').classList.toggle('visible', status === '조치중');
-    document.getElementById('panelResolved').classList.toggle('visible',   status === '조치완료');
-  }
+  fetch(BASE_URL + '/api/reports/' + reportId + '/action', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action_status: selectedStatus, action_note: note.trim() })
+  })
+  .then(function(res) {
+    if (res.ok) {
+      var badge = g('currentBadge');
+      if (badge) badge.className = 'current-badge ' + selectedStatus;
+      setText('currentBadgeText', selectedStatus);
+      showMsg('저장되었습니다', 'success');
+    } else { showMsg('저장 실패', 'error'); }
+  })
+  .catch(function(e) { showMsg('오류: ' + e.message, 'error'); })
+  .finally(function() {
+    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="ri-save-line"></i> 저장'; }
+  });
+}
 
-  async function saveAction() {
-    if (!selectedStatus) { alert('조치 상태를 선택해주세요.'); return; }
+function showMsg(text, type) {
+  var el = g('saveMsg');
+  if (!el) return;
+  el.textContent = text;
+  el.className = 'save-msg ' + type;
+  setTimeout(function() { el.className = 'save-msg'; el.textContent = ''; }, 3000);
+}
 
-    let note = '';
-    if (selectedStatus === '미조치')   note = document.getElementById('unresNote').value.trim();
-    else if (selectedStatus === '조치중') {
-      const deadline = document.getElementById('inprogDate').value;
-      note = document.getElementById('inprogNote').value.trim();
-      if (deadline) note += (note ? '\n' : '') + '처리 기한: ' + deadline;
-    }
-    else if (selectedStatus === '조치완료') note = document.getElementById('resNote').value.trim();
-
-    const btn = document.getElementById('saveBtn');
-    btn.disabled = true;
-    btn.innerHTML = '<i class="ri-loader-4-line"></i> 저장 중...';
-
-    try {
-      const res = await fetch(BASE_URL + '/api/reports/' + reportId + '/action', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action_status: selectedStatus, action_note: note })
-      });
-      if (!res.ok) throw new Error('저장 실패 ' + res.status);
-
-      const badge = document.getElementById('currentBadge');
-      badge.className = 'action-current-badge ' + selectedStatus;
-      document.getElementById('currentBadgeText').textContent = selectedStatus;
-
-      showMsg('✅ 저장되었습니다!', 'ok');
-    } catch (err) {
-      showMsg('❌ ' + err.message, 'err');
-    } finally {
-      btn.disabled = false;
-      btn.innerHTML = '<i class="ri-save-line"></i> 저장';
-    }
-  }
-
-  function showMsg(text, type) {
-    const el = document.getElementById('saveMsg');
-    el.textContent = text;
-    el.className = 'save-msg ' + type;
-    setTimeout(() => { el.className = 'save-msg'; }, 3000);
-  }
-
-  load();
-    function toggleNav() {
-      const sub = document.getElementById('navSub');
-      const arrow = document.getElementById('navArrow');
-      const title = document.getElementById('navGroupTitle');
-      if (sub) { sub.classList.toggle('open'); arrow.classList.toggle('open'); title.classList.toggle('open'); }
-    }
-  </script>
+load();
+</script>
 </body>
 </html>
