@@ -160,8 +160,10 @@ function runPipeline(videoPath, userId) {
 }
 
 // ────────────────────────────────────────
-// 빠른 바운딩박스 전용 (DB 저장 없음 - 웹캠 실시간용)
+// 빠른 바운딩박스 전용 (Flask AI 서버로 포워딩)
 // ────────────────────────────────────────
+const AI_SERVER = process.env.AI_SERVER_URL || 'http://localhost:5001';
+
 app.post("/analyze-quick", upload.single("video"), async (req, res) => {
   if (!req.file) return res.status(400).json({ boxes: [], danger: false });
   const tempPath = path.resolve(req.file.path);
@@ -169,22 +171,17 @@ app.post("/analyze-quick", upload.single("video"), async (req, res) => {
   fs.renameSync(tempPath, newPath);
 
   try {
-    const quickPath = path.join(__dirname, "AI_engine", "detect_quick.py");
-    const result = await new Promise((resolve) => {
-      const py = spawn("python3", [quickPath, newPath]);
-      let out = "";
-      py.stdout.on("data", d => { out += d.toString(); });
-      py.stderr.on("data", d => {});
-      py.on("close", () => {
-        if (fs.existsSync(newPath)) fs.unlinkSync(newPath);
-        try {
-          const lines    = out.trim().split('\n');
-          const jsonLine = lines.reverse().find(l => l.trim().startsWith('{'));
-          resolve(JSON.parse(jsonLine));
-        } catch(e) { resolve({ boxes: [], danger: false }); }
-      });
+    const FormData = require('form-data');
+    const form = new FormData();
+    form.append('image', fs.createReadStream(newPath), 'capture.jpg');
+
+    const response = await axios.post(AI_SERVER + '/analyze-quick', form, {
+      headers: form.getHeaders(),
+      timeout: 15000
     });
-    res.json(result);
+
+    if (fs.existsSync(newPath)) fs.unlinkSync(newPath);
+    res.json(response.data);
   } catch (err) {
     if (fs.existsSync(newPath)) fs.unlinkSync(newPath);
     res.json({ boxes: [], danger: false });
@@ -488,6 +485,22 @@ app.get("/health", (req, res) => {
   res.json({ status: "running", uptime: process.uptime(), db_connected: true });
 });
 
+// ── Flask AI 서버 자동 시작 ──────────────
+function startFlaskServer() {
+  const flaskPath = path.join(__dirname, "AI_engine", "app.py");
+  const flask = spawn("python3", [flaskPath], {
+    detached: false,
+    stdio: ['ignore', 'pipe', 'pipe']
+  });
+  flask.stdout.on("data", d => console.log("[Flask AI]", d.toString().trim()));
+  flask.stderr.on("data", d => console.log("[Flask AI]", d.toString().trim()));
+  flask.on("close", (code) => {
+    console.log(`[Flask AI] 종료됨 (코드 ${code}) - 3초 후 재시작`);
+    setTimeout(startFlaskServer, 3000);
+  });
+  console.log("[Flask AI] 서버 시작됨");
+}
+
 server.listen(PORT, async () => {
   console.log(`
   ================================================
@@ -496,4 +509,6 @@ server.listen(PORT, async () => {
   - Port: ${PORT}
   ================================================
   `);
+  // Flask AI 서버 자동 시작
+  startFlaskServer();
 });
