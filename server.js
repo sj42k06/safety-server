@@ -56,23 +56,10 @@ async function sendHandoverSms(approvedBy, unresolvedCount, todayCount) {
       return false;
     }
 
-    const date      = new Date().toISOString();
-    const salt      = crypto.randomBytes(16).toString('hex');
-    const signature = crypto.createHmac('sha256', apiSecret).update(date + salt).digest('hex');
-
     const now  = new Date().toLocaleString('ko-KR');
     const text = `[안전관리시스템] 인수인계 완료\n승인자: ${approvedBy}\n시각: ${now}\n미조치: ${unresolvedCount}건 / 당일보고서: ${todayCount}건`;
 
-    await axios.post(
-      'https://api.solapi.com/messages/v4/send',
-      { message: { to: toPhone, from, text } },
-      {
-        headers: {
-          'Authorization': `HMAC-SHA256 apiKey=${apiKey}, date=${date}, salt=${salt}, signature=${signature}`,
-          'Content-Type': 'application/json'
-        }
-      }
-    );
+    await solapiSend(apiKey, apiSecret, from, toPhone, text);
 
     console.log(`✅ SMS 발송 완료 → ${toUser}(${toPhone})`);
     return true;
@@ -99,30 +86,13 @@ async function sendDangerSms(reportId, dangerType, detectedBy) {
     // 손광민(admin)에게만 발송
     const phones = [process.env.ADMIN_PHONE].filter(Boolean);
     for (const toPhone of phones) {
-      const date      = new Date().toISOString();
-      const salt      = crypto.randomBytes(16).toString('hex');
-      const signature = crypto.createHmac('sha256', apiSecret).update(date + salt).digest('hex');
-      await axios.post(
-        'https://api.solapi.com/messages/v4/send',
-        { message: { to: toPhone, from, text } },
-        { headers: {
-            'Authorization': `HMAC-SHA256 apiKey=${apiKey}, date=${date}, salt=${salt}, signature=${signature}`,
-            'Content-Type': 'application/json'
-        }}
-      );
+      await solapiSend(apiKey, apiSecret, from, toPhone, text);
       console.log(`✅ 위험 감지 SMS 발송 → ${toPhone}`);
     }
   } catch (err) {
     console.error('❌ 위험 SMS 오류:', err.response?.data || err.message);
   }
 }
-
-// ── 위험 감지 SMS API ────────────────────
-app.post('/api/danger-sms', async (req, res) => {
-  const { report_id, danger_type, user } = req.body;
-  await sendDangerSms(report_id, danger_type || '위험 감지', user || 'admin');
-  res.json({ success: true });
-});
 
 // ── 미들웨어 ─────────────────────────────
 app.use(cors({ origin: "*", credentials: true }));
@@ -154,6 +124,21 @@ app.get("/archive",      (req, res) => res.sendFile(path.join(__dirname, "public
 app.get("/reports",      (req, res) => res.sendFile(path.join(__dirname, "public", "reports.html")));
 app.get("/reports/:id",  (req, res) => res.sendFile(path.join(__dirname, "public", "report-detail.html")));
 app.get("/video-upload", (req, res) => res.sendFile(path.join(__dirname, "public", "video-upload.html")));
+
+// ── 위험 감지 SMS API ────────────────────
+app.post('/api/danger-sms', async (req, res) => {
+  try {
+    const body = req.body || {};
+    const report_id  = body.report_id;
+    const danger_type = body.danger_type || '위험 감지';
+    const user = body.user || 'admin';
+    await sendDangerSms(report_id, danger_type, user);
+    res.json({ success: true });
+  } catch(err) {
+    console.error('danger-sms 오류:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
 
 // ────────────────────────────────────────
 // 로그인 (users 테이블 기반)
@@ -575,6 +560,14 @@ function startFlaskServer() {
   console.log("[Flask AI] 서버 시작됨");
   waitFlaskReady();
 }
+
+// 전역 에러 핸들러 - 서버 크래시 방지
+process.on('uncaughtException', (err) => {
+  console.error('⚠️ 처리되지 않은 오류 (서버 유지):', err.message);
+});
+process.on('unhandledRejection', (reason) => {
+  console.error('⚠️ 처리되지 않은 Promise 거부 (서버 유지):', reason);
+});
 
 server.listen(PORT, async () => {
   console.log(`
