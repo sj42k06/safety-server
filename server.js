@@ -12,6 +12,27 @@ const jwt = require("jsonwebtoken");
 const axios = require("axios");
 const crypto = require("crypto");
 
+// ── Solapi SMS 공통 발송 함수 ─────────────
+async function solapiSend(apiKey, apiSecret, from, to, text) {
+  const date      = new Date().toISOString();
+  const salt      = Math.random().toString(36).substring(2, 20);
+  const hmac      = crypto.createHmac('sha256', apiSecret);
+  hmac.update(date + salt);
+  const signature = hmac.digest('hex');
+  const res = await axios.post(
+    'https://api.solapi.com/messages/v4/send',
+    { message: { to, from, text } },
+    {
+      headers: {
+        'Authorization': `HMAC-SHA256 apiKey=${apiKey}, date=${date}, salt=${salt}, signature=${signature}`,
+        'Content-Type': 'application/json'
+      },
+      timeout: 10000
+    }
+  );
+  return res.data;
+}
+
 const app = express();
 const server = http.createServer(app);
 const PORT = process.env.PORT || 10000;
@@ -232,10 +253,23 @@ app.post("/analyze", upload.single("video"), async (req, res) => {
   const userId = req.body.user_id || req.headers['x-user-id'] || 1;
   let dangerTypes = [];
   try { dangerTypes = JSON.parse(req.body.danger_types || '[]'); } catch(e) {}
+  const actionStatus = req.body.action_status || '미조치';
+  const actionNote   = req.body.action_note   || '';
 
   try {
     const result = await runPipeline(newPath, userId, dangerTypes);
     if (fs.existsSync(newPath)) fs.unlinkSync(newPath);
+
+    // 조치 상태 즉시 업데이트
+    if (result.risk_id && actionStatus !== '미조치') {
+      try {
+        await db.query(
+          "UPDATE risk_logs SET action_status = ?, action_note = ? WHERE risk_id = ?",
+          [actionStatus, actionNote || null, result.risk_id]
+        );
+      } catch(e) { console.error('조치상태 업데이트 오류:', e.message); }
+    }
+
     res.status(200).json({
       성공: true,
       report_id: result.report_id,
@@ -536,7 +570,7 @@ async function waitFlaskReady() {
         return;
       }
     } catch(e) {}
-    console.log(`[Flask AI] 준비 대기 중... (${i+1}/${maxTry})`);
+    // 대기 중 로그 생략
     await new Promise(r => setTimeout(r, 2000));
   }
   console.log('[Flask AI] 준비 타임아웃 - 계속 진행');
