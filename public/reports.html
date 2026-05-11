@@ -9,14 +9,29 @@
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { background: #f1f5f9; font-family: 'Pretendard', 'Apple SD Gothic Neo', sans-serif; display: flex; min-height: 100vh; }
+
+    /* ── 사이드바 ── */
     aside { width: 180px; background: #1e293b; display: flex; flex-direction: column; padding: 20px 0; position: fixed; height: 100vh; }
     .logo { padding: 0 16px 24px; border-bottom: 1px solid #334155; }
     .logo-title { color: #fff; font-size: 14px; font-weight: 700; }
     .logo-sub { color: #94a3b8; font-size: 11px; margin-top: 2px; }
-    nav { flex: 1; padding: 16px 0; }
+    nav { flex: 1; padding: 16px 0; overflow-y: auto; }
     nav a { display: flex; align-items: center; gap: 8px; padding: 10px 16px; color: #94a3b8; font-size: 13px; text-decoration: none; }
     nav a:hover, nav a.active { background: #334155; color: #fff; }
     nav a i { font-size: 16px; }
+
+    /* 자료실 하위 메뉴 */
+    .nav-group-title { display:flex; align-items:center; gap:10px; padding:10px 16px; border-radius:8px; color:#94a3b8; font-size:13px; cursor:pointer; transition:all .2s; user-select:none; }
+    .nav-group-title:hover { background:rgba(255,255,255,.05); color:#fff; }
+    .nav-group-title.open { color:#fff; }
+    .nav-arrow { margin-left:auto; transition:transform .2s; font-size:14px; }
+    .nav-arrow.open { transform:rotate(180deg); }
+    .nav-sub { display:none; flex-direction:column; gap:2px; padding-left:14px; margin-top:2px; }
+    .nav-sub.open { display:flex; }
+    .nav-sub a { display:flex; align-items:center; gap:8px; padding:8px 14px; border-radius:8px; color:#94a3b8; font-size:12px; text-decoration:none; transition:all .2s; }
+    .nav-sub a:hover { background:rgba(255,255,255,.05); color:#fff; }
+    .nav-sub a.active { background:rgba(59,130,246,.15); color:#60a5fa; font-weight:600; }
+
     .user-section { padding: 16px; border-top: 1px solid #334155; }
     .user-info { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
     .user-avatar { width: 32px; height: 32px; background: #475569; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 14px; }
@@ -24,16 +39,48 @@
     .user-role { color: #94a3b8; font-size: 11px; }
     .logout-btn { width: 100%; background: none; border: 1px solid #475569; color: #94a3b8; padding: 6px; border-radius: 6px; cursor: pointer; font-size: 12px; display: flex; align-items: center; justify-content: center; gap: 4px; }
     .logout-btn:hover { background: #334155; color: #fff; }
+
     main { margin-left: 180px; flex: 1; padding: 28px; }
     .page-tag { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #94a3b8; margin-bottom: 6px; }
     .page-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 20px; }
     .page-header h2 { font-size: 22px; font-weight: 700; color: #1e293b; }
     .page-desc { font-size: 13px; color: #94a3b8; margin-top: 4px; }
-    .header-btns { display: flex; gap: 10px; align-items: center; }
+    .header-btns { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+
     .view-toggle { display: flex; background: #f1f5f9; border-radius: 10px; padding: 3px; gap: 2px; }
-    .toggle-btn { padding: 7px 16px; border: none; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit; color: #94a3b8; background: transparent; transition: all .2s; }
+    .toggle-btn { padding: 7px 14px; border: none; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit; color: #94a3b8; background: transparent; transition: all .2s; }
     .toggle-btn.active { background: #1e293b; color: #fff; }
-    .btn-new { background: #1e293b; color: #fff; padding: 8px 16px; border-radius: 8px; text-decoration: none; font-size: 13px; display: flex; align-items: center; gap: 6px; }
+
+    .btn-new { background: #1e293b; color: #fff; padding: 8px 14px; border-radius: 8px; text-decoration: none; font-size: 13px; display: flex; align-items: center; gap: 6px; white-space: nowrap; }
+
+    /* ── 삭제 버튼들 ── */
+    .btn-delete-selected {
+      background: #dc2626; color: #fff; border: none;
+      padding: 8px 14px; border-radius: 8px; font-size: 13px; font-weight: 600;
+      cursor: pointer; font-family: inherit; display: none; align-items: center; gap: 6px;
+      white-space: nowrap;
+    }
+    .btn-delete-selected.show { display: flex; }
+    .btn-delete-all {
+      background: #fff; color: #dc2626; border: 1px solid #fecaca;
+      padding: 8px 14px; border-radius: 8px; font-size: 13px; font-weight: 600;
+      cursor: pointer; font-family: inherit; display: flex; align-items: center; gap: 6px;
+      white-space: nowrap;
+    }
+    .btn-delete-all:hover { background: #fee2e2; }
+
+    /* ── 선택 모드 바 ── */
+    .select-bar {
+      background: #1e293b; border-radius: 12px; padding: 12px 18px;
+      display: none; align-items: center; gap: 12px; margin-bottom: 16px;
+      animation: fadeIn .2s ease;
+    }
+    .select-bar.show { display: flex; }
+    @keyframes fadeIn { from{opacity:0;transform:translateY(-6px)} to{opacity:1;transform:translateY(0)} }
+    .select-bar-text { color: #fff; font-size: 13px; font-weight: 600; flex: 1; }
+    .select-bar-cancel { background: transparent; border: 1px solid #475569; color: #94a3b8; padding: 6px 14px; border-radius: 8px; font-size: 12px; cursor: pointer; font-family: inherit; }
+    .select-bar-cancel:hover { color: #fff; }
+    .select-bar-delete { background: #dc2626; color: #fff; border: none; padding: 6px 14px; border-radius: 8px; font-size: 12px; font-weight: 700; cursor: pointer; font-family: inherit; }
 
     .today-banner { background: linear-gradient(135deg, #1e293b 0%, #334155 100%); border-radius: 12px; padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
     .today-banner-left { display: flex; align-items: center; gap: 12px; }
@@ -49,25 +96,38 @@
     .filter-tab.active { background: #1e293b; color: #fff; border-color: #1e293b; }
     .filter-tab span { font-weight: 700; }
 
+    /* ── 카드 그리드 ── */
     .reports-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; }
-    .report-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 14px; overflow: hidden; cursor: pointer; transition: box-shadow .2s; position: relative; }
+    .report-card {
+      background: #fff; border: 1px solid #e2e8f0; border-radius: 14px;
+      overflow: hidden; cursor: pointer; transition: box-shadow .2s, border-color .2s;
+      position: relative;
+    }
     .report-card:hover { box-shadow: 0 4px 20px rgba(0,0,0,.1); }
-    .new-badge { position: absolute; top: 10px; right: 10px; z-index: 2; background: #dc2626; color: #fff; font-size: 10px; font-weight: 800; padding: 2px 7px; border-radius: 10px; }
+    .report-card.selected { border-color: #3b82f6; box-shadow: 0 0 0 2px rgba(59,130,246,.3); }
 
+    /* 체크박스 */
+    .card-checkbox {
+      position: absolute; top: 10px; left: 10px; z-index: 6;
+      width: 20px; height: 20px; border-radius: 6px;
+      background: #fff; border: 2px solid #e2e8f0;
+      display: none; align-items: center; justify-content: center;
+      cursor: pointer; transition: all .2s;
+    }
+    .card-checkbox.show { display: flex; }
+    .card-checkbox.checked { background: #3b82f6; border-color: #3b82f6; }
+    .card-checkbox.checked::after { content: '✓'; color: #fff; font-size: 12px; font-weight: 800; }
+
+    .new-badge { position: absolute; top: 10px; right: 10px; z-index: 2; background: #dc2626; color: #fff; font-size: 10px; font-weight: 800; padding: 2px 7px; border-radius: 10px; }
     .card-thumb { width: 100%; height: 140px; background: #f1f5f9; position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center; }
     .card-thumb img { width: 100%; height: 100%; object-fit: cover; }
     .card-thumb .no-thumb { color: #cbd5e1; font-size: 32px; }
     .card-grade-badge { position: absolute; top: 10px; left: 10px; font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 12px; }
-    .badge-고위험 { background: #fee2e2; color: #dc2626; }
-    .badge-관찰   { background: #fef3c7; color: #d97706; }
-    .badge-정상   { background: #dcfce7; color: #16a34a; }
     .badge-RISK   { background: #fee2e2; color: #dc2626; }
     .badge-NORMAL { background: #dcfce7; color: #16a34a; }
-
     .action-badge { display: inline-block; font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 10px; margin-top: 5px; }
     .action-badge.미조치  { background: #fee2e2; color: #dc2626; }
     .action-badge.조치완료 { background: #dcfce7; color: #16a34a; }
-
     .card-body { padding: 14px; }
     .card-id   { font-size: 13px; font-weight: 700; color: #1e293b; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .card-case { font-size: 11px; color: #64748b; margin-bottom: 4px; }
@@ -81,15 +141,17 @@
     .empty-desc  { font-size: 13px; color: #94a3b8; margin-bottom: 20px; }
     .empty-btn   { background: #1e293b; color: #fff; padding: 10px 20px; border-radius: 8px; text-decoration: none; font-size: 13px; }
 
+    /* ── 모달 ── */
     .modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,.5); display: flex; align-items: center; justify-content: center; z-index: 100; }
     .modal { background: #fff; border-radius: 16px; padding: 28px; width: 320px; text-align: center; }
     .modal-icon { width: 48px; height: 48px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 22px; margin: 0 auto 14px; }
+    .modal-icon.red   { background: #fee2e2; color: #dc2626; }
     .modal-icon.amber { background: #fef3c7; color: #d97706; }
     .modal h3 { font-size: 16px; font-weight: 700; color: #1e293b; margin-bottom: 8px; }
     .modal p  { font-size: 13px; color: #64748b; margin-bottom: 20px; }
     .modal-btns { display: flex; gap: 10px; }
-    .btn-cancel       { flex: 1; background: #f1f5f9; border: none; padding: 10px; border-radius: 8px; cursor: pointer; font-size: 13px; color: #475569; }
-    .btn-confirm-amber{ flex: 1; background: #d97706; border: none; padding: 10px; border-radius: 8px; cursor: pointer; font-size: 13px; color: #fff; }
+    .btn-cancel      { flex: 1; background: #f1f5f9; border: none; padding: 10px; border-radius: 8px; cursor: pointer; font-size: 13px; color: #475569; }
+    .btn-confirm-red { flex: 1; background: #dc2626; border: none; padding: 10px; border-radius: 8px; cursor: pointer; font-size: 13px; color: #fff; }
   </style>
 </head>
 <body>
@@ -99,10 +161,21 @@
       <div class="logo-sub">안전관제 시스템</div>
     </div>
     <nav>
-      <a href="/dashboard"><i class="ri-dashboard-line"></i> 자료실</a>
       <a href="/upload"><i class="ri-camera-line"></i> 현장 모니터링</a>
       <a href="/video-upload"><i class="ri-video-upload-line"></i> 영상 분석</a>
       <a href="/reports" class="active"><i class="ri-file-chart-line"></i> AI 보고서</a>
+
+      <!-- 자료실 하위 메뉴 -->
+      <div class="nav-group">
+        <div class="nav-group-title" id="navGroupTitle" onclick="toggleNav()">
+          <i class="ri-folder-chart-line"></i> 자료실
+          <i class="ri-arrow-down-s-line nav-arrow" id="navArrow"></i>
+        </div>
+        <div class="nav-sub" id="navSub">
+          <a href="/dashboard"><i class="ri-bar-chart-2-line"></i> 통계실</a>
+          <a href="/archive"><i class="ri-file-list-3-line"></i> 보고서 기록실</a>
+        </div>
+      </div>
     </nav>
     <div class="user-section">
       <div class="user-info">
@@ -130,8 +203,23 @@
           <button class="toggle-btn active" id="toggleToday" onclick="setView('today')">📅 당일</button>
           <button class="toggle-btn" id="toggleAll" onclick="setView('all')">전체</button>
         </div>
+        <!-- 선택 삭제 버튼 -->
+        <button class="btn-delete-selected" id="btnDeleteSelected" onclick="showDeleteSelectedModal()">
+          <i class="ri-delete-bin-line"></i> 선택 삭제 (<span id="selectedCount">0</span>)
+        </button>
+        <!-- 전체 삭제 버튼 -->
+        <button class="btn-delete-all" id="btnDeleteAll" onclick="showDeleteAllModal()">
+          <i class="ri-delete-bin-2-line"></i> 전체 삭제
+        </button>
         <a href="/upload" class="btn-new"><i class="ri-camera-line"></i> 현장 모니터링</a>
       </div>
+    </div>
+
+    <!-- 선택 모드 안내 바 -->
+    <div class="select-bar" id="selectBar">
+      <span class="select-bar-text" id="selectBarText">0개 선택됨</span>
+      <button class="select-bar-cancel" onclick="exitSelectMode()">취소</button>
+      <button class="select-bar-delete" onclick="showDeleteSelectedModal()">선택 삭제</button>
     </div>
 
     <div class="today-banner" id="todayBanner">
@@ -147,8 +235,8 @@
 
     <div class="filter-tabs">
       <div class="filter-tab active" onclick="filterReports('전체')"  id="tab-전체">전체 <span id="count-전체">0</span></div>
-      <div class="filter-tab" onclick="filterReports('위험')"  id="tab-위험">위험 <span id="count-위험">0</span></div>
-      <div class="filter-tab" onclick="filterReports('정상')"  id="tab-정상">정상 <span id="count-정상">0</span></div>
+      <div class="filter-tab" onclick="filterReports('위험')"   id="tab-위험">위험 <span id="count-위험">0</span></div>
+      <div class="filter-tab" onclick="filterReports('정상')"   id="tab-정상">정상 <span id="count-정상">0</span></div>
       <div class="filter-tab" onclick="filterReports('미조치')" id="tab-미조치">미조치 <span id="count-미조치">0</span></div>
     </div>
 
@@ -162,14 +250,28 @@
     <div id="reportsGrid" class="reports-grid"></div>
   </main>
 
-  <div class="modal-bg" id="resetModal" style="display:none">
+  <!-- 선택 삭제 모달 -->
+  <div class="modal-bg" id="deleteSelectedModal" style="display:none">
     <div class="modal">
-      <div class="modal-icon amber"><i class="ri-refresh-line"></i></div>
-      <h3>전체 초기화할까요?</h3>
-      <p>모든 보고서가 삭제됩니다.</p>
+      <div class="modal-icon red"><i class="ri-delete-bin-line"></i></div>
+      <h3>선택한 보고서를 삭제할까요?</h3>
+      <p id="deleteSelectedDesc">선택한 0건을 삭제합니다. 복구할 수 없습니다.</p>
       <div class="modal-btns">
-        <button class="btn-cancel" onclick="closeResetModal()">취소</button>
-        <button class="btn-confirm-amber" onclick="confirmReset()">초기화</button>
+        <button class="btn-cancel" onclick="closeDeleteSelectedModal()">취소</button>
+        <button class="btn-confirm-red" onclick="confirmDeleteSelected()">삭제</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 전체 삭제 모달 -->
+  <div class="modal-bg" id="deleteAllModal" style="display:none">
+    <div class="modal">
+      <div class="modal-icon red"><i class="ri-delete-bin-2-line"></i></div>
+      <h3>전체 삭제할까요?</h3>
+      <p>모든 보고서가 삭제됩니다. 복구할 수 없습니다.</p>
+      <div class="modal-btns">
+        <button class="btn-cancel" onclick="closeDeleteAllModal()">취소</button>
+        <button class="btn-confirm-red" onclick="confirmDeleteAll()">전체 삭제</button>
       </div>
     </div>
   </div>
@@ -179,6 +281,8 @@
     let allReports    = [];
     let currentFilter = '전체';
     let currentView   = 'today';
+    let selectMode    = false;
+    let selectedIds   = new Set();
     const todayStr    = new Date().toISOString().slice(0, 10);
 
     const user = localStorage.getItem('username') || 'admin';
@@ -188,6 +292,13 @@
     const days = ['일','월','화','수','목','금','토'];
     document.getElementById('todayDateText').textContent =
       `${now.getFullYear()}년 ${now.getMonth()+1}월 ${now.getDate()}일 ${days[now.getDay()]}요일`;
+
+    // 사이드바 자료실 토글
+    function toggleNav() {
+      document.getElementById('navSub').classList.toggle('open');
+      document.getElementById('navArrow').classList.toggle('open');
+      document.getElementById('navGroupTitle').classList.toggle('open');
+    }
 
     function formatDate(str) {
       if (!str) return '-';
@@ -215,17 +326,16 @@
     }
 
     function getViewReports() {
-      if (currentView === 'today') {
+      if (currentView === 'today')
         return allReports.filter(r => r.created_at && r.created_at.slice(0,10) === todayStr);
-      }
       return allReports;
     }
 
     function updateFilterCounts() {
       const vr = getViewReports();
-      document.getElementById('count-전체').textContent  = vr.length;
-      document.getElementById('count-위험').textContent  = vr.filter(r => r.detection_status === 'RISK').length;
-      document.getElementById('count-정상').textContent  = vr.filter(r => r.detection_status === 'NORMAL').length;
+      document.getElementById('count-전체').textContent   = vr.length;
+      document.getElementById('count-위험').textContent   = vr.filter(r => r.detection_status === 'RISK').length;
+      document.getElementById('count-정상').textContent   = vr.filter(r => r.detection_status === 'NORMAL').length;
       document.getElementById('count-미조치').textContent = vr.filter(r => r.action_status === '미조치' || !r.action_status).length;
 
       const todayCount = allReports.filter(r => r.created_at && r.created_at.slice(0,10) === todayStr).length;
@@ -259,15 +369,22 @@
         const grade  = r.detection_status === 'RISK' ? '고위험' : '정상';
         const action = r.action_status || '미조치';
         const isNew  = idx === 0 && currentView === 'today';
+        const isSelected = selectedIds.has(r.report_id);
 
-        // report_content에서 케이스 파싱
         let cases = [];
         try { cases = JSON.parse(r.report_content || '{}').detected_cases || []; } catch(_) {}
         const caseText = r.case_name || (cases[0] || '-');
 
         return `
-          <div class="report-card" onclick="window.location.href='/reports/${r.report_id}'">
-            ${isNew ? '<div class="new-badge">NEW</div>' : ''}
+          <div class="report-card ${isSelected ? 'selected' : ''}"
+               id="card-${r.report_id}"
+               onclick="handleCardClick(event, ${r.report_id})">
+            <!-- 체크박스 -->
+            <div class="card-checkbox ${selectMode ? 'show' : ''} ${isSelected ? 'checked' : ''}"
+                 id="chk-${r.report_id}"
+                 onclick="toggleSelect(event, ${r.report_id})">
+            </div>
+            ${isNew && !selectMode ? '<div class="new-badge">NEW</div>' : ''}
             <div class="card-thumb">
               ${r.image_path
                 ? `<img src="${r.image_path}" alt="썸네일"/>`
@@ -281,11 +398,89 @@
               <div><span class="action-badge ${action}">${action}</span></div>
               <div class="card-footer">
                 <div style="font-size:12px;color:#64748b;">${r.created_by_name || '-'}</div>
-                <div class="card-link">상세 보기 →</div>
+                <div class="card-link">${selectMode ? '선택' : '상세 보기 →'}</div>
               </div>
             </div>
           </div>`;
       }).join('');
+    }
+
+    // ── 카드 클릭 처리 ──────────────────────
+    function handleCardClick(e, reportId) {
+      if (selectMode) {
+        toggleSelect(e, reportId);
+      } else {
+        // 길게 누르면 선택 모드 시작 (데스크탑은 우클릭)
+        window.location.href = '/reports/' + reportId;
+      }
+    }
+
+    // ── 선택 모드 ───────────────────────────
+    function toggleSelect(e, reportId) {
+      e.stopPropagation();
+      if (!selectMode) enterSelectMode();
+
+      if (selectedIds.has(reportId)) {
+        selectedIds.delete(reportId);
+      } else {
+        selectedIds.add(reportId);
+      }
+      updateSelectUI();
+      renderReports();
+    }
+
+    function enterSelectMode() {
+      selectMode = true;
+      document.getElementById('selectBar').classList.add('show');
+      document.getElementById('btnDeleteSelected').classList.add('show');
+      renderReports();
+    }
+
+    function exitSelectMode() {
+      selectMode = false;
+      selectedIds.clear();
+      document.getElementById('selectBar').classList.remove('show');
+      document.getElementById('btnDeleteSelected').classList.remove('show');
+      updateSelectUI();
+      renderReports();
+    }
+
+    function updateSelectUI() {
+      const count = selectedIds.size;
+      document.getElementById('selectedCount').textContent = count;
+      document.getElementById('selectBarText').textContent = `${count}개 선택됨`;
+      document.getElementById('deleteSelectedDesc').textContent = `선택한 ${count}건을 삭제합니다. 복구할 수 없습니다.`;
+    }
+
+    // ── 선택 삭제 ───────────────────────────
+    function showDeleteSelectedModal() {
+      if (selectedIds.size === 0) { alert('삭제할 보고서를 선택해주세요.'); return; }
+      document.getElementById('deleteSelectedModal').style.display = 'flex';
+    }
+    function closeDeleteSelectedModal() {
+      document.getElementById('deleteSelectedModal').style.display = 'none';
+    }
+    async function confirmDeleteSelected() {
+      const ids = [...selectedIds];
+      closeDeleteSelectedModal();
+
+      // 선택된 보고서 순차 삭제
+      for (const id of ids) {
+        await fetch(BASE_URL + '/api/reports/' + id, { method: 'DELETE' }).catch(() => {});
+      }
+
+      exitSelectMode();
+      loadReports();
+    }
+
+    // ── 전체 삭제 ───────────────────────────
+    function showDeleteAllModal() { document.getElementById('deleteAllModal').style.display = 'flex'; }
+    function closeDeleteAllModal() { document.getElementById('deleteAllModal').style.display = 'none'; }
+    async function confirmDeleteAll() {
+      await fetch(BASE_URL + '/api/reports', { method: 'DELETE' });
+      closeDeleteAllModal();
+      exitSelectMode();
+      loadReports();
     }
 
     function filterReports(filter) {
@@ -293,14 +488,6 @@
       document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
       document.getElementById(`tab-${filter}`).classList.add('active');
       renderReports();
-    }
-
-    function showResetModal() { document.getElementById('resetModal').style.display = 'flex'; }
-    function closeResetModal() { document.getElementById('resetModal').style.display = 'none'; }
-    async function confirmReset() {
-      await fetch(BASE_URL + '/api/reports', { method: 'DELETE' });
-      closeResetModal();
-      loadReports();
     }
 
     loadReports();
