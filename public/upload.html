@@ -87,6 +87,50 @@
     .timer-text { display:none; }
 
     /* ── 위험 알림 팝업 ── */
+    /* ── 조치 선택 팝업 ── */
+    .action-select-popup {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,.6);
+      display: none; align-items: center; justify-content: center;
+      z-index: 999;
+    }
+    .action-select-popup.show { display: flex; }
+    .action-select-box {
+      background: #fff; border-radius: 20px;
+      padding: 28px 24px; width: 340px;
+      box-shadow: 0 20px 60px rgba(0,0,0,.3);
+      animation: popIn .3s ease;
+    }
+    @keyframes popIn { from{opacity:0;transform:scale(.9)} to{opacity:1;transform:scale(1)} }
+    .action-select-title { font-size: 16px; font-weight: 800; color: #1e293b; margin-bottom: 6px; text-align:center; }
+    .action-select-sub   { font-size: 13px; color: #64748b; margin-bottom: 20px; text-align:center; }
+    .action-select-danger-type { background:#fee2e2; color:#dc2626; font-size:12px; font-weight:700; padding:6px 14px; border-radius:20px; display:inline-block; margin-bottom:20px; }
+    .action-btns { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+    .action-btn {
+      background: #f8fafc; border: 2px solid #e2e8f0;
+      border-radius: 14px; padding: 16px 8px;
+      cursor: pointer; text-align: center;
+      transition: all .2s; font-family: inherit;
+    }
+    .action-btn:hover { border-color: #1e293b; background: #f1f5f9; }
+    .action-btn.selected-unresolved { border-color: #dc2626; background: #fee2e2; }
+    .action-btn.selected-inprogress { border-color: #d97706; background: #fef3c7; }
+    .action-btn.selected-resolved   { border-color: #16a34a; background: #dcfce7; }
+    .action-btn-icon { font-size: 24px; margin-bottom: 6px; }
+    .action-btn-label { font-size: 12px; font-weight: 700; color: #1e293b; }
+    .action-btn-sub   { font-size: 10px; color: #94a3b8; margin-top: 2px; }
+    .action-note-wrap { margin-bottom: 16px; display:none; }
+    .action-note-wrap.show { display:block; }
+    .action-note-label { font-size: 12px; font-weight: 600; color: #475569; margin-bottom: 6px; }
+    .action-note-input { width: 100%; border: 1px solid #e2e8f0; border-radius: 10px; padding: 10px 12px; font-size: 13px; font-family: inherit; resize: none; height: 70px; }
+    .action-confirm-btn {
+      width: 100%; padding: 14px; background: #1e293b; color: #fff;
+      border: none; border-radius: 12px; font-size: 14px; font-weight: 700;
+      cursor: pointer; font-family: inherit;
+    }
+    .action-confirm-btn:disabled { background: #94a3b8; cursor: not-allowed; }
+    .action-confirm-btn:hover:not(:disabled) { background: #0f172a; }
+
     .alert-popup { position:fixed; top:20px; right:20px; background:#dc2626; color:#fff; padding:14px 18px; border-radius:12px; z-index:999; display:none; box-shadow:0 4px 20px rgba(0,0,0,.3); animation:slideIn .3s ease; }
     @keyframes slideIn { from{opacity:0;transform:translateX(20px)} to{opacity:1;transform:translateX(0)} }
     .alert-title { font-size:14px; font-weight:700; margin-bottom:3px; }
@@ -530,9 +574,9 @@
     }
 
     // ── 전체 보고서 생성 (백그라운드) ─────────
-    async function createFullReport(quickData) {
+    async function createFullReport(quickData, actionStatus = '미조치', actionNote = '') {
       isCreatingReport = true;
-      document.getElementById('resultHeader').textContent = '⏳ 보고서 생성 중... (감지 계속)';
+      document.getElementById('resultHeader').textContent = '⏳ 보고서 생성 중...';
 
       const canvas = document.createElement('canvas');
       canvas.width  = cameraVideo.videoWidth  || 640;
@@ -549,6 +593,8 @@
       if (quickData && quickData.danger_zone) dangerTypes.push('위험구역 출입 사고');
       if (dangerTypes.length === 0) dangerTypes.push('위험 감지');
       formData.append('danger_types', JSON.stringify(dangerTypes));
+      formData.append('action_status', actionStatus);
+      formData.append('action_note', actionNote);
 
       try {
         const res  = await fetch(BASE_URL + '/analyze', { method:'POST', body:formData });
@@ -594,6 +640,60 @@
 
     function goToReport() {
       if (lastReportId) window.location.href = '/reports/' + lastReportId;
+    }
+
+    // ── 조치 상태 선택 팝업 ─────────────────
+    let pendingDangerData = null;
+    let selectedActionStatus = null;
+
+    function showActionSelectPopup(dangerData, alertMsg) {
+      pendingDangerData = dangerData;
+      selectedActionStatus = null;
+      document.getElementById('popupDangerType').textContent = alertMsg || '위험 감지';
+      document.getElementById('actionNoteWrap').classList.remove('show');
+      document.getElementById('actionNoteInput').value = '';
+      document.getElementById('actionConfirmBtn').disabled = true;
+
+      // 버튼 초기화
+      ['btnPopupUnresolved','btnPopupInprogress','btnPopupResolved'].forEach(id => {
+        const btn = document.getElementById(id);
+        btn.className = 'action-btn';
+      });
+
+      document.getElementById('actionSelectPopup').classList.add('show');
+    }
+
+    function selectActionStatus(status) {
+      selectedActionStatus = status;
+
+      document.getElementById('btnPopupUnresolved').className = 'action-btn' + (status === '미조치'   ? ' selected-unresolved' : '');
+      document.getElementById('btnPopupInprogress').className = 'action-btn' + (status === '조치중'   ? ' selected-inprogress' : '');
+      document.getElementById('btnPopupResolved').className   = 'action-btn' + (status === '조치완료' ? ' selected-resolved'   : '');
+
+      const noteWrap  = document.getElementById('actionNoteWrap');
+      const noteLabel = document.getElementById('actionNoteLabel');
+      if (status === '미조치') {
+        noteWrap.classList.add('show');
+        noteLabel.textContent = '미조치 사유 (선택)';
+      } else if (status === '조치중') {
+        noteWrap.classList.add('show');
+        noteLabel.textContent = '처리 예정 내용 (선택)';
+      } else {
+        noteWrap.classList.remove('show');
+      }
+
+      document.getElementById('actionConfirmBtn').disabled = false;
+    }
+
+    async function confirmActionAndReport() {
+      if (!selectedActionStatus) return;
+      const note = document.getElementById('actionNoteInput').value.trim();
+
+      document.getElementById('actionSelectPopup').classList.remove('show');
+      document.getElementById('actionConfirmBtn').disabled = true;
+
+      // 보고서 생성 (선택한 조치 상태 포함)
+      await createFullReport(pendingDangerData, selectedActionStatus, note);
     }
 
     // ── 감지 시작 ──────────────────────────
