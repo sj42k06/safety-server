@@ -195,10 +195,10 @@
         <span class="current-badge 미조치" id="currentBadge"><span class="dot"></span><span id="currentBadgeText">미조치</span></span>
       </div>
       <div class="status-btn-group">
-        <button class="status-btn btn-unresolved" id="btnUnresolved" onclick="selectStatus('미조치')">
+        <button class="status-btn btn-unresolved" id="btnUnresolved" onclick="selectStatus('즉각조치')">
           <div class="sb-icon">🚨</div><span class="sb-label">미조치</span><span class="sb-sub">처리 전</span>
         </button>
-        <button class="status-btn btn-inprogress" id="btnInprogress" onclick="selectStatus('조치중')">
+        <button class="status-btn btn-inprogress" id="btnInprogress" onclick="selectStatus('사후조치')">
           <div class="sb-icon">⏳</div><span class="sb-label">조치 중</span><span class="sb-sub">처리 예정</span>
         </button>
         <button class="status-btn btn-resolved" id="btnResolved" onclick="selectStatus('조치완료')">
@@ -394,7 +394,7 @@ function load() {
       setText('evalText', content.summary_eval || r.description || evalMap[grade] || evalMap['정상']);
 
       // 조치 상태
-      initAction(r.action_status || '미조치', r.action_note);
+      initAction(r.action_status || '즉각조치', r.action_note);
     })
     .catch(function(err) {
       g('loadingState').style.display = 'none';
@@ -416,8 +416,8 @@ function initAction(status, note) {
     var p = g(id); if (p) p.classList.remove('visible');
   });
 
-  if (status === '미조치')   { if (g('btnUnresolved')) g('btnUnresolved').classList.add('active'); if (g('panelUnresolved')) g('panelUnresolved').classList.add('visible'); }
-  if (status === '조치중')   { if (g('btnInprogress')) g('btnInprogress').classList.add('active'); if (g('panelInprogress')) g('panelInprogress').classList.add('visible'); }
+  if (status === '즉각조치')   { if (g('btnUnresolved')) g('btnUnresolved').classList.add('active'); if (g('panelUnresolved')) g('panelUnresolved').classList.add('visible'); }
+  if (status === '사후조치')   { if (g('btnInprogress')) g('btnInprogress').classList.add('active'); if (g('panelInprogress')) g('panelInprogress').classList.add('visible'); }
   if (status === '조치완료') { if (g('btnResolved'))   g('btnResolved').classList.add('active');   if (g('panelResolved'))   g('panelResolved').classList.add('visible'); }
 
   if (note) {
@@ -435,8 +435,8 @@ function selectStatus(status) {
   ['panelUnresolved','panelInprogress','panelResolved'].forEach(function(id) {
     var p = g(id); if (p) p.classList.remove('visible');
   });
-  if (status === '미조치')   { if (g('btnUnresolved')) g('btnUnresolved').classList.add('active'); if (g('panelUnresolved')) g('panelUnresolved').classList.add('visible'); }
-  if (status === '조치중')   { if (g('btnInprogress')) g('btnInprogress').classList.add('active'); if (g('panelInprogress')) g('panelInprogress').classList.add('visible'); }
+  if (status === '즉각조치')   { if (g('btnUnresolved')) g('btnUnresolved').classList.add('active'); if (g('panelUnresolved')) g('panelUnresolved').classList.add('visible'); }
+  if (status === '사후조치')   { if (g('btnInprogress')) g('btnInprogress').classList.add('active'); if (g('panelInprogress')) g('panelInprogress').classList.add('visible'); }
   if (status === '조치완료') { if (g('btnResolved'))   g('btnResolved').classList.add('active');   if (g('panelResolved'))   g('panelResolved').classList.add('visible'); }
 }
 
