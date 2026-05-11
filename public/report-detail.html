@@ -13,8 +13,8 @@
     .top-bar { display:flex; align-items:center; gap:12px; margin-bottom:20px; }
     .back-btn { background:#fff; border:1px solid #e2e8f0; padding:8px 14px; border-radius:8px; cursor:pointer; font-size:13px; color:#475569; display:flex; align-items:center; gap:6px; }
     .report-title { font-size:15px; font-weight:700; color:#1e293b; }
-    .main-image { width:100%; height:260px; border-radius:16px; margin-bottom:20px; background:#e2e8f0; display:flex; align-items:center; justify-content:center; overflow:hidden; }
-    .main-image img { width:100%; height:100%; object-fit:cover; }
+    .main-image { width:100%; border-radius:16px; margin-bottom:20px; background:#e2e8f0; overflow:hidden; }
+    .main-image img { width:100%; height:auto; object-fit:contain; display:block; max-height:400px; }
     .no-image { color:#94a3b8; font-size:14px; text-align:center; }
     .card { background:#fff; border:1px solid #e2e8f0; border-radius:16px; padding:22px; margin-bottom:16px; }
     .card-title { display:flex; align-items:center; gap:8px; font-size:15px; font-weight:700; color:#1e293b; margin-bottom:16px; }
@@ -139,6 +139,18 @@
 
     .bottom-msg { background:#1e293b; border-radius:16px; padding:20px; text-align:center; color:#fff; font-size:14px; font-style:italic; margin-top:8px; }
 
+    /* 보고 개요 */
+    .overview-list { display:flex; flex-direction:column; gap:10px; }
+    .overview-item { display:flex; gap:12px; font-size:13px; padding:8px 0; border-bottom:1px solid #f1f5f9; }
+    .overview-item:last-child { border-bottom:none; }
+    .ov-label { color:#94a3b8; font-weight:600; width:90px; flex-shrink:0; }
+    .ov-value { color:#1e293b; flex:1; line-height:1.5; }
+
+    /* 감지 방식 */
+    .method-list { display:flex; flex-direction:column; gap:10px; }
+    .method-item { display:flex; align-items:flex-start; gap:8px; font-size:13px; color:#475569; line-height:1.6; }
+    .method-item i { font-size:16px; flex-shrink:0; margin-top:1px; }
+
     /* 위험요소 감지 결과 */
     .det-result-item { background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:14px 16px; margin-bottom:10px; }
     .det-result-item:last-child { margin-bottom:0; }
@@ -185,6 +197,30 @@
     <!-- 대표 이미지 -->
     <div class="main-image" id="mainImageWrap">
       <div class="no-image"><i class="ri-image-line" style="font-size:32px;display:block;margin-bottom:8px;"></i>대표 스냅샷</div>
+    </div>
+
+    <!-- 보고 개요 카드 -->
+    <div class="card">
+      <div class="card-title"><span class="card-num">📋</span> 보고 개요</div>
+      <div class="overview-list">
+        <div class="overview-item"><span class="ov-label">보고서 제목</span><span class="ov-value" id="overviewTitle">-</span></div>
+        <div class="overview-item"><span class="ov-label">분석 일시</span><span class="ov-value" id="overviewDate">-</span></div>
+        <div class="overview-item"><span class="ov-label">작성자</span><span class="ov-value" id="overviewAuthor">-</span></div>
+        <div class="overview-item"><span class="ov-label">감지 방식</span><span class="ov-value">AI 기반 실시간 영상 분석 시스템 (YOLO v8)</span></div>
+        <div class="overview-item"><span class="ov-label">분석 목적</span><span class="ov-value">작업자 보호구 착용 여부, 위험구역 침범, 중장비 접근 등 복합 위험 판단</span></div>
+      </div>
+    </div>
+
+    <!-- 감지 방식 카드 -->
+    <div class="card">
+      <div class="card-title"><span class="card-num">🔍</span> 감지 방식</div>
+      <div class="method-list">
+        <div class="method-item"><i class="ri-checkbox-circle-line" style="color:#22c55e;"></i> AI 기반 실시간 영상 분석 시스템 (YOLO v8 객체 감지)</div>
+        <div class="method-item"><i class="ri-checkbox-circle-line" style="color:#22c55e;"></i> 가상 펜스(Virtual Fence) 기반 위험구역 침범 실시간 판단</div>
+        <div class="method-item"><i class="ri-checkbox-circle-line" style="color:#22c55e;"></i> 안전모·안전조끼 착용 여부 자동 식별 및 미착용자 감지</div>
+        <div class="method-item"><i class="ri-checkbox-circle-line" style="color:#22c55e;"></i> 중장비·차량 근접 여부 거리 기반 분석</div>
+        <div class="method-item"><i class="ri-checkbox-circle-line" style="color:#22c55e;"></i> 위험 감지 시 관리자에게 자동 SMS 알림 발송</div>
+      </div>
     </div>
 
     <!-- 카드 1: AI 등급 평가 -->
@@ -395,11 +431,11 @@
       const detections = content.detections || [];
       const detEl = document.getElementById('detectionResultList');
       const caseIconMap = {
-        '보호구 미착용': { icon:'⛑️', grade:'고위험', desc:'안전모/안전조끼 미착용으로 인한 머리/신체 부상 위험이 감지되었습니다.' },
-        '중장비 접근 사고': { icon:'🚜', grade:'고위험', desc:'중장비 운행 구역 내 작업자 접근으로 인한 충돌/협착 위험이 감지되었습니다.' },
-        '자재물 낙하/추락 위험': { icon:'📦', grade:'주의', desc:'불안정한 자재 배치로 인한 낙하/추락 위험이 감지되었습니다.' },
-        '위험구역 출입 사고': { icon:'🚧', grade:'고위험', desc:'지정된 위험구역에 무단 출입하는 작업자가 감지되었습니다.' },
-        '자재물로 인한 걸림/넘어짐': { icon:'⚠️', grade:'관찰', desc:'통로에 방치된 자재로 인한 걸림/넘어짐 위험이 감지되었습니다.' },
+        '보호구 미착용': { icon:'⛑️', grade:'고위험', desc:'AI가 작업자의 안전모 및 안전조끼 미착용 상태를 감지하였습니다. 머리 및 신체 부상 위험이 높은 상태로 즉각적인 착용 지도가 필요합니다. 보호구 미착용 작업자가 식별되었으며 현장 작업 중지 및 착용 후 재개가 요구됩니다.' },
+        '중장비 접근 사고': { icon:'🚜', grade:'고위험', desc:'AI가 중장비 운행 구역 내 작업자 접근을 감지하였습니다. 중장비와 작업자 간 안전거리(2m 이상)가 확보되지 않은 상태로 충돌·협착 사고 위험이 매우 높습니다. 즉시 작업 중지 및 작업자 대피가 필요합니다.' },
+        '자재물 낙하/추락 위험': { icon:'📦', grade:'주의', desc:'AI가 불안정하게 적재된 자재 또는 고소 작업 환경에서의 낙하·추락 위험 요소를 감지하였습니다. 자재 고정 상태를 즉시 점검하고 낙하물 방지망 설치 여부를 확인해야 합니다.' },
+        '위험구역 출입 사고': { icon:'🚧', grade:'고위험', desc:'AI가 가상펜스(Virtual Fence)를 통해 작업자의 위험구역 무단 침범을 감지하였습니다. 지정 위험구역에 허가되지 않은 인원이 진입한 상태로 즉각적인 퇴거 조치 및 출입 통제 강화가 필요합니다.' },
+        '자재물로 인한 걸림/넘어짐': { icon:'⚠️', grade:'관찰', desc:'AI가 작업 통로 내 자재 방치로 인한 걸림·넘어짐 위험 상황을 감지하였습니다. 통로 내 장애물 즉시 제거 및 정리정돈이 필요하며 재발 방지를 위한 자재 보관 구역 지정이 요구됩니다.' },
       };
 
       const allCases = cases.length > 0 ? cases : (r.case_name ? [r.case_name] : []);
@@ -423,27 +459,46 @@
 
       // ── 관련 법규 ─────────────────────────
       const lawMap = {
-        '보호구 미착용': { name:'산업안전보건법 제38조 (보호구 착용)', content:'사업주는 작업자에게 안전모, 안전화, 안전조끼 등 적정한 보호구를 지급하고 착용하도록 하여야 한다.' },
-        '중장비 접근 사고': { name:'산업안전보건기준에 관한 규칙 제200조', content:'차량계 하역운반기계 등을 사용하는 작업 시 운행경로, 작업방법을 정하고 작업자 출입을 금지시켜야 한다.' },
-        '자재물 낙하/추락 위험': { name:'산업안전보건기준에 관한 규칙 제14조', content:'낙하물에 의한 위험을 방지하기 위해 낙하물 방지망, 수직보호망 등을 설치하여야 한다.' },
-        '위험구역 출입 사고': { name:'산업안전보건법 제42조 (위험구역 출입 금지)', content:'사업주는 위험물질 보관 장소, 기계 작동 구역 등 위험구역에 관계자 외 출입을 금지하여야 한다.' },
-        '자재물로 인한 걸림/넘어짐': { name:'산업안전보건기준에 관한 규칙 제3조', content:'작업장 내 통로는 항상 정리정돈하여 걸림/넘어짐 위험 요소를 제거하여야 한다.' },
+        '보호구 미착용': [
+          { name:'산업안전보건법 제38조 (보호구 착용)', content:'사업주는 작업자에게 안전모, 안전화, 안전조끼 등 적정한 보호구를 지급하고 착용하도록 하여야 한다.' },
+          { name:'산업안전보건기준에 관한 규칙 제32조 (보호구 지급 및 관리)', content:'사업주는 보호구를 작업자 수 이상으로 지급하고, 항상 사용 가능한 상태로 유지·관리하여야 한다.' },
+          { name:'산업안전보건법 제173조 (벌칙)', content:'보호구 착용 의무를 위반한 경우 5년 이하의 징역 또는 5천만원 이하의 벌금에 처한다.' },
+        ],
+        '중장비 접근 사고': [
+          { name:'산업안전보건기준에 관한 규칙 제200조 (차량계 건설기계)', content:'차량계 건설기계를 사용하는 작업 시 운행경로, 작업방법을 정하고 작업자 출입을 통제하여야 한다.' },
+          { name:'산업안전보건기준에 관한 규칙 제201조 (접촉 방지)', content:'차량계 건설기계와 작업자 간 접촉 위험이 있는 경우 유도자를 배치하고 안전거리를 확보하여야 한다.' },
+        ],
+        '자재물 낙하/추락 위험': [
+          { name:'산업안전보건기준에 관한 규칙 제14조 (낙하물 방지)', content:'낙하물에 의한 위험을 방지하기 위해 낙하물 방지망, 수직보호망 또는 방호선반 등을 설치하여야 한다.' },
+          { name:'산업안전보건기준에 관한 규칙 제43조 (추락 방호망)', content:'높이 10m 이상에서의 작업 시 추락 방호망을 설치하여야 한다.' },
+        ],
+        '위험구역 출입 사고': [
+          { name:'산업안전보건법 제42조 (위험구역 출입 금지)', content:'사업주는 위험물질 보관 장소, 기계 작동 구역 등 위험구역에 관계자 외 출입을 금지하여야 한다.' },
+          { name:'산업안전보건기준에 관한 규칙 제38조 (안전난간 설치)', content:'위험구역 경계에는 안전난간, 울타리, 경고 표지 등을 설치하여 출입을 통제하여야 한다.' },
+        ],
+        '자재물로 인한 걸림/넘어짐': [
+          { name:'산업안전보건기준에 관한 규칙 제3조 (정리정돈)', content:'작업장 내 통로는 항상 정리정돈하여 걸림/넘어짐 위험 요소를 즉시 제거하여야 한다.' },
+          { name:'산업안전보건기준에 관한 규칙 제22조 (통로의 조명)', content:'작업장 통로에는 75럭스 이상의 조명을 설치하고 장애물을 제거하여 안전한 보행을 확보하여야 한다.' },
+        ],
       };
       const lawEl = document.getElementById('lawList');
       const lawRefs = content.law_references || [];
       const lawCases = allCases.length > 0 ? allCases : (lawRefs.length > 0 ? lawRefs : []);
       if (lawCases.length > 0) {
         lawEl.innerHTML = lawCases.map(c => {
-          const law = lawMap[c] || { name: r.law_name || '관련 법규', content: r.law_content || '해당 없음' };
-          return `
-            <div class="law-item">
-              <div class="law-item-header">⚖️ ${law.name}</div>
-              <div class="law-item-body">${law.content}</div>
-            </div>`;
+          const laws = lawMap[c];
+          if (Array.isArray(laws)) {
+            return laws.map(law => `
+              <div class="law-item">
+                <div class="law-item-header">⚖️ ${law.name}</div>
+                <div class="law-item-body">${law.content}</div>
+              </div>`).join('');
+          }
+          const law = laws || { name: r.law_name || '관련 법규', content: r.law_content || '해당 없음' };
+          return `<div class="law-item"><div class="law-item-header">⚖️ ${law.name}</div><div class="law-item-body">${law.content}</div></div>`;
         }).join('');
       } else {
-        const fallbackLaw = { name: r.law_name || '관련 법규', content: r.law_content || '해당 없음' };
-        lawEl.innerHTML = `<div class="law-item"><div class="law-item-header">⚖️ ${fallbackLaw.name}</div><div class="law-item-body">${fallbackLaw.content}</div></div>`;
+        lawEl.innerHTML = `<div class="law-item"><div class="law-item-header">⚖️ ${r.law_name || '관련 법규'}</div><div class="law-item-body">${r.law_content || '해당 없음'}</div></div>`;
       }
 
       // ── 권고사항 ──────────────────────────
