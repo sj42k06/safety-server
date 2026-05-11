@@ -89,9 +89,63 @@
     .nav-sub a { display:flex; align-items:center; gap:8px; padding:8px 14px; border-radius:8px; color:#94a3b8; font-size:12px; text-decoration:none; transition:all .2s; }
     .nav-sub a:hover { background:rgba(255,255,255,.05); color:#fff; }
     .nav-sub a.active { background:rgba(59,130,246,.15); color:#60a5fa; font-weight:600; }
+    /* ── 조치 선택 팝업 ── */
+    .action-select-popup { position:fixed; inset:0; background:rgba(0,0,0,.6); display:none; align-items:center; justify-content:center; z-index:999; }
+    .action-select-popup.show { display:flex; }
+    .action-select-box { background:#fff; border-radius:20px; padding:28px 24px; width:340px; box-shadow:0 20px 60px rgba(0,0,0,.3); animation:popIn .3s ease; }
+    @keyframes popIn { from{opacity:0;transform:scale(.9)} to{opacity:1;transform:scale(1)} }
+    .action-select-title { font-size:16px; font-weight:800; color:#1e293b; margin-bottom:6px; text-align:center; }
+    .action-select-sub   { font-size:13px; color:#64748b; margin-bottom:20px; text-align:center; }
+    .action-btns { display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; margin-bottom:16px; }
+    .action-btn { background:#f8fafc; border:2px solid #e2e8f0; border-radius:14px; padding:16px 8px; cursor:pointer; text-align:center; transition:all .2s; font-family:inherit; }
+    .action-btn:hover { border-color:#1e293b; background:#f1f5f9; }
+    .action-btn.selected-unresolved { border-color:#dc2626; background:#fee2e2; }
+    .action-btn.selected-inprogress { border-color:#d97706; background:#fef3c7; }
+    .action-btn.selected-resolved   { border-color:#16a34a; background:#dcfce7; }
+    .action-btn-icon  { font-size:24px; margin-bottom:6px; }
+    .action-btn-label { font-size:12px; font-weight:700; color:#1e293b; }
+    .action-btn-sub   { font-size:10px; color:#94a3b8; margin-top:2px; }
+    .action-note-wrap  { margin-bottom:16px; display:none; }
+    .action-note-wrap.show { display:block; }
+    .action-note-label { font-size:12px; font-weight:600; color:#475569; margin-bottom:6px; }
+    .action-note-input { width:100%; border:1px solid #e2e8f0; border-radius:10px; padding:10px 12px; font-size:13px; font-family:inherit; resize:none; height:70px; }
+    .action-confirm-btn { width:100%; padding:14px; background:#1e293b; color:#fff; border:none; border-radius:12px; font-size:14px; font-weight:700; cursor:pointer; font-family:inherit; }
+    .action-confirm-btn:disabled { background:#94a3b8; cursor:not-allowed; }
   </style>
 </head>
 <body>
+  <!-- 조치 상태 선택 팝업 -->
+  <div class="action-select-popup" id="actionSelectPopup">
+    <div class="action-select-box">
+      <div class="action-select-title">📋 분석 완료</div>
+      <div class="action-select-sub">조치 상태를 선택하면 보고서가 생성됩니다</div>
+      <div class="action-btns">
+        <button class="action-btn" id="btnPopupUnresolved" onclick="selectActionStatus('미조치')">
+          <div class="action-btn-icon">🚨</div>
+          <div class="action-btn-label">미조치</div>
+          <div class="action-btn-sub">처리 전</div>
+        </button>
+        <button class="action-btn" id="btnPopupInprogress" onclick="selectActionStatus('조치중')">
+          <div class="action-btn-icon">⏳</div>
+          <div class="action-btn-label">조치 중</div>
+          <div class="action-btn-sub">처리 예정</div>
+        </button>
+        <button class="action-btn" id="btnPopupResolved" onclick="selectActionStatus('조치완료')">
+          <div class="action-btn-icon">✅</div>
+          <div class="action-btn-label">조치 완료</div>
+          <div class="action-btn-sub">처리 완료</div>
+        </button>
+      </div>
+      <div class="action-note-wrap" id="actionNoteWrap">
+        <div class="action-note-label" id="actionNoteLabel">메모 (선택)</div>
+        <textarea class="action-note-input" id="actionNoteInput" placeholder="내용을 입력하세요..."></textarea>
+      </div>
+      <button class="action-confirm-btn" id="actionConfirmBtn" onclick="confirmAction()" disabled>
+        보고서 생성하기
+      </button>
+    </div>
+  </div>
+
   <aside>
     <div class="logo">
       <img src="https://public.readdy.ai/ai/img_res/f3ccc83c-cf23-4ebf-b376-21d351a806b7.png" alt="로고" />
@@ -403,11 +457,11 @@
 
         if (data.report_id) {
           lastReportId = data.report_id;
-          progressStatus.textContent = '✅ 분석 완료!';
+          progressStatus.textContent = '✅ 분석 완료! 조치 상태를 선택해주세요.';
           progressStatus.className   = 'progress-status success';
 
-          // 결과 패널 표시
-          showResultPanel(data);
+          // 조치 상태 선택 팝업 표시
+          showActionPopup();
         } else {
           progressStatus.textContent = '분석 실패: ' + (data.error || '오류 발생');
           progressStatus.className   = 'progress-status error';
@@ -455,6 +509,53 @@
 
     function goToReport() {
       if (lastReportId) window.location.href = '/reports/' + lastReportId;
+    }
+
+    // ── 조치 상태 선택 팝업 ─────────────────
+    let selectedActionStatus = null;
+
+    function showActionPopup() {
+      selectedActionStatus = null;
+      document.getElementById('actionNoteWrap').classList.remove('show');
+      document.getElementById('actionNoteInput').value = '';
+      document.getElementById('actionConfirmBtn').disabled = true;
+      ['btnPopupUnresolved','btnPopupInprogress','btnPopupResolved'].forEach(id => {
+        document.getElementById(id).className = 'action-btn';
+      });
+      document.getElementById('actionSelectPopup').classList.add('show');
+    }
+
+    function selectActionStatus(status) {
+      selectedActionStatus = status;
+      document.getElementById('btnPopupUnresolved').className = 'action-btn' + (status === '미조치'   ? ' selected-unresolved' : '');
+      document.getElementById('btnPopupInprogress').className = 'action-btn' + (status === '조치중'   ? ' selected-inprogress' : '');
+      document.getElementById('btnPopupResolved').className   = 'action-btn' + (status === '조치완료' ? ' selected-resolved'   : '');
+
+      const noteWrap = document.getElementById('actionNoteWrap');
+      const noteLabel = document.getElementById('actionNoteLabel');
+      if (status === '미조치') { noteWrap.classList.add('show'); noteLabel.textContent = '미조치 사유 (선택)'; }
+      else if (status === '조치중') { noteWrap.classList.add('show'); noteLabel.textContent = '처리 예정 내용 (선택)'; }
+      else { noteWrap.classList.remove('show'); }
+
+      document.getElementById('actionConfirmBtn').disabled = false;
+    }
+
+    async function confirmAction() {
+      if (!selectedActionStatus || !lastReportId) return;
+      const note = document.getElementById('actionNoteInput').value.trim();
+      document.getElementById('actionSelectPopup').classList.remove('show');
+
+      // 조치 상태 서버에 저장
+      try {
+        await fetch(BASE_URL + '/api/reports/' + lastReportId + '/action', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action_status: selectedActionStatus, action_note: note })
+        });
+      } catch(e) { console.warn('조치 상태 저장 오류:', e); }
+
+      // 보고서 페이지로 이동
+      window.location.href = '/reports/' + lastReportId;
     }
       function toggleNav() {
       const sub = document.getElementById('navSub');
