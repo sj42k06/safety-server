@@ -12,10 +12,10 @@
     /* ── 카메라 섹션 ── */
     .camera-section {
       background: #000; border-radius: 16px; overflow: hidden;
-      position: relative; width: 100%; height: 65vh;
+      position: relative; width: 100%; height: 70vh;
       border: 2px solid #1e293b; transition: border-color .3s;
     }
-    .camera-section video { width:100%; height:100%; object-fit:contain; display:block; }
+    .camera-section video { width:100%; height:100%; object-fit:cover; display:block; }
     .camera-border-danger { border-color: #ef4444 !important; box-shadow: 0 0 20px rgba(239,68,68,.4); }
 
     /* ── canvas (바운딩박스 + 가상펜스) ── */
@@ -501,8 +501,26 @@
 
           if (data.report_id) {
             lastReportId = data.report_id;
-            document.getElementById('resultHeader').textContent = '✅ 보고서 생성 완료!';
+            document.getElementById('resultHeader').textContent = '✅ 보고서 생성 완료! 이동 중...';
             resultPanel.classList.add('show');
+
+            // 위험 감지 SMS 발송
+            try {
+              await fetch(BASE_URL + '/api/danger-sms', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  report_id: data.report_id,
+                  danger_type: data.ppe_violation ? '보호구 미착용' : '위험구역 진입',
+                  user: localStorage.getItem('username') || 'admin'
+                })
+              });
+            } catch(e) { console.warn('SMS 오류:', e); }
+
+            // 3초 후 보고서 상세로 자동 이동
+            setTimeout(() => {
+              window.location.href = '/reports/' + data.report_id;
+            }, 3000);
           }
         } catch (err) {
           console.error('보고서 생성 오류:', err);
