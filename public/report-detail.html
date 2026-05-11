@@ -136,6 +136,17 @@
     .bottom-msg { background:#1e293b; border-radius:16px; padding:20px; text-align:center; color:#fff; font-size:14px; font-style:italic; margin-top:8px; }
     .loading { text-align:center; padding:60px; color:#94a3b8; }
     .error   { text-align:center; padding:60px; color:#ef4444; }
+      /* 자료실 하위 메뉴 */
+    .nav-group-title { display:flex; align-items:center; gap:10px; padding:10px 16px; color:#94a3b8; font-size:13px; cursor:pointer; transition:all .2s; user-select:none; }
+    .nav-group-title:hover { background:rgba(255,255,255,.05); color:#fff; }
+    .nav-group-title.open { color:#fff; }
+    .nav-arrow { margin-left:auto; transition:transform .2s; font-size:14px; }
+    .nav-arrow.open { transform:rotate(180deg); }
+    .nav-sub { display:none; flex-direction:column; gap:2px; padding-left:14px; margin-top:2px; }
+    .nav-sub.open { display:flex; }
+    .nav-sub a { display:flex; align-items:center; gap:8px; padding:8px 14px; border-radius:8px; color:#94a3b8; font-size:12px; text-decoration:none; transition:all .2s; }
+    .nav-sub a:hover { background:rgba(255,255,255,.05); color:#fff; }
+    .nav-sub a.active { background:rgba(59,130,246,.15); color:#60a5fa; font-weight:600; }
   </style>
 </head>
 <body>
@@ -417,6 +428,12 @@
   }
 
   load();
-</script>
+    function toggleNav() {
+      const sub = document.getElementById('navSub');
+      const arrow = document.getElementById('navArrow');
+      const title = document.getElementById('navGroupTitle');
+      if (sub) { sub.classList.toggle('open'); arrow.classList.toggle('open'); title.classList.toggle('open'); }
+    }
+  </script>
 </body>
 </html>

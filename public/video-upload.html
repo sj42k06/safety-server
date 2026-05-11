@@ -78,6 +78,17 @@
     .legend { display: flex; gap: 12px; flex-wrap: wrap; padding: 10px 14px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; }
     .legend-item { display: flex; align-items: center; gap: 5px; font-size: 11px; color: #475569; }
     .legend-dot { width: 10px; height: 10px; border-radius: 2px; }
+      /* 자료실 하위 메뉴 */
+    .nav-group-title { display:flex; align-items:center; gap:10px; padding:10px 16px; color:#94a3b8; font-size:13px; cursor:pointer; transition:all .2s; user-select:none; }
+    .nav-group-title:hover { background:rgba(255,255,255,.05); color:#fff; }
+    .nav-group-title.open { color:#fff; }
+    .nav-arrow { margin-left:auto; transition:transform .2s; font-size:14px; }
+    .nav-arrow.open { transform:rotate(180deg); }
+    .nav-sub { display:none; flex-direction:column; gap:2px; padding-left:14px; margin-top:2px; }
+    .nav-sub.open { display:flex; }
+    .nav-sub a { display:flex; align-items:center; gap:8px; padding:8px 14px; border-radius:8px; color:#94a3b8; font-size:12px; text-decoration:none; transition:all .2s; }
+    .nav-sub a:hover { background:rgba(255,255,255,.05); color:#fff; }
+    .nav-sub a.active { background:rgba(59,130,246,.15); color:#60a5fa; font-weight:600; }
   </style>
 </head>
 <body>
@@ -87,10 +98,20 @@
       <div class="logo-text"><div class="title">스마트 현장</div><div class="sub">안전관제 시스템</div></div>
     </div>
     <nav>
-      <a href="/dashboard"><i class="ri-dashboard-line"></i> 자료실</a>
-      <a href="/upload"><i class="ri-camera-line"></i> 현장 모니터링</a>
+      <!-- 자료실 하위 메뉴 (맨 위 고정) -->
+      <div class="nav-group">
+        <div class="nav-group-title " id="navGroupTitle" onclick="toggleNav()">
+          <i class="ri-folder-chart-line"></i> 자료실
+          <i class="ri-arrow-down-s-line nav-arrow " id="navArrow"></i>
+        </div>
+        <div class="nav-sub " id="navSub">
+          <a href="/dashboard" ><i class="ri-bar-chart-2-line"></i> 통계실</a>
+          <a href="/archive" ><i class="ri-file-list-3-line"></i> 보고서 기록실</a>
+        </div>
+      </div>
+      <a href="/upload" ><i class="ri-camera-line"></i> 현장 모니터링</a>
       <a href="/video-upload" class="active"><i class="ri-video-upload-line"></i> 영상 분석</a>
-      <a href="/reports"><i class="ri-file-chart-line"></i> AI 보고서</a>
+      <a href="/reports" ><i class="ri-file-chart-line"></i> AI 보고서</a>
     </nav>
     <div class="user-section">
       <div class="user-info">
@@ -418,6 +439,12 @@
 
     function goToReport() {
       if (lastReportId) window.location.href = '/reports/' + lastReportId;
+    }
+      function toggleNav() {
+      const sub = document.getElementById('navSub');
+      const arrow = document.getElementById('navArrow');
+      const title = document.getElementById('navGroupTitle');
+      if (sub) { sub.classList.toggle('open'); arrow.classList.toggle('open'); title.classList.toggle('open'); }
     }
   </script>
 </body>
