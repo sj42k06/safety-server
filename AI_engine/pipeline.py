@@ -14,8 +14,33 @@ from datetime import datetime
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 print("모듈 import 시작", file=sys.stderr)
-from detect_ppe import detect_all
-print("detect_ppe 완료", file=sys.stderr)
+import requests as http_requests
+AI_SERVER = os.getenv('AI_SERVER_URL', 'http://localhost:5001')
+
+def detect_all(input_folder):
+    """Flask AI 서버에 탐지 요청 (YOLO 직접 로드 안 함)"""
+    results_data = []
+    if not os.path.exists(input_folder):
+        return results_data
+    valid_extensions = (".jpg", ".jpeg", ".png")
+    image_files = [f for f in os.listdir(input_folder) if f.lower().endswith(valid_extensions)]
+    for filename in image_files:
+        filepath = os.path.join(input_folder, filename)
+        try:
+            with open(filepath, 'rb') as f:
+                response = http_requests.post(
+                    AI_SERVER + '/detect-all',
+                    files={'image': (filename, f, 'image/jpeg')},
+                    timeout=30
+                )
+            if response.status_code == 200:
+                data = response.json()
+                results_data.append(data)
+        except Exception as e:
+            print(f"Flask 탐지 오류 ({filename}): {e}", file=sys.stderr)
+    return results_data
+
+print("detect_ppe 완료 (Flask 모드)", file=sys.stderr)
 from structure_ppe import structure_data
 print("structure_ppe 완료", file=sys.stderr)
 from logic_ppe import analyze_ppe

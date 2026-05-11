@@ -91,6 +91,62 @@ def analyze_quick():
             os.unlink(tmp_path)
 
 
+@app.route('/detect-all', methods=['POST'])
+def detect_all_endpoint():
+    """pipeline.py용 - 이미지 탐지 결과 반환"""
+    if 'image' not in request.files:
+        return jsonify({"frame": "", "width": 640, "height": 480, "detections": []})
+
+    file = request.files['image']
+    filename = file.filename or 'frame.jpg'
+
+    with tempfile.NamedTemporaryFile(suffix='.jpg', delete=False) as tmp:
+        file.save(tmp.name)
+        tmp_path = tmp.name
+
+    try:
+        import cv2
+        img = cv2.imread(tmp_path)
+        if img is None:
+            return jsonify({"frame": filename, "width": 640, "height": 480, "detections": []})
+
+        h, w = img.shape[:2]
+        results = model([img], conf=CONF_THRESHOLD, stream=False)
+        detections = []
+
+        for r in results:
+            for box in r.boxes:
+                conf    = float(box.conf[0])
+                cls_idx = int(box.cls[0])
+                if cls_idx not in MODEL_NAMES:
+                    continue
+                label = MODEL_NAMES[cls_idx]
+                x1, y1, x2, y2 = map(int, box.xyxy[0])
+                fx = (x1 + x2) // 2
+                fy = y2
+                detections.append({
+                    "type":       label,
+                    "confidence": round(conf, 2),
+                    "bbox":       [x1, y1, x2, y2],
+                    "fx": fx,
+                    "fy": fy
+                })
+
+        return jsonify({
+            "frame":      filename,
+            "width":      w,
+            "height":     h,
+            "detections": detections
+        })
+
+    except Exception as e:
+        print(f"[AI 서버] detect-all 오류: {e}", file=sys.stderr)
+        return jsonify({"frame": filename, "width": 640, "height": 480, "detections": []})
+    finally:
+        if os.path.exists(tmp_path):
+            os.unlink(tmp_path)
+
+
 if __name__ == '__main__':
     port = int(os.environ.get('AI_PORT', 5001))
     print(f"[AI 서버] 포트 {port}에서 시작", file=sys.stderr)
