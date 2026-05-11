@@ -159,6 +159,38 @@ function runPipeline(videoPath, userId) {
   });
 }
 
+// ────────────────────────────────────────
+// 빠른 바운딩박스 전용 (DB 저장 없음 - 웹캠 실시간용)
+// ────────────────────────────────────────
+app.post("/analyze-quick", upload.single("video"), async (req, res) => {
+  if (!req.file) return res.status(400).json({ boxes: [], danger: false });
+  const tempPath = path.resolve(req.file.path);
+  const newPath  = tempPath + '.jpg';
+  fs.renameSync(tempPath, newPath);
+
+  try {
+    const quickPath = path.join(__dirname, "AI_engine", "detect_quick.py");
+    const result = await new Promise((resolve) => {
+      const py = spawn("python3", [quickPath, newPath]);
+      let out = "";
+      py.stdout.on("data", d => { out += d.toString(); });
+      py.stderr.on("data", d => {});
+      py.on("close", () => {
+        if (fs.existsSync(newPath)) fs.unlinkSync(newPath);
+        try {
+          const lines    = out.trim().split('\n');
+          const jsonLine = lines.reverse().find(l => l.trim().startsWith('{'));
+          resolve(JSON.parse(jsonLine));
+        } catch(e) { resolve({ boxes: [], danger: false }); }
+      });
+    });
+    res.json(result);
+  } catch (err) {
+    if (fs.existsSync(newPath)) fs.unlinkSync(newPath);
+    res.json({ boxes: [], danger: false });
+  }
+});
+
 app.post("/analyze", upload.single("video"), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: "분석할 파일을 업로드해 주세요." });
   const tempPath = path.resolve(req.file.path);
