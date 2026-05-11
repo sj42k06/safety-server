@@ -276,8 +276,8 @@
         });
         cameraVideo.srcObject = stream;
         cameraVideo.onloadedmetadata = () => {
-          bboxCanvas.width  = cameraVideo.videoWidth;
-          bboxCanvas.height = cameraVideo.videoHeight;
+          bboxCanvas.width  = cameraVideo.videoWidth  || cameraSection.offsetWidth;
+          bboxCanvas.height = cameraVideo.videoHeight || cameraSection.offsetHeight;
 
           // 줌 지원 확인 후 슬라이더 표시
           const track = stream.getVideoTracks()[0];
@@ -294,6 +294,20 @@
               document.getElementById('zoomValue').textContent = parseFloat(zoomInput.value).toFixed(1) + 'x';
             };
           }
+        };
+
+        // 카메라 준비되면 가상펜스 즉시 표시
+        cameraVideo.oncanplay = () => {
+          bboxCanvas.width  = cameraVideo.videoWidth  || cameraSection.offsetWidth;
+          bboxCanvas.height = cameraVideo.videoHeight || cameraSection.offsetHeight;
+          drawFenceOnly();
+        };
+        cameraVideo.onplay = () => {
+          setTimeout(() => {
+            bboxCanvas.width  = cameraVideo.videoWidth  || cameraSection.offsetWidth;
+            bboxCanvas.height = cameraVideo.videoHeight || cameraSection.offsetHeight;
+            drawFenceOnly();
+          }, 300);
         };
         cameraDot.className      = 'camera-dot';
         cameraStatus.textContent = 'LIVE';
@@ -325,6 +339,29 @@
         if (r > 0) timerText.textContent = `다음 분석까지 ${r}초`;
         else { clearInterval(countdownId); timerText.textContent = ''; }
       }, 1000);
+    }
+
+    // ── 가상펜스만 그리기 ──────────────────
+    function drawFenceOnly() {
+      const W = bboxCanvas.width  = cameraVideo.videoWidth  || cameraSection.offsetWidth;
+      const H = bboxCanvas.height = cameraVideo.videoHeight || cameraSection.offsetHeight;
+      if (!W || !H) return;
+      bboxCtx.clearRect(0, 0, W, H);
+
+      const fenceX = W * 0.5;
+      bboxCtx.fillStyle = 'rgba(34,197,94,0.06)';
+      bboxCtx.fillRect(0, 0, fenceX, H);
+      bboxCtx.fillStyle = 'rgba(239,68,68,0.06)';
+      bboxCtx.fillRect(fenceX, 0, W - fenceX, H);
+
+      bboxCtx.strokeStyle = 'rgba(255,255,255,0.8)';
+      bboxCtx.lineWidth   = 2;
+      bboxCtx.setLineDash([10, 6]);
+      bboxCtx.beginPath();
+      bboxCtx.moveTo(fenceX, 0);
+      bboxCtx.lineTo(fenceX, H);
+      bboxCtx.stroke();
+      bboxCtx.setLineDash([]);
     }
 
     // ── 가상펜스 + 바운딩박스 그리기 ────────
@@ -408,9 +445,20 @@
 
         const res = await fetch(BASE_URL + '/analyze-quick', { method:'POST', body:formData });
         const contentType = res.headers.get('content-type') || '';
-        if (!contentType.includes('application/json')) return;
+        if (!contentType.includes('application/json')) {
+          // 서버 에러 - 3초 대기
+          await new Promise(r => setTimeout(r, 3000));
+          return;
+        }
 
         const data = await res.json();
+
+        // Flask 아직 준비 안됨 - 3초 대기
+        if (data.not_ready) {
+          document.getElementById('currentStatus').textContent = 'AI 준비 중...';
+          await new Promise(r => setTimeout(r, 3000));
+          return;
+        }
 
         analyzeCount++;
         document.getElementById('analyzeCount').textContent = analyzeCount;
@@ -428,9 +476,16 @@
 
           // 보고서 백그라운드 생성 (루프는 계속)
           if (!isCreatingReport) {
-            showAlert(data.ppe_violation ? '보호구 미착용' : '위험구역 진입');
-            showDetectedList(data.boxes);
-            createFullReport(data); // await 없이 백그라운드 실행
+            // 위험구역 진입 여부 확인
+          const hasDangerZone = (data.boxes || []).some(b => b.in_danger_zone);
+          const enrichedData = { ...data, danger_zone: hasDangerZone };
+
+          const alertMsg = [];
+          if (data.ppe_violation) alertMsg.push('보호구 미착용');
+          if (hasDangerZone) alertMsg.push('위험구역 진입');
+          showAlert(alertMsg.join(' + ') || '위험 감지');
+          showDetectedList(data.boxes);
+          createFullReport(enrichedData); // await 없이 백그라운드 실행
           }
         } else {
           cameraSection.classList.remove('camera-border-danger');
@@ -488,15 +543,21 @@
       const formData = new FormData();
       formData.append('video', blob, 'capture.jpg');
 
+      // 위험 타입 정보 전달 (위험구역 진입 포함)
+      const dangerTypes = [];
+      if (quickData && quickData.ppe_violation) dangerTypes.push('보호구 미착용');
+      if (quickData && quickData.danger_zone) dangerTypes.push('위험구역 출입 사고');
+      if (dangerTypes.length === 0) dangerTypes.push('위험 감지');
+      formData.append('danger_types', JSON.stringify(dangerTypes));
+
       try {
         const res  = await fetch(BASE_URL + '/analyze', { method:'POST', body:formData });
         const data = await res.json();
 
         if (data.report_id) {
           lastReportId = data.report_id;
-
-          // 헤더 업데이트
-          document.getElementById('resultHeader').textContent = '✅ 보고서 생성 완료!';
+          document.getElementById('resultHeader').textContent = '✅ 보고서 생성 완료! 이동 중...';
+          resultPanel.classList.add('show');
 
           // SMS 발송
           try {
@@ -505,15 +566,16 @@
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
                 report_id: data.report_id,
-                danger_type: (quickData && quickData.ppe_violation) ? '보호구 미착용' : '위험구역 진입',
+                danger_type: dangerTypes.join(', '),
                 user: localStorage.getItem('username') || 'admin'
               })
             });
           } catch(e) {}
 
-          // 보고서 보기 버튼 활성화
-          document.getElementById('resultViewBtn').style.display = 'block';
-          resultPanel.classList.add('show');
+          // 3초 후 보고서 상세로 자동 이동
+          setTimeout(() => {
+            window.location.href = '/reports/' + data.report_id;
+          }, 3000);
         }
       } catch (err) {
         console.error('보고서 생성 오류:', err);
