@@ -172,6 +172,14 @@
           </button>
         </div>
 
+        <!-- 줌 슬라이더 -->
+        <div id="zoomWrap" style="display:none; align-items:center; gap:10px; background:#fff; border:1px solid #e2e8f0; border-radius:10px; padding:10px 16px;">
+          <i class="ri-zoom-in-line" style="color:#64748b;"></i>
+          <span style="font-size:12px;color:#64748b;font-weight:600;">줌</span>
+          <input type="range" id="zoomInput" style="flex:1;" />
+          <span id="zoomValue" style="font-size:12px;font-weight:700;color:#1e293b;width:32px;">1.0x</span>
+        </div>
+
         <!-- 상태 카드 -->
         <div class="status-grid">
           <div class="status-card"><div class="status-title">현재 상태</div><div class="status-value" id="currentStatus">대기 중</div></div>
@@ -259,11 +267,33 @@
     // ── 카메라 연결 ──────────────────────────
     async function initCamera() {
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            width: { ideal: 1280 },
+            height: { ideal: 720 },
+            zoom: true  // 줌 지원 요청
+          }
+        });
         cameraVideo.srcObject = stream;
         cameraVideo.onloadedmetadata = () => {
           bboxCanvas.width  = cameraVideo.videoWidth;
           bboxCanvas.height = cameraVideo.videoHeight;
+
+          // 줌 지원 확인 후 슬라이더 표시
+          const track = stream.getVideoTracks()[0];
+          const capabilities = track.getCapabilities();
+          if (capabilities.zoom) {
+            document.getElementById('zoomWrap').style.display = 'flex';
+            const zoomInput = document.getElementById('zoomInput');
+            zoomInput.min   = capabilities.zoom.min;
+            zoomInput.max   = capabilities.zoom.max;
+            zoomInput.step  = capabilities.zoom.step || 0.1;
+            zoomInput.value = capabilities.zoom.min;
+            zoomInput.oninput = () => {
+              track.applyConstraints({ advanced: [{ zoom: parseFloat(zoomInput.value) }] });
+              document.getElementById('zoomValue').textContent = parseFloat(zoomInput.value).toFixed(1) + 'x';
+            };
+          }
         };
         cameraDot.className      = 'camera-dot';
         cameraStatus.textContent = 'LIVE';
