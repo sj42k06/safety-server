@@ -235,6 +235,18 @@ def generate_ai_report(structured, ppe_risks, collision_risks, falling_risks, tr
     if falling_detected or hook_detected: detected_cases.append("자재물 낙하/추락 위험")
     if trip_detected or material_detected: detected_cases.append("자재물로 인한 걸림/넘어짐")
 
+    # 웹캠에서 전달된 위험 타입 추가 (위험구역 진입 등)
+    extra_danger_types = []
+    danger_types_env = os.environ.get('DANGER_TYPES', '')
+    if danger_types_env:
+        import json as _json
+        try:
+            extra_danger_types = _json.loads(danger_types_env)
+        except: pass
+    for dt in extra_danger_types:
+        if dt not in detected_cases and dt not in ['보호구 미착용', '위험 감지']:
+            detected_cases.append(dt)
+
     prompt = f"""
 당신은 산업현장 안전관리 전문가입니다. 아래 AI 분석 결과를 바탕으로 안전 보고서를 작성해주세요.
 
