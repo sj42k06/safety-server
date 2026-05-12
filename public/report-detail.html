@@ -463,7 +463,7 @@ function saveAction() {
   if (selectedStatus === '조치완료') note = (g('resNote') && g('resNote').value) || '';
 
   fetch(BASE_URL + '/api/reports/' + reportId + '/action', {
-    method: 'POST',
+    method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ action_status: selectedStatus, action_note: note.trim() })
   })
