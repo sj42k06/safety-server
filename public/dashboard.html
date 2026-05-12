@@ -234,10 +234,37 @@
 
     async function loadData() {
       try {
-        const res  = await fetch(BASE_URL + '/api/reports');
+        // 통계 API 호출
+        const params = new URLSearchParams();
+        if (currentPeriodDays !== 'all') params.set('days', currentPeriodDays);
+        const statFrom = document.getElementById('statFrom').value;
+        const statTo   = document.getElementById('statTo').value;
+        if (statFrom) params.set('from', statFrom);
+        if (statTo)   params.set('to', statTo);
+        const grade  = document.getElementById('filterGrade').value;
+        const action = document.getElementById('filterAction').value;
+        const person = document.getElementById('filterPerson').value;
+        if (grade)  params.set('grade', grade);
+        if (action) params.set('action', action);
+        if (person) params.set('person', person);
+        if (activeTypes.size > 0) params.set('type', [...activeTypes][0]);
+
+        const res  = await fetch(BASE_URL + '/api/stats?' + params.toString());
         const data = await res.json();
-        allReports = data.reports || [];
-        renderStats(allReports);
+
+        // 통계 카드 업데이트
+        document.getElementById('totalCount').textContent      = data.total || 0;
+        document.getElementById('dangerCount').textContent     = data.danger || 0;
+        document.getElementById('unresolvedCount').textContent = data.unresolved || 0;
+        document.getElementById('resolvedCount').textContent   = data.resolved || 0;
+
+        // 차트 업데이트
+        renderChartsFromStats(data);
+
+        // 보고서 목록은 기존 API
+        const res2  = await fetch(BASE_URL + '/api/reports');
+        const data2 = await res2.json();
+        allReports = data2.reports || [];
         applyFilters();
       } catch (err) { console.error(err); }
     }
@@ -265,6 +292,7 @@
     }
 
     function applyFilters() {
+      loadData(); return;
       const from   = document.getElementById('statFrom').value;
       const to     = document.getElementById('statTo').value;
       const grade  = document.getElementById('filterGrade').value;
@@ -324,6 +352,54 @@
       document.querySelectorAll('.type-btn').forEach(b => b.classList.remove('active'));
       document.getElementById('filterResultBanner').classList.remove('show');
       applyFilters();
+    }
+
+    function renderChartsFromStats(data) {
+      const danger     = data.danger || 0;
+      const normal     = data.normal || 0;
+      const unresolved = data.unresolved || 0;
+      const resolved   = data.resolved || 0;
+      const byCase     = data.byCase || [];
+      const daily      = (data.daily || []).reverse();
+
+      if (gradeChart)  gradeChart.destroy();
+      if (actionChart) actionChart.destroy();
+      if (typeChart)   typeChart.destroy();
+      if (dailyChart)  dailyChart.destroy();
+
+      gradeChart = new Chart(document.getElementById('gradeChart'), {
+        type:'doughnut',
+        data:{ labels:['위험','정상'], datasets:[{ data:[danger,normal], backgroundColor:['#dc2626','#22c55e'], borderWidth:0 }] },
+        options:{ responsive:true, maintainAspectRatio:false, cutout:'65%', plugins:{ legend:{ position:'bottom' } } }
+      });
+
+      actionChart = new Chart(document.getElementById('actionChart'), {
+        type:'doughnut',
+        data:{ labels:['미조치','조치완료'], datasets:[{ data:[unresolved,resolved], backgroundColor:['#ef4444','#22c55e'], borderWidth:0 }] },
+        options:{ responsive:true, maintainAspectRatio:false, cutout:'65%', plugins:{ legend:{ position:'bottom' } } }
+      });
+
+      if (byCase.length > 0) {
+        typeChart = new Chart(document.getElementById('typeChart'), {
+          type:'bar',
+          data:{ labels: byCase.map(c=>c.case_name), datasets:[{ label:'발생 횟수', data: byCase.map(c=>c.count), backgroundColor:'#3b82f6', borderRadius:6 }] },
+          options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{ display:false } }, scales:{ y:{ beginAtZero:true } } }
+        });
+      }
+
+      if (daily.length > 0) {
+        dailyChart = new Chart(document.getElementById('dailyChart'), {
+          type:'bar',
+          data:{
+            labels: daily.map(d=>d.date),
+            datasets:[
+              { label:'위험', data: daily.map(d=>d.danger), backgroundColor:'#dc2626', borderRadius:4 },
+              { label:'정상', data: daily.map(d=>d.normal), backgroundColor:'#22c55e', borderRadius:4 }
+            ]
+          },
+          options:{ responsive:true, maintainAspectRatio:false, scales:{ x:{ stacked:true }, y:{ stacked:true, beginAtZero:true } } }
+        });
+      }
     }
 
     function renderStats(reports) {
