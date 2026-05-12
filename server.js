@@ -257,8 +257,23 @@ app.post("/analyze", upload.single("video"), async (req, res) => {
   const actionNote   = req.body.action_note   || '';
 
   try {
+    // Cloudinary에 이미지 먼저 업로드
+    let imageUrl = '';
+    try {
+      const uploadResult = await cloudinary.uploader.upload(newPath, { folder: 'safety_frames' });
+      imageUrl = uploadResult.secure_url;
+      console.log('✅ Cloudinary 업로드:', imageUrl);
+    } catch(e) { console.error('Cloudinary 오류:', e.message); }
+
     const result = await runPipeline(newPath, userId, dangerTypes);
     if (fs.existsSync(newPath)) fs.unlinkSync(newPath);
+
+    // 이미지 URL 업데이트
+    if (result.risk_id && imageUrl) {
+      try {
+        await db.query("UPDATE risk_logs SET image_path = ? WHERE risk_id = ?", [imageUrl, result.risk_id]);
+      } catch(e) { console.error('이미지 업데이트 오류:', e.message); }
+    }
 
     // 조치 상태 즉시 업데이트
     if (result.risk_id && actionStatus !== '미조치') {
