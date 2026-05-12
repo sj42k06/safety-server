@@ -200,9 +200,10 @@
 
             </div>
 
-            <button style="width:100%;padding:14px;background:#1e293b;color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;margin-top:4px;" onclick="createReport()">
+            <button id="createReportBtn" style="width:100%;padding:14px;background:#1e293b;color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;margin-top:4px;" onclick="createReport()">
               📋 보고서 생성하기
             </button>
+            <div class="creating-msg" id="creatingMsg"></div>
             <div class="creating-msg" id="creatingMsg">⏳ 보고서 생성 중... 잠시만 기다려주세요</div>
           </div>
         </div>
@@ -503,7 +504,8 @@
 
     // ── 보고서 생성 ───────────────────────
     function createReport() {
-      if (!selectedAction || isCreatingReport) return;
+      if (isCreatingReport) return;
+      if (!selectedAction) selectedAction = '즉각조치';
       isCreatingReport = true;
 
       var btn = document.getElementById('createReportBtn');
