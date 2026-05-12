@@ -67,6 +67,10 @@
     .field-input { width:100%; border:1px solid #e2e8f0; border-radius:8px; padding:9px 12px; font-size:13px; font-family:inherit; }
     .field-textarea { width:100%; border:1px solid #e2e8f0; border-radius:8px; padding:9px 12px; font-size:13px; font-family:inherit; resize:none; height:70px; }
 
+    /* 조치 섹션 */
+    .action-section { background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:14px; margin-bottom:12px; }
+    .action-section-title { font-size:13px; font-weight:700; color:#1e293b; margin-bottom:10px; }
+
     /* 보고서 생성 버튼 */
     .create-report-btn { width:100%; padding:14px; background:#1e293b; color:#fff; border:none; border-radius:12px; font-size:14px; font-weight:700; cursor:pointer; font-family:inherit; display:none; align-items:center; justify-content:center; gap:8px; }
     .create-report-btn.show { display:flex; }
@@ -175,60 +179,28 @@
           </div>
           <div class="danger-list" id="dangerList"></div>
 
-          <!-- 조치 상태 선택 -->
+          <!-- 조치 내용 입력 -->
           <div class="action-area">
-            <div class="action-area-title">📋 조치 상태를 선택하고 보고서를 생성하세요</div>
-            <div class="action-btns">
-              <button class="action-btn" id="btnImmediate" onclick="selectAction('즉각조치')">
-                <div class="action-btn-icon">🚨</div>
-                <div class="action-btn-label">즉각 조치</div>
-                <div class="action-btn-sub">현장 즉시 처리</div>
-              </button>
-              <button class="action-btn" id="btnDeferred" onclick="selectAction('사후조치')">
-                <div class="action-btn-icon">⏳</div>
-                <div class="action-btn-label">사후 조치</div>
-                <div class="action-btn-sub">추후 처리 예정</div>
-              </button>
-              <button class="action-btn" id="btnDone" onclick="selectAction('조치완료')">
-                <div class="action-btn-icon">✅</div>
-                <div class="action-btn-label">조치 완료</div>
-                <div class="action-btn-sub">처리 완료</div>
-              </button>
+            <div class="action-area-title">📋 조치 내용을 입력하고 보고서를 생성하세요</div>
+
+            <!-- 즉각조치 -->
+            <div class="action-section">
+              <div class="action-section-title">🚨 즉각 조치 내용</div>
+              <div class="field-label">현장에서 즉시 조치한 내용</div>
+              <textarea class="field-textarea" id="noteImmediate" placeholder="예) 작업자 안전모 착용 지시, 위험구역 즉시 퇴거 조치&#10;해당사항 없으면 비워두세요"></textarea>
             </div>
 
-            <!-- 즉각조치 필드 -->
-            <div class="action-fields" id="fieldsImmediate">
-              <div>
-                <div class="field-label">조치 내용 (선택)</div>
-                <textarea class="field-textarea" id="noteImmediate" placeholder="즉각 조치한 내용을 입력하세요..."></textarea>
-              </div>
+            <!-- 사후조치 -->
+            <div class="action-section">
+              <div class="action-section-title">⏳ 사후 조치 내용</div>
+              <div class="field-label">추후 처리할 내용</div>
+              <textarea class="field-textarea" id="noteDeferred" placeholder="예) 내일 오전 안전망 설치 예정&#10;해당사항 없으면 비워두세요"></textarea>
+              <div class="field-label" style="margin-top:8px;">담당자</div>
+              <input type="text" class="field-input" id="managerDeferred" placeholder="담당자 이름 (선택)" />
+
             </div>
 
-            <!-- 사후조치 필드 -->
-            <div class="action-fields" id="fieldsDeferred">
-              <div>
-                <div class="field-label">미조치 사유</div>
-                <textarea class="field-textarea" id="noteDeferred" placeholder="현재 조치하지 못한 사유를 입력하세요..."></textarea>
-              </div>
-              <div>
-                <div class="field-label">담당자</div>
-                <input type="text" class="field-input" id="managerDeferred" placeholder="담당자 이름 입력" />
-              </div>
-              <div>
-                <div class="field-label">처리 예정 시간</div>
-                <input type="datetime-local" class="field-input" id="scheduleDeferred" />
-              </div>
-            </div>
-
-            <!-- 조치완료 필드 -->
-            <div class="action-fields" id="fieldsDone">
-              <div>
-                <div class="field-label">조치 완료 내용 (선택)</div>
-                <textarea class="field-textarea" id="noteDone" placeholder="조치 완료 내용을 입력하세요..."></textarea>
-              </div>
-            </div>
-
-            <button class="create-report-btn" id="createReportBtn" onclick="createReport()">
+            <button class="create-report-btn show" id="createReportBtn" onclick="createReport()">
               <i class="ri-file-chart-line"></i> 보고서 생성하기
             </button>
             <div class="creating-msg" id="creatingMsg">⏳ 보고서 생성 중... 잠시만 기다려주세요</div>
@@ -537,20 +509,31 @@
       btn.disabled = true;
       msg.className = 'creating-msg show';
 
-      // 입력값 수집
-      var note = '';
-      if (selectedAction === '즉각조치') {
-        note = document.getElementById('noteImmediate').value.trim();
-      } else if (selectedAction === '사후조치') {
-        var reason   = document.getElementById('noteDeferred').value.trim();
-        var manager  = document.getElementById('managerDeferred').value.trim();
-        var schedule = document.getElementById('scheduleDeferred').value;
-        if (reason)   note += '미조치 사유: ' + reason + '\n';
-        if (manager)  note += '담당자: ' + manager + '\n';
-        if (schedule) note += '처리 예정: ' + new Date(schedule).toLocaleString('ko-KR');
-      } else if (selectedAction === '조치완료') {
-        note = document.getElementById('noteDone').value.trim();
+      // 즉각조치 + 사후조치 내용 수집
+      var noteImmediate = document.getElementById('noteImmediate').value.trim();
+      var noteDeferred  = document.getElementById('noteDeferred').value.trim();
+      var manager       = document.getElementById('managerDeferred').value.trim();
+      var schedule      = '';
+
+      // 조치 상태 결정
+      var actionStatus = '즉각조치';
+      if (noteDeferred || manager || schedule) {
+        actionStatus = '사후조치중';
       }
+      if (noteImmediate && !noteDeferred && !manager && !schedule) {
+        actionStatus = '조치완료';
+      }
+
+      // 노트 구성
+      var note = '';
+      if (noteImmediate) note += '[즉각조치] ' + noteImmediate + '
+';
+      if (noteDeferred)  note += '[사후조치] ' + noteDeferred + '
+';
+      if (manager)       note += '담당자: ' + manager + '
+';
+      if (schedule)      note += '처리 예정: ' + new Date(schedule).toLocaleString('ko-KR');
+      note = note.trim();
 
       var hasDangerZone = lastDangerData && (lastDangerData.boxes || []).some(function(b) { return b.in_danger_zone; });
       var dangerTypes = [];
@@ -573,7 +556,7 @@
         var formData = new FormData();
         formData.append('video', blob, 'capture.jpg');
         formData.append('danger_types',  JSON.stringify(dangerTypes));
-        formData.append('action_status', selectedAction);
+        formData.append('action_status', actionStatus);
         formData.append('action_note',   note);
 
         fetch(BASE_URL + '/analyze', { method:'POST', body:formData })
@@ -604,7 +587,11 @@
       stopBtn.style.display   = 'flex';
       dangerDetected = false;
       isCreatingReport = false;
-      selectedAction = null;
+      // 입력 초기화
+      var ni = document.getElementById('noteImmediate'); if(ni) ni.value='';
+      var nd = document.getElementById('noteDeferred'); if(nd) nd.value='';
+      var md = document.getElementById('managerDeferred'); if(md) md.value='';
+      var sd = document.getElementById('scheduleDeferred'); if(sd) sd.value='';
       lastDangerData = null;
 
       document.getElementById('dangerPanel').classList.remove('show');
