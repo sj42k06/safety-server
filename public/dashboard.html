@@ -139,7 +139,7 @@
             <button class="period-btn active" onclick="setPeriod(7,this)">7일</button>
             <button class="period-btn" onclick="setPeriod(30,this)">30일</button>
             <button class="period-btn" onclick="setPeriod(90,this)">90일</button>
-            <button class="period-btn" onclick="setPeriod(0,this)">전체</button>
+            <button class="period-btn" onclick="setPeriod('all',this)">전체</button>
             <input type="date" class="period-input" id="statFrom" onchange="applyCustomPeriod()" />
             <span style="font-size:12px;color:#94a3b8;">~</span>
             <input type="date" class="period-input" id="statTo" onchange="applyCustomPeriod()" />
@@ -236,7 +236,7 @@
       try {
         // 통계 API 호출
         const params = new URLSearchParams();
-        if (currentPeriodDays !== 'all') params.set('days', currentPeriodDays);
+        if (currentPeriodDays && currentPeriodDays !== 'all' && currentPeriodDays > 0) params.set('days', currentPeriodDays);
         const statFrom = document.getElementById('statFrom').value;
         const statTo   = document.getElementById('statTo').value;
         if (statFrom) params.set('from', statFrom);
@@ -261,11 +261,10 @@
         // 차트 업데이트
         renderChartsFromStats(data);
 
-        // 보고서 목록은 기존 API
+        // 보고서 목록
         const res2  = await fetch(BASE_URL + '/api/reports');
         const data2 = await res2.json();
         allReports = data2.reports || [];
-        applyFilters();
       } catch (err) { console.error(err); }
     }
 
@@ -275,24 +274,23 @@
       btn.classList.add('active');
       document.getElementById('statFrom').value = '';
       document.getElementById('statTo').value   = '';
-      applyFilters();
+      loadData();
     }
 
     function applyCustomPeriod() {
       document.querySelectorAll('.period-btn').forEach(b => b.classList.remove('active'));
       currentPeriodDays = -1;
-      applyFilters();
+      loadData();
     }
 
     function toggleType(btn) {
       const type = btn.dataset.type;
       if (activeTypes.has(type)) { activeTypes.delete(type); btn.classList.remove('active'); }
       else { activeTypes.add(type); btn.classList.add('active'); }
-      applyFilters();
+      loadData();
     }
 
     function applyFilters() {
-      loadData(); return;
       const from   = document.getElementById('statFrom').value;
       const to     = document.getElementById('statTo').value;
       const grade  = document.getElementById('filterGrade').value;
@@ -351,7 +349,7 @@
       activeTypes.clear();
       document.querySelectorAll('.type-btn').forEach(b => b.classList.remove('active'));
       document.getElementById('filterResultBanner').classList.remove('show');
-      applyFilters();
+      loadData();
     }
 
     function renderChartsFromStats(data) {
