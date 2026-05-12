@@ -142,14 +142,6 @@
 
       <div class="monitoring-wrap">
 
-        <!-- 카메라 선택 -->
-        <div style="margin-bottom:10px;display:flex;align-items:center;gap:10px;">
-          <label style="font-size:13px;font-weight:600;color:#475569;">카메라 선택</label>
-          <select id="cameraSelect" onchange="changeCamera()" style="flex:1;border:1px solid #e2e8f0;border-radius:8px;padding:8px 12px;font-size:13px;font-family:inherit;">
-            <option value="">카메라 목록 로딩 중...</option>
-          </select>
-        </div>
-
         <!-- 카메라 화면 -->
         <div class="camera-section" id="cameraSection">
           <video id="cameraVideo" autoplay muted playsinline></video>
@@ -271,60 +263,17 @@
     // ── 카메라 초기화 ──────────────────────
     var currentStream = null;
 
-    function loadCameraList() {
-      navigator.mediaDevices.enumerateDevices()
-        .then(function(devices) {
-          var select = document.getElementById('cameraSelect');
-          var videoDevices = devices.filter(function(d) { return d.kind === 'videoinput'; });
-          select.innerHTML = videoDevices.map(function(d, i) {
-            return '<option value="' + d.deviceId + '">' + (d.label || '카메라 ' + (i+1)) + '</option>';
-          }).join('');
-        });
-    }
 
-    function changeCamera() {
-      var deviceId = document.getElementById('cameraSelect').value;
-      if (currentStream) {
-        currentStream.getTracks().forEach(function(t) { t.stop(); });
-      }
-      var constraints = deviceId
-        ? { video: { deviceId: { exact: deviceId } } }
-        : { video: true };
-      navigator.mediaDevices.getUserMedia(constraints)
-        .then(function(stream) {
-          currentStream = stream;
-          cameraVideo.srcObject = stream;
-          cameraVideo.play();
-          bboxCanvas.width  = cameraVideo.videoWidth  || cameraSection.offsetWidth;
-          bboxCanvas.height = cameraVideo.videoHeight || cameraSection.offsetHeight;
-          drawFence();
-          cameraDot.className      = 'camera-dot';
-          cameraStatus.textContent = 'LIVE';
-          detectBtn.disabled       = false;
-        })
-        .catch(function() {
-          cameraStatus.textContent = '카메라 연결 실패';
-        });
-    }
 
     function initCamera() {
-      navigator.mediaDevices.getUserMedia({ video: true })
+      navigator.mediaDevices.getUserMedia({ video: { width:{ideal:1280}, height:{ideal:720} } })
         .then(function(stream) {
           currentStream = stream;
-          loadCameraList();
           cameraVideo.srcObject = stream;
-          cameraVideo.play();
-          cameraVideo.oncanplay = function() {
+          cameraVideo.onloadedmetadata = function() {
             bboxCanvas.width  = cameraVideo.videoWidth  || cameraSection.offsetWidth;
             bboxCanvas.height = cameraVideo.videoHeight || cameraSection.offsetHeight;
             drawFence();
-          };
-          cameraVideo.onplay = function() {
-            setTimeout(function() {
-              bboxCanvas.width  = cameraVideo.videoWidth  || cameraSection.offsetWidth;
-              bboxCanvas.height = cameraVideo.videoHeight || cameraSection.offsetHeight;
-              drawFence();
-            }, 300);
           };
           cameraDot.className      = 'camera-dot';
           cameraStatus.textContent = 'LIVE';
@@ -575,12 +524,9 @@
 
       // 노트 구성
       var note = '';
-      if (noteImmediate) note += '[즉각조치] ' + noteImmediate + '
-';
-      if (noteDeferred)  note += '[사후조치] ' + noteDeferred + '
-';
-      if (manager)       note += '담당자: ' + manager + '
-';
+      if (noteImmediate) note += '[즉각조치] ' + noteImmediate + String.fromCharCode(10);
+      if (noteDeferred)  note += '[사후조치] ' + noteDeferred + String.fromCharCode(10);
+      if (manager)       note += '담당자: ' + manager + String.fromCharCode(10);
       if (schedule)      note += '처리 예정: ' + new Date(schedule).toLocaleString('ko-KR');
       note = note.trim();
 
