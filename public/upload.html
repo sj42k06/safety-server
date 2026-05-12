@@ -200,8 +200,8 @@
 
             </div>
 
-            <button class="create-report-btn show" id="createReportBtn" onclick="createReport()">
-              <i class="ri-file-chart-line"></i> 보고서 생성하기
+            <button style="width:100%;padding:14px;background:#1e293b;color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;margin-top:4px;" onclick="createReport()">
+              📋 보고서 생성하기
             </button>
             <div class="creating-msg" id="creatingMsg">⏳ 보고서 생성 중... 잠시만 기다려주세요</div>
           </div>
@@ -476,6 +476,10 @@
       }
 
       panel.classList.add('show');
+
+      // 보고서 생성 버튼 표시
+      var btn = document.getElementById('createReportBtn');
+      if (btn) btn.className = 'create-report-btn show';
 
       // 스크롤 이동
       panel.scrollIntoView({ behavior:'smooth', block:'start' });
