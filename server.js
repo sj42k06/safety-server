@@ -521,30 +521,83 @@ app.post("/api/handover/approve", async (req, res) => {
 // ────────────────────────────────────────
 app.get("/api/stats", async (req, res) => {
   try {
-    const [[{ total }]] = await db.query("SELECT COUNT(*) AS total FROM reports");
+    const { from, to, grade, action, person, type, days } = req.query;
 
-    const [byCase] = await db.query(`
-      SELECT sr.case_name, COUNT(*) AS count
-      FROM reports r
-      JOIN risk_logs rl ON r.risk_id = rl.risk_id
-      JOIN safety_rules sr ON rl.rule_id = sr.rule_id
-      GROUP BY sr.case_name
-    `);
+    let where = ['1=1'];
+    let params = [];
 
-    const [[{ unresolved }]] = await db.query(`
-      SELECT COUNT(*) AS unresolved FROM reports r
-      JOIN risk_logs rl ON r.risk_id = rl.risk_id
-      WHERE rl.action_status = '미조치' OR rl.action_status IS NULL
-    `);
+    if (days && days !== 'all') {
+      where.push('r.created_at >= DATE_SUB(NOW(), INTERVAL ? DAY)');
+      params.push(parseInt(days));
+    }
+    if (from) { where.push('DATE(r.created_at) >= ?'); params.push(from); }
+    if (to)   { where.push('DATE(r.created_at) <= ?'); params.push(to); }
+    if (grade === 'RISK')   { where.push("rl.detection_status = 'RISK'"); }
+    if (grade === 'NORMAL') { where.push("rl.detection_status = 'NORMAL'"); }
+    if (action) { where.push('rl.action_status = ?'); params.push(action); }
+    if (person) { where.push('u.name = ?'); params.push(person); }
+    if (type)   { where.push('sr.case_name = ?'); params.push(type); }
 
-    const [[{ resolved }]] = await db.query(`
-      SELECT COUNT(*) AS resolved FROM reports r
-      JOIN risk_logs rl ON r.risk_id = rl.risk_id
-      WHERE rl.action_status = '조치완료'
-    `);
+    const whereStr = where.join(' AND ');
 
-    res.json({ success: true, total, byCase, unresolved, resolved });
+    const [[{ total }]] = await db.query(
+      `SELECT COUNT(*) AS total FROM reports r
+       LEFT JOIN risk_logs rl ON r.risk_id = rl.risk_id
+       LEFT JOIN users u ON r.created_by = u.user_id
+       LEFT JOIN safety_rules sr ON rl.rule_id = sr.rule_id
+       WHERE ${whereStr}`, params);
+
+    const [[{ danger }]] = await db.query(
+      `SELECT COUNT(*) AS danger FROM reports r
+       LEFT JOIN risk_logs rl ON r.risk_id = rl.risk_id
+       LEFT JOIN users u ON r.created_by = u.user_id
+       LEFT JOIN safety_rules sr ON rl.rule_id = sr.rule_id
+       WHERE rl.detection_status = 'RISK' AND ${whereStr}`, params);
+
+    const [[{ normal }]] = await db.query(
+      `SELECT COUNT(*) AS normal FROM reports r
+       LEFT JOIN risk_logs rl ON r.risk_id = rl.risk_id
+       LEFT JOIN users u ON r.created_by = u.user_id
+       LEFT JOIN safety_rules sr ON rl.rule_id = sr.rule_id
+       WHERE (rl.detection_status = 'NORMAL' OR rl.detection_status IS NULL) AND ${whereStr}`, params);
+
+    const [[{ unresolved }]] = await db.query(
+      `SELECT COUNT(*) AS unresolved FROM reports r
+       LEFT JOIN risk_logs rl ON r.risk_id = rl.risk_id
+       LEFT JOIN users u ON r.created_by = u.user_id
+       LEFT JOIN safety_rules sr ON rl.rule_id = sr.rule_id
+       WHERE (rl.action_status = '미조치' OR rl.action_status IS NULL) AND rl.detection_status = 'RISK' AND ${whereStr}`, params);
+
+    const [[{ resolved }]] = await db.query(
+      `SELECT COUNT(*) AS resolved FROM reports r
+       LEFT JOIN risk_logs rl ON r.risk_id = rl.risk_id
+       LEFT JOIN users u ON r.created_by = u.user_id
+       LEFT JOIN safety_rules sr ON rl.rule_id = sr.rule_id
+       WHERE rl.action_status = '조치완료' AND ${whereStr}`, params);
+
+    const [byCase] = await db.query(
+      `SELECT sr.case_name, COUNT(*) AS count
+       FROM reports r
+       JOIN risk_logs rl ON r.risk_id = rl.risk_id
+       JOIN safety_rules sr ON rl.rule_id = sr.rule_id
+       LEFT JOIN users u ON r.created_by = u.user_id
+       WHERE rl.detection_status = 'RISK' AND ${whereStr}
+       GROUP BY sr.case_name ORDER BY count DESC`, params);
+
+    const [daily] = await db.query(
+      `SELECT DATE(r.created_at) AS date,
+        SUM(CASE WHEN rl.detection_status='RISK' THEN 1 ELSE 0 END) AS danger,
+        SUM(CASE WHEN rl.detection_status='NORMAL' OR rl.detection_status IS NULL THEN 1 ELSE 0 END) AS normal
+       FROM reports r
+       LEFT JOIN risk_logs rl ON r.risk_id = rl.risk_id
+       LEFT JOIN users u ON r.created_by = u.user_id
+       LEFT JOIN safety_rules sr ON rl.rule_id = sr.rule_id
+       WHERE ${whereStr}
+       GROUP BY DATE(r.created_at) ORDER BY date DESC LIMIT 30`, params);
+
+    res.json({ success:true, total, danger, normal, unresolved, resolved, byCase, daily });
   } catch (err) {
+    console.error('통계 오류:', err.message);
     res.status(500).json({ error: "통계 조회 실패" });
   }
 });
