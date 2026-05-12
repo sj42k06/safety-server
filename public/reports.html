@@ -206,6 +206,10 @@
         <button class="btn-delete-selected" id="btnDeleteSelected" onclick="showDeleteSelectedModal()">
           <i class="ri-delete-bin-line"></i> 선택 삭제 (<span id="selectedCount">0</span>)
         </button>
+        <!-- 선택 모드 버튼 -->
+        <button class="btn-delete-all" id="btnSelectMode" onclick="enterSelectMode()" style="background:#f1f5f9;color:#475569;border:1px solid #e2e8f0;">
+          <i class="ri-checkbox-multiple-line"></i> 선택
+        </button>
         <!-- 전체 삭제 버튼 -->
         <button class="btn-delete-all" id="btnDeleteAll" onclick="showDeleteAllModal()">
           <i class="ri-delete-bin-2-line"></i> 전체 삭제
@@ -276,6 +280,8 @@
   </div>
 
   <script>
+    // 인수인계 확인
+    if (!localStorage.getItem('handover_done') && localStorage.getItem('username')) { window.location.href = '/handover'; }
     const BASE_URL = 'https://safety-server-oqza.onrender.com';
     let allReports    = [];
     let currentFilter = '전체';
