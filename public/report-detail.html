@@ -417,12 +417,20 @@ function initAction(status, note) {
   });
 
   if (status === '즉각조치')   { if (g('btnUnresolved')) g('btnUnresolved').classList.add('active'); if (g('panelUnresolved')) g('panelUnresolved').classList.add('visible'); }
-  if (status === '사후조치')   { if (g('btnInprogress')) g('btnInprogress').classList.add('active'); if (g('panelInprogress')) g('panelInprogress').classList.add('visible'); }
+  if (status === '사후조치' || status === '사후조치중')   { if (g('btnInprogress')) g('btnInprogress').classList.add('active'); if (g('panelInprogress')) g('panelInprogress').classList.add('visible'); }
   if (status === '조치완료') { if (g('btnResolved'))   g('btnResolved').classList.add('active');   if (g('panelResolved'))   g('panelResolved').classList.add('visible'); }
 
+  // 웹캠에서 입력한 노트 파싱해서 채우기
   if (note) {
-    if (g('unresNote'))  g('unresNote').value  = note;
-    if (g('inprogNote')) g('inprogNote').value = note;
+    var immediateNote = '';
+    var deferredNote  = '';
+    note.split('\n').forEach(function(line) {
+      if (line.startsWith('[즉각조치]')) immediateNote += line.replace('[즉각조치] ','') + '\n';
+      else if (line.startsWith('[사후조치]')) deferredNote += line.replace('[사후조치] ','') + '\n';
+      else deferredNote += line + '\n';
+    });
+    if (g('unresNote'))  g('unresNote').value  = immediateNote.trim() || note;
+    if (g('inprogNote')) g('inprogNote').value = deferredNote.trim() || note;
     if (g('resNote'))    g('resNote').value    = note;
   }
 }
@@ -436,7 +444,7 @@ function selectStatus(status) {
     var p = g(id); if (p) p.classList.remove('visible');
   });
   if (status === '즉각조치')   { if (g('btnUnresolved')) g('btnUnresolved').classList.add('active'); if (g('panelUnresolved')) g('panelUnresolved').classList.add('visible'); }
-  if (status === '사후조치')   { if (g('btnInprogress')) g('btnInprogress').classList.add('active'); if (g('panelInprogress')) g('panelInprogress').classList.add('visible'); }
+  if (status === '사후조치' || status === '사후조치중') { if (g('btnInprogress')) g('btnInprogress').classList.add('active'); if (g('panelInprogress')) g('panelInprogress').classList.add('visible'); }
   if (status === '조치완료') { if (g('btnResolved'))   g('btnResolved').classList.add('active');   if (g('panelResolved'))   g('panelResolved').classList.add('visible'); }
 }
 
