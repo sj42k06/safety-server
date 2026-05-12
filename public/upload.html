@@ -594,8 +594,8 @@
       lastDangerData = null;
 
       document.getElementById('dangerPanel').classList.remove('show');
-      document.getElementById('createReportBtn').className = 'create-report-btn';
-      document.getElementById('creatingMsg').className = 'creating-msg';
+      var crb = document.getElementById('createReportBtn'); if(crb) crb.className = 'create-report-btn';
+      var cm = document.getElementById('creatingMsg'); if(cm) cm.className = 'creating-msg';
 
       safeSet('currentStatus', '감지 중...');
       safeClass('currentStatus', 'status-value');
