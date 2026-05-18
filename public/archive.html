@@ -222,7 +222,7 @@
         if (from && r.report_date && r.report_date.slice(0,10) < from) return false;
         if (to   && r.report_date && r.report_date.slice(0,10) > to)   return false;
         // 기간 버튼 필터
-        if (currentDays !== 'all') {
+        if (currentDays && currentDays !== 'all' && !isNaN(parseInt(currentDays))) {
           const cutoff = new Date();
           cutoff.setDate(cutoff.getDate() - parseInt(currentDays));
           const reportDate = new Date(r.report_date);
