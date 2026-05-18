@@ -25,18 +25,12 @@ def analyze_ppe(structured_frames):
             helmet_status = "HELMET" if (has_helmet and not no_helmet) else "NO_HELMET"
             vest_status = "VEST" if (has_vest and not no_vest) else "NO_VEST"
             
-            # 위험도 산정
-            risk = "LOW"
-            if helmet_status == "NO_HELMET": risk = "HIGH"
-            elif vest_status == "NO_VEST": risk = "MEDIUM"
-
             frame_result["workers"].append({
                 "bbox": person["bbox"], 
                 "fx": person["fx"], 
                 "fy": person["fy"],
                 "helmet": helmet_status, 
                 "vest": vest_status, 
-                "risk": risk
             })
         results.append(frame_result)
     return results

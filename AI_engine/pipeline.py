@@ -45,13 +45,15 @@ from structure_ppe import structure_data
 print("structure_ppe 완료", file=sys.stderr)
 from logic_ppe import analyze_ppe
 print("logic_ppe 완료", file=sys.stderr)
+from logic_crowd import analyze_crowd_density
+print("logic_crowd 완료", file=sys.stderr)
 from logic_collision import analyze_collision
 print("logic_collision 완료", file=sys.stderr)
 from logic_falling import analyze_falling
 print("logic_falling 완료", file=sys.stderr)
 from logic_trip import analyze_trip
 print("logic_trip 완료", file=sys.stderr)
-from safety_engine import integrate_analysis
+from safety_engine import calculate_precise_risk, get_risk_level, integrate_analysis
 print("safety_engine 완료", file=sys.stderr)
 
 cloudinary.config(
@@ -230,10 +232,10 @@ def generate_ai_report(structured, ppe_risks, collision_risks, falling_risks, tr
 
     # 감지된 사고 케이스 목록
     detected_cases = []
-    if helmet_violated or vest_violated: detected_cases.append("보호구 미착용")
-    if machine_detected or collision_detected: detected_cases.append("중장비 접근 사고")
-    if falling_detected or hook_detected: detected_cases.append("자재물 낙하/추락 위험")
-    if trip_detected or material_detected: detected_cases.append("자재물로 인한 걸림/넘어짐")
+    if helmet_violated or vest_violated: detected_cases.append("안전복 미착용")
+    if machine_detected or collision_detected: detected_cases.append("중장비 작업 반경 내 인원 접근 감지")
+    if falling_detected or hook_detected: detected_cases.append("출입 금지 구역 또는 낙하물 위험 구역 무단 진입 감지")
+    if trip_detected or material_detected: detected_cases.append("작업 통로 및 비상 통로 자재물 적치 감지")
 
     # 웹캠에서 전달된 위험 타입 추가 (위험구역 진입 등)
     extra_danger_types = []
@@ -421,52 +423,74 @@ def run_pipeline(video_path, user_id=1):
             if image_url:
                 break  # 대표 이미지 1장만
 
-        # ── 감지된 사고 케이스에 맞는 rule_id 찾기 ──
-        rule_id = None
-        if ai_report['detected_cases']:
-            rule_id = get_rule_id(cursor, ai_report['detected_cases'][0])
+        # ── 위험도 계산 (safety_engine 공식) ──
+        detected_cases = ai_report['detected_cases']
 
-        # ── detection_status 결정 ──
-        detection_status = 'RISK' if ai_report['risk_grade'] != '정상' else 'NORMAL'
+        # 케이스별 rule_id 및 위험도 저장
+        case_rule_map = {
+            '안전복 미착용': {'rule_id': 3, 'possibility': 4, 'severity': 3},
+            '출입 금지 구역 또는 낙하물 위험 구역 무단 진입 감지': {'rule_id': 1, 'possibility': 3, 'severity': 5},
+            '중장비 작업 반경 내 인원 접근 감지': {'rule_id': 5, 'possibility': 3, 'severity': 5},
+            '작업 통로 및 비상 통로 자재물 적치 감지': {'rule_id': 2, 'possibility': 4, 'severity': 2},
+            '작업자 밀집 위험 감지': {'rule_id': 4, 'possibility': 3, 'severity': 2},
+        }
 
-        # ── 보고서 내용 JSON으로 구성 ──
-        report_content = json.dumps({
-            "risk_grade": ai_report['risk_grade'],
-            "risk_score": ai_report['risk_score'],
-            "detected_cases": ai_report['detected_cases'],
-            "law_references": ai_report['law_references'],
-            "recommendations": ai_report['recommendations'],
-            "summary_eval": ai_report['summary_eval'],
-        }, ensure_ascii=False)
+        # 현재 세션 찾기
+        now = datetime.now()
+        hour = now.hour
+        if 6 <= hour < 14: shift_type = '오전'
+        elif 14 <= hour < 22: shift_type = '오후'
+        else: shift_type = '야간'
 
-        # ── 1. risk_logs 저장 ──
         cursor.execute("""
-            INSERT INTO risk_logs
-              (rule_id, detected_by, detection_status, description, image_path, action_status, detected_at)
-            VALUES (%s, %s, %s, %s, %s, %s, %s)
-        """, (
-            rule_id,
-            user_id,
-            detection_status,
-            ai_report['summary_eval'],
-            image_url,
-            '미조치' if detection_status == 'RISK' else None,
-            datetime.now()
-        ))
-        risk_id = cursor.lastrowid
+            SELECT session_id FROM monitoring_sessions
+            WHERE session_date = %s AND shift_type = %s
+            ORDER BY session_id DESC LIMIT 1
+        """, (now.date(), shift_type))
+        session_row = cursor.fetchone()
+        session_id = session_row['session_id'] if session_row else None
 
-        # ── 2. reports 저장 ──
-        cursor.execute("""
-            INSERT INTO reports (risk_id, report_title, report_date, created_by, report_content)
-            VALUES (%s, %s, %s, %s, %s)
-        """, (
-            risk_id,
-            ai_report['report_title'],
-            datetime.now().date(),
-            user_id,
-            report_content
-        ))
-        report_id = cursor.lastrowid
+        last_risk_id = None
+        for case_name in detected_cases:
+            case_info = case_rule_map.get(case_name, {'rule_id': 3, 'possibility': 4, 'severity': 3})
+            risk_percent = calculate_precise_risk(case_info['possibility'], case_info['severity'])
+            risk_level = get_risk_level(risk_percent)
+            risk_level_kr = {'EMERGENCY': '즉각조치', 'WARNING': '위험', 'CAUTION': '주의'}.get(risk_level, '주의')
+
+            cursor.execute("""
+                INSERT INTO risk_events
+                (session_id, rule_id, detected_time, risk_case, accident_type,
+                 likelihood_score, severity_score, risk_score, risk_percent, risk_level,
+                 description, image_path, bbox_image_path, created_at)
+                SELECT %s, rule_id, %s, case_name, accident_type,
+                       %s, %s, %s, %s, %s,
+                       %s, %s, %s, %s
+                FROM safety_rules WHERE rule_id = %s
+            """, (
+                session_id, now,
+                case_info['possibility'], case_info['severity'],
+                int(case_info['possibility'] * case_info['severity']),
+                risk_percent, risk_level_kr,
+                ai_report['summary_eval'], image_url, image_url, now,
+                case_info['rule_id']
+            ))
+            last_risk_id = cursor.lastrowid
+
+            # action_logs 저장
+            cursor.execute("""
+                INSERT INTO action_logs (risk_id, action_status, action_manager_id, created_at)
+                VALUES (%s, '미조치', %s, %s)
+            """, (last_risk_id, user_id, now))
+
+        # 세션 업데이트
+        if session_id and detected_cases:
+            cursor.execute("""
+                UPDATE monitoring_sessions
+                SET risk_event_count = risk_event_count + %s, session_status = '위험발생'
+                WHERE session_id = %s
+            """, (len(detected_cases), session_id))
+
+        report_id = last_risk_id or 0
 
         conn.commit()
         print(json.dumps({"status": "success", "report_id": report_id}, ensure_ascii=False))
