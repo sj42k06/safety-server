@@ -96,9 +96,52 @@
     .nav-sub a.active { background:rgba(59,130,246,.15); color:#60a5fa; font-weight:600; }
 
     :fullscreen .camera-section { border-radius:0; height:100vh; }
+
+    /* 알람 팝업 */
+    .alarm-popup { display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.6); z-index:9999; align-items:center; justify-content:center; }
+    .alarm-popup.show { display:flex; }
+    .alarm-popup-inner { background:#fff; border-radius:16px; padding:24px; max-width:420px; width:90%; box-shadow:0 20px 60px rgba(0,0,0,0.3); }
+    .alarm-popup-title { font-size:20px; font-weight:800; color:#dc2626; margin-bottom:16px; display:flex; align-items:center; gap:8px; }
+    .alarm-popup-item { background:#fef2f2; border:1px solid #fecaca; border-radius:10px; padding:12px; margin-bottom:10px; }
+    .alarm-popup-item-name { font-size:14px; font-weight:700; color:#1e293b; margin-bottom:6px; }
+    .alarm-popup-item-detail { font-size:12px; color:#64748b; }
+    .alarm-popup-item-risk { display:inline-block; padding:3px 10px; border-radius:20px; font-size:12px; font-weight:700; margin-top:6px; }
+    .alarm-popup-item-risk.emergency { background:#fee2e2; color:#dc2626; }
+    .alarm-popup-item-risk.warning { background:#fef3c7; color:#d97706; }
+    .alarm-popup-item-risk.caution { background:#dcfce7; color:#16a34a; }
+    .alarm-popup-action { font-size:13px; color:#475569; margin-top:8px; padding:8px; background:#f8fafc; border-radius:8px; }
+    .alarm-confirm-btn { width:100%; padding:12px; background:#dc2626; color:#fff; border:none; border-radius:10px; font-size:14px; font-weight:700; cursor:pointer; font-family:inherit; margin-top:16px; }
+
+    /* 알람 목록 패널 */
+    .alarm-panel { background:#fff; border:1px solid #e2e8f0; border-radius:14px; padding:16px; margin-top:12px; }
+    .alarm-panel-title { font-size:14px; font-weight:700; color:#1e293b; margin-bottom:12px; display:flex; align-items:center; gap:6px; }
+    .alarm-empty { text-align:center; color:#94a3b8; font-size:13px; padding:20px; }
+    .alarm-item { border:1px solid #e2e8f0; border-radius:10px; padding:10px 12px; margin-bottom:8px; cursor:pointer; transition:all .2s; }
+    .alarm-item:hover { background:#f8fafc; }
+    .alarm-item-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:4px; }
+    .alarm-item-time { font-size:12px; color:#94a3b8; font-weight:600; }
+    .alarm-item-name { font-size:13px; font-weight:700; color:#1e293b; }
+    .alarm-item-badge { padding:2px 8px; border-radius:10px; font-size:11px; font-weight:700; }
+    .alarm-item-badge.emergency { background:#fee2e2; color:#dc2626; }
+    .alarm-item-badge.warning { background:#fef3c7; color:#d97706; }
+    .alarm-item-badge.caution { background:#dcfce7; color:#16a34a; }
+
+    /* 카메라 슬라이드 버튼 */
+    .slide-btn { padding:8px 16px; border:1px solid #e2e8f0; border-radius:8px; background:#f8fafc; color:#64748b; font-size:12px; font-weight:600; cursor:pointer; font-family:inherit; transition:all .2s; }
+    .slide-btn.active { background:#1e293b; color:#fff; border-color:#1e293b; }
+    .slide-mode-bar { display:flex; align-items:center; gap:8px; margin-bottom:8px; }
   </style>
 </head>
 <body>
+  <!-- 알람 팝업 -->
+  <div class="alarm-popup" id="alarmPopup">
+    <div class="alarm-popup-inner">
+      <div class="alarm-popup-title">🚨 위험 감지!</div>
+      <div id="alarmPopupContent"></div>
+      <button class="alarm-confirm-btn" onclick="closeAlarmPopup()">✅ 확인</button>
+    </div>
+  </div>
+
   <aside>
     <div class="logo">
       <img src="https://public.readdy.ai/ai/img_res/f3ccc83c-cf23-4ebf-b376-21d351a806b7.png" alt="로고" />
@@ -116,7 +159,7 @@
         </div>
       </div>
       <a href="/upload" class="active"><i class="ri-camera-line"></i> 현장 모니터링</a>
-      <a href="/video-upload"><i class="ri-video-upload-line"></i> 영상 분석</a>
+      
       <a href="/reports"><i class="ri-file-chart-line"></i> AI 보고서</a>
     </nav>
     <div class="user-section">
@@ -137,7 +180,7 @@
       <h2>현장 모니터링</h2>
       <p class="page-desc">
         웹캠으로 현장을 실시간 모니터링합니다. 화면 왼쪽은 🟢정상구역, 오른쪽은 🔴위험구역입니다.<br/>
-        보호구 미착용 또는 위험구역 진입 감지 시 SMS 알림 발송 후 조치 상태 선택 및 보고서를 생성합니다.
+        위험 감지 시 즉시 알람 팝업이 표시됩니다. 감지된 알람은 오른쪽 패널에서 확인할 수 있습니다.
       </p>
 
       <div class="monitoring-wrap">
@@ -157,6 +200,21 @@
           </button>
         </div>
 
+
+        <!-- 카메라 슬라이드 모드 -->
+        <div class="slide-mode-bar">
+          <button class="slide-btn" id="webcamBtn" onclick="switchToWebcam()">📷 웹캠</button>
+          <button class="slide-btn" id="slideBtn" onclick="switchToSlide()">🏗️ 슬라이드</button>
+          <span style="font-size:12px;color:#94a3b8;" id="slideModeStatus"></span>
+        </div>
+
+        <!-- 알람 목록 패널 -->
+        <div class="alarm-panel">
+          <div class="alarm-panel-title"><i class="ri-alarm-warning-line"></i> 오늘 알람 목록 <span id="alarmCount" style="background:#dc2626;color:#fff;border-radius:10px;padding:1px 8px;font-size:11px;margin-left:4px;">0</span></div>
+          <div id="alarmList"><div class="alarm-empty">감지된 알람이 없습니다</div></div>
+        </div>
+
+
         <!-- 줌 슬라이더 -->
         <div id="zoomWrap" style="display:none;align-items:center;gap:10px;background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:10px 16px;">
           <i class="ri-zoom-in-line" style="color:#64748b;"></i>
@@ -175,7 +233,7 @@
         <!-- 위험 감지 패널 (감지 후 표시) -->
         <div class="danger-panel" id="dangerPanel">
           <div class="danger-panel-header">
-            🔴 위험 상황 감지됨 — SMS 알림 발송 완료
+            🔴 위험 감지!
           </div>
           <div class="danger-list" id="dangerList"></div>
 
@@ -259,8 +317,9 @@
     var LABEL_KR = {
       'hardhat':'안전모 착용','no-hardhat':'안전모 미착용',
       'safety vest':'조끼 착용','no-safety vest':'조끼 미착용',
-      'person':'작업자','machinery':'중장비','vehicle':'차량',
-      'hook':'후크','material':'자재'
+      'person':'작업자','excavator':'굴착기','forklift':'지게차',
+      'machinery':'중장비','vehicle':'차량','hook':'후크','material':'자재',
+      'box':'박스','pallet':'팔레트','danger_zone':'위험구역'
     };
 
     // ── 카메라 초기화 ──────────────────────
@@ -409,11 +468,7 @@
             if (data.danger && !dangerDetected) {
               dangerDetected = true;
 
-              // 감지 루프 중지
-              intervalId = null;
-              detectBtn.style.display = 'flex';
-              stopBtn.style.display   = 'none';
-
+              // 분석 계속 진행 (멈추지 않음)
               cameraSection.classList.add('camera-border-danger');
               cameraDot.classList.add('danger');
               safeSet('currentStatus', '🔴 위험 감지!');
@@ -421,21 +476,17 @@
 
               lastDangerData = data;
 
-              // SMS 발송 (백그라운드)
+              // 위험 요소 파악
               var hasDangerZone = (data.boxes || []).some(function(b) { return b.in_danger_zone; });
               var dangerTypes = [];
-              if (data.ppe_violation) dangerTypes.push('보호구 미착용');
-              if (hasDangerZone)      dangerTypes.push('위험구역 진입');
+              if (data.ppe_violation) dangerTypes.push('안전복 미착용');
+              if (hasDangerZone)      dangerTypes.push('위험구역 출입');
               var dangerMsg = dangerTypes.join(' + ') || '위험 감지';
 
-              fetch(BASE_URL + '/api/danger-sms', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ report_id: null, danger_type: dangerMsg, user: user })
-              }).catch(function(){});
-
-              // 위험 패널 표시
-              showDangerPanel(data.boxes || [], dangerMsg);
+              // 알람 팝업 표시 (SMS 없음)
+              showAlarmPopup(data.boxes || [], dangerMsg);
+              // 알람 목록에 추가
+              addAlarmToList(dangerMsg, data.boxes || []);
 
             } else if (!data.danger) {
               cameraSection.classList.remove('camera-border-danger');
@@ -456,7 +507,7 @@
       var list   = document.getElementById('dangerList');
       var header = panel.querySelector('.danger-panel-header');
 
-      if (header) header.textContent = '🔴 위험 감지: ' + dangerMsg + ' — SMS 알림 발송됨';
+      if (header) header.textContent = '🔴 위험 감지: ' + dangerMsg;
 
       var dangerBoxes = (boxes || []).filter(function(b) {
         return b.in_danger_zone || b.label === 'no-hardhat' || b.label === 'no-safety vest';
@@ -617,7 +668,7 @@
       analyzeQuick();
       setTimeout(function() {
         if (intervalId) loopAnalyze();
-      }, 1500);
+      }, 3000);
     }
 
     // ── 감지 중지 ─────────────────────────
@@ -636,6 +687,124 @@
       cameraDot.classList.remove('danger');
       drawFence();
     }
+
+
+    // ── 알람 팝업 ─────────────────────────
+    var alarmList = [];
+    var alarmCount = 0;
+
+    var RISK_INFO = {
+      '안전복 미착용':   { percent: 48, level: 'warning', grade: '위험', action: '안전모/조끼/안전화 착용 여부 확인 후 즉시 착용 지시' },
+      '위험구역 출입':   { percent: 60, level: 'emergency', grade: '즉각조치', action: '즉시 위험구역 이탈 지시 및 출입 통제 강화' },
+      '중장비 접근':     { percent: 60, level: 'emergency', grade: '즉각조치', action: '중장비 작업 반경 내 인원 즉시 대피' },
+      '자재물 적치':     { percent: 32, level: 'warning', grade: '위험', action: '통로 내 자재물 즉시 제거 및 이동 경로 확보' },
+      '작업자 밀집':     { percent: 24, level: 'caution', grade: '주의', action: '작업자 분산 배치 및 작업 동선 조정' },
+      '위험 감지':       { percent: 48, level: 'warning', grade: '위험', action: '현장 상황 즉시 확인 및 조치' },
+    };
+
+    function showAlarmPopup(boxes, dangerMsg) {
+      var popup = document.getElementById('alarmPopup');
+      var content = document.getElementById('alarmPopupContent');
+      var types = dangerMsg.split(' + ');
+      var html = '';
+      types.forEach(function(type) {
+        var info = RISK_INFO[type] || RISK_INFO['위험 감지'];
+        html += '<div class="alarm-popup-item">';
+        html += '<div class="alarm-popup-item-name">⚠️ ' + type + '</div>';
+        html += '<div class="alarm-popup-item-detail">감지 시간: ' + new Date().toLocaleTimeString('ko-KR') + '</div>';
+        html += '<div class="alarm-popup-item-risk ' + info.level + '">' + info.percent + '% · ' + info.grade + '</div>';
+        html += '<div class="alarm-popup-action">📋 즉각 조치: ' + info.action + '</div>';
+        html += '</div>';
+      });
+      content.innerHTML = html;
+      popup.classList.add('show');
+    }
+
+    function closeAlarmPopup() {
+      document.getElementById('alarmPopup').classList.remove('show');
+    }
+
+    function addAlarmToList(dangerMsg, boxes) {
+      alarmCount++;
+      document.getElementById('alarmCount').textContent = alarmCount;
+      var types = dangerMsg.split(' + ');
+      var time = new Date().toLocaleTimeString('ko-KR');
+      types.forEach(function(type) {
+        var info = RISK_INFO[type] || RISK_INFO['위험 감지'];
+        alarmList.unshift({ type: type, time: time, info: info });
+      });
+      renderAlarmList();
+    }
+
+    function renderAlarmList() {
+      var list = document.getElementById('alarmList');
+      if (alarmList.length === 0) {
+        list.innerHTML = '<div class="alarm-empty">감지된 알람이 없습니다</div>';
+        return;
+      }
+      list.innerHTML = alarmList.map(function(a) {
+        return '<div class="alarm-item">' +
+          '<div class="alarm-item-header">' +
+          '<span class="alarm-item-time">' + a.time + '</span>' +
+          '<span class="alarm-item-badge ' + a.info.level + '">' + a.info.grade + '</span>' +
+          '</div>' +
+          '<div class="alarm-item-name">' + a.type + '</div>' +
+          '<div style="font-size:11px;color:#94a3b8;margin-top:4px;">' + a.info.percent + '% · ' + a.info.action + '</div>' +
+          '</div>';
+      }).join('');
+    }
+
+    // ── 카메라 슬라이드 ─────────────────────────
+    var slideMode = false;
+    var slideImages = [];
+    var slideIndex = 0;
+    var slideTimer = null;
+
+    function switchToWebcam() {
+      slideMode = false;
+      if (slideTimer) { clearInterval(slideTimer); slideTimer = null; }
+      document.getElementById('webcamBtn').classList.add('active');
+      document.getElementById('slideBtn').classList.remove('active');
+      document.getElementById('slideModeStatus').textContent = '';
+      document.getElementById('cameraVideo').style.display = 'block';
+    }
+
+    function switchToSlide() {
+      if (slideImages.length === 0) {
+        alert('슬라이드 이미지가 없습니다. /public/slides/ 폴더에 이미지를 추가해주세요.');
+        return;
+      }
+      slideMode = true;
+      document.getElementById('webcamBtn').classList.remove('active');
+      document.getElementById('slideBtn').classList.add('active');
+      document.getElementById('cameraVideo').style.display = 'none';
+      document.getElementById('slideModeStatus').textContent = '슬라이드 모드';
+      slideIndex = 0;
+      showSlide();
+      slideTimer = setInterval(function() {
+        slideIndex = (slideIndex + 1) % slideImages.length;
+        showSlide();
+      }, 5000);
+    }
+
+    function showSlide() {
+      var canvas = document.getElementById('bboxCanvas');
+      var ctx = canvas.getContext('2d');
+      var img = new Image();
+      img.onload = function() {
+        canvas.width = img.width;
+        canvas.height = img.height;
+        ctx.drawImage(img, 0, 0);
+      };
+      img.src = slideImages[slideIndex];
+      document.getElementById('slideModeStatus').textContent = '슬라이드 모드 (' + (slideIndex+1) + '/' + slideImages.length + ')';
+    }
+
+    // 슬라이드 이미지 로드
+    fetch(BASE_URL + '/api/slides')
+      .then(function(r) { return r.json(); })
+      .then(function(data) { if (data.images) slideImages = data.images; })
+      .catch(function(){});
 
     function toggleNav() {
       var sub   = document.getElementById('navSub');

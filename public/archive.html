@@ -23,6 +23,8 @@
     .filter-bar label { font-size:12px; color:#64748b; font-weight:600; }
     .filter-select, .filter-input { padding:8px 12px; border:1px solid #e2e8f0; border-radius:8px; font-size:13px; color:#1e293b; background:#f8fafc; font-family:inherit; outline:none; }
     .filter-reset { padding:8px 14px; border:1px solid #e2e8f0; border-radius:8px; background:#fff; color:#64748b; font-size:12px; font-weight:600; cursor:pointer; font-family:inherit; margin-left:auto; }
+    .period-btn { padding:6px 12px; border:1px solid #e2e8f0; border-radius:8px; background:#f8fafc; color:#64748b; font-size:12px; font-weight:600; cursor:pointer; font-family:inherit; transition:all .2s; }
+    .period-btn.active { background:#1e293b; color:#fff; border-color:#1e293b; }
 
     .report-table-wrap { background:#fff; border:1px solid #e2e8f0; border-radius:12px; overflow:hidden; }
     .report-table-header { padding:14px 18px; border-bottom:1px solid #f1f5f9; display:flex; align-items:center; justify-content:space-between; }
@@ -73,7 +75,7 @@
         </div>
       </div>
       <a href="/upload" ><i class="ri-camera-line"></i> 현장 모니터링</a>
-      <a href="/video-upload" ><i class="ri-video-upload-line"></i> 영상 분석</a>
+      
       <a href="/reports" ><i class="ri-file-chart-line"></i> AI 보고서</a>
     </nav>
     <div class="user-section">
@@ -97,30 +99,34 @@
       <div class="date-text" id="dateText"></div>
 
       <div class="filter-bar">
-        <label>날짜</label>
-        <input type="date" class="filter-input" id="filterDateFrom" />
-        <span style="font-size:12px;color:#94a3b8;">~</span>
-        <input type="date" class="filter-input" id="filterDateTo" />
+        <label>기간</label>
+        <button class="period-btn active" data-days="all" onclick="setPeriod(this)">전체</button>
+        <button class="period-btn" data-days="7" onclick="setPeriod(this)">7일</button>
+        <button class="period-btn" data-days="30" onclick="setPeriod(this)">30일</button>
+        <button class="period-btn" data-days="90" onclick="setPeriod(this)">3개월</button>
+        <input type="date" class="filter-input" id="filterDateFrom" placeholder="날짜 선택" style="margin-left:4px;" onchange="setCustomDate()" />
         <label>위험등급</label>
         <select class="filter-select" id="filterGrade">
           <option value="">전체</option>
-          <option value="RISK">위험</option>
-          <option value="NORMAL">정상</option>
+          <option value="즉각조치">즉각조치</option>
+          <option value="위험">위험</option>
+          <option value="주의">주의</option>
         </select>
         <label>조치상태</label>
         <select class="filter-select" id="filterAction">
           <option value="">전체</option>
           <option value="미조치">미조치</option>
           <option value="조치완료">조치완료</option>
+          <option value="확인중">확인중</option>
         </select>
         <label>사고유형</label>
         <select class="filter-select" id="filterCase">
           <option value="">전체</option>
-          <option value="보호구 미착용">보호구 미착용</option>
-          <option value="중장비 접근 사고">중장비 접근</option>
-          <option value="자재물 낙하/추락 위험">낙하물</option>
-          <option value="위험구역 출입 사고">위험구역 출입</option>
-          <option value="자재물로 인한 걸림/넘어짐">자재 걸림</option>
+          <option value="안전복 미착용">안전복 미착용</option>
+          <option value="위험구역 출입">위험구역 출입</option>
+          <option value="중장비 접근">중장비 접근</option>
+          <option value="자재물 적치">자재물 적치</option>
+          <option value="작업자 밀집">작업자 밀집</option>
         </select>
         <button class="filter-reset" onclick="resetFilter()">초기화</button>
       </div>
