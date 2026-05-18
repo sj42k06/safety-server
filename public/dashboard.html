@@ -192,13 +192,11 @@
         <div class="filter-rows">
           <div class="filter-row">
             <span class="filter-label">기간</span>
-            <button class="period-btn active" onclick="setPeriod(7,this)">7일</button>
+            <button class="period-btn active" onclick="setPeriod('all',this)">전체</button>
+            <button class="period-btn" onclick="setPeriod(7,this)">7일</button>
             <button class="period-btn" onclick="setPeriod(30,this)">30일</button>
             <button class="period-btn" onclick="setPeriod(90,this)">90일</button>
-            <button class="period-btn" onclick="setPeriod('all',this)">전체</button>
-            <input type="date" class="period-input" id="statFrom" onchange="applyCustomPeriod()"/>
-            <span style="font-size:12px;color:#94a3b8;">~</span>
-            <input type="date" class="period-input" id="statTo" onchange="applyCustomPeriod()"/>
+            <input type="date" class="period-input" id="statFrom" placeholder="날짜 선택" onchange="applyCustomPeriod()"/>
           </div>
           <div class="filter-row">
             <span class="filter-label">위험등급</span>
@@ -394,7 +392,7 @@
         document.getElementById('resolvedCount').textContent   = (data.resolved || 0).toLocaleString();
 
         // 사고 유형 TOP 5 카드 + 가로 막대
-        renderCaseCards(data.byCase || [], data.danger || 0);
+        renderCaseCards(data.byCase || [], data.total || 0);
 
         // 차트
         renderCharts(data);
@@ -412,12 +410,13 @@
         return;
       }
 
-      const maxCount = byCase[0]?.count || 1;
+      // 전체 합계 기준 100%
+      const totalAll = byCase.reduce((sum, c) => sum + c.count, 0) || 1;
       const rankClasses = ['r1','r2','r3','',''];
 
       // 사고 유형 카드
       cards.innerHTML = byCase.slice(0,5).map((c, i) => {
-        const pct = totalDanger > 0 ? Math.round(c.count / totalDanger * 100) : 0;
+        const pct = Math.round(c.count / totalAll * 100);
         const resolved   = Math.round(c.count * 0.8);
         const unresolved = c.count - resolved;
         return `
@@ -440,7 +439,7 @@
 
       // 도넛 차트 그리기
       byCase.slice(0,5).forEach((c, i) => {
-        const pct = totalDanger > 0 ? Math.round(c.count / totalDanger * 100) : 0;
+        const pct = Math.round(c.count / totalAll * 100);
         const ctx = document.getElementById(`donut_${i}`);
         if (!ctx) return;
         new Chart(ctx, {
@@ -450,9 +449,9 @@
         });
       });
 
-      // 가로 막대
+      // 가로 막대 (전체 100% 기준)
       rank.innerHTML = byCase.slice(0,5).map((c, i) => {
-        const pct = totalDanger > 0 ? Math.round(c.count / totalDanger * 100) : 0;
+        const pct = Math.round(c.count / totalAll * 100);
         return `
           <div class="rank-item">
             <div class="rank-header">
