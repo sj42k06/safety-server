@@ -179,6 +179,16 @@
       document.getElementById('navGroupTitle').classList.toggle('open');
     }
 
+    var currentDays = 'all';
+
+    function setPeriod(btn) {
+      document.querySelectorAll('.period-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      currentDays = btn.dataset.days;
+      document.getElementById('filterDateFrom').value = '';
+      renderTable();
+    }
+
     async function loadData() {
       try {
         const res  = await fetch(BASE_URL + '/api/reports');
@@ -192,21 +202,34 @@
       const grade  = document.getElementById('filterGrade').value;
       const action = document.getElementById('filterAction').value;
       const from   = document.getElementById('filterDateFrom').value;
-      const to     = document.getElementById('filterDateTo').value;
+      const toEl = document.getElementById('filterDateTo'); const to = toEl ? toEl.value : '';
       const caseF  = document.getElementById('filterCase').value;
 
       let filtered = allReports.filter(r => {
-        if (grade  && r.detection_status !== grade)                         return false;
-        if (action && (r.action_status || '미조치') !== action)              return false;
-        if (from   && r.created_at && r.created_at.slice(0,10) < from)      return false;
-        if (to     && r.created_at && r.created_at.slice(0,10) > to)        return false;
-        if (caseF  && r.case_name !== caseF) {
-          // report_content에서도 확인
-          try {
-            const cases = JSON.parse(r.report_content || '{}').detected_cases || [];
-            if (!cases.includes(caseF)) return false;
-          } catch(_) { return false; }
+        // 위험등급 필터 (즉각조치/위험/주의)
+        if (grade) {
+          const maxPct = parseFloat(r.max_risk_percent || 0);
+          if (grade === '즉각조치' && maxPct < 60) return false;
+          if (grade === '위험' && (maxPct < 31 || maxPct >= 60)) return false;
+          if (grade === '주의' && maxPct >= 31) return false;
         }
+        // 조치상태 필터
+        if (action) {
+          if (action === '미조치' && (r.unresolved_count || 0) === 0) return false;
+          if (action === '조치완료' && (r.resolved_count || 0) === 0) return false;
+        }
+        // 날짜 필터
+        if (from && r.report_date && r.report_date.slice(0,10) < from) return false;
+        if (to   && r.report_date && r.report_date.slice(0,10) > to)   return false;
+        // 기간 버튼 필터
+        if (currentDays !== 'all') {
+          const cutoff = new Date();
+          cutoff.setDate(cutoff.getDate() - parseInt(currentDays));
+          const reportDate = new Date(r.report_date);
+          if (reportDate < cutoff) return false;
+        }
+        // 사고유형 필터
+        if (caseF && r.major_risk_case && !r.major_risk_case.includes(caseF)) return false;
         return true;
       });
 
@@ -223,24 +246,23 @@
         const dts = dt
           ? `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')} ${String(dt.getHours()).padStart(2,'0')}:${String(dt.getMinutes()).padStart(2,'0')}`
           : '-';
-        const grade  = r.detection_status || 'NORMAL';
-        const action = r.action_status    || '미조치';
-        const gradeLabel = grade === 'RISK' ? '위험' : '정상';
-
-        // 사고 유형
-        let cases = [];
-        try { cases = JSON.parse(r.report_content || '{}').detected_cases || []; } catch(_) {}
-        const caseText = r.case_name || cases[0] || '-';
+        const maxPct = parseFloat(r.max_risk_percent || 0);
+        const gradeClass = maxPct >= 60 ? 'RISK' : maxPct >= 31 ? 'WARNING' : 'NORMAL';
+        const gradeLabel = maxPct >= 60 ? '즉각조치' : maxPct >= 31 ? '위험' : '주의';
+        const hasUnresolved = (r.unresolved_count || 0) > 0;
+        const actionLabel = hasUnresolved ? '미조치 ' + r.unresolved_count + '건' : '조치완료';
+        const actionClass = hasUnresolved ? '미조치' : '조치완료';
+        const caseText = r.major_risk_case || '-';
 
         return `
           <tr>
             <td style="font-weight:700;cursor:pointer;" onclick="window.location.href='/reports/${r.report_id}'">#${r.report_id}</td>
             <td style="cursor:pointer;max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" onclick="window.location.href='/reports/${r.report_id}'">${r.report_title || '-'}</td>
             <td style="cursor:pointer;" onclick="window.location.href='/reports/${r.report_id}'">${dts}</td>
-            <td style="cursor:pointer;" onclick="window.location.href='/reports/${r.report_id}'"><span class="badge ${grade}">${gradeLabel}</span></td>
+            <td style="cursor:pointer;" onclick="window.location.href='/reports/${r.report_id}'"><span class="badge ${gradeClass}">${gradeLabel}</span></td>
             <td style="cursor:pointer;" onclick="window.location.href='/reports/${r.report_id}'">${caseText}</td>
             <td style="cursor:pointer;" onclick="window.location.href='/reports/${r.report_id}'">${r.created_by_name || '-'}</td>
-            <td style="cursor:pointer;" onclick="window.location.href='/reports/${r.report_id}'"><span class="badge ${action}">${action}</span></td>
+            <td style="cursor:pointer;" onclick="window.location.href='/reports/${r.report_id}'"><span class="badge ${actionClass}">${actionLabel}</span></td>
             <td>
               <button class="btn-pdf" onclick="downloadPdf(${r.report_id},'${gradeLabel}','${dts}','${action}','${r.report_title||''}','${caseText}')">
                 <i class="ri-file-pdf-line"></i> PDF
