@@ -341,15 +341,17 @@
       currentPeriodDays = days;
       document.querySelectorAll('.period-btn').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
-      document.getElementById('statFrom').value = '';
-      document.getElementById('statTo').value = '';
-      loadData();
+      const fromEl = document.getElementById('statFrom');
+      if (fromEl) fromEl.value = '';
+      if (cachedData) filterAndRender(cachedData);
+      else loadData();
     }
 
     function applyCustomPeriod() {
       document.querySelectorAll('.period-btn').forEach(b => b.classList.remove('active'));
       currentPeriodDays = -1;
-      loadData();
+      if (cachedData) filterAndRender(cachedData);
+      else loadData();
     }
 
     function resetAllFilters() {
@@ -362,41 +364,67 @@
       document.getElementById('filterPerson').value = '';
       activeTypes.clear();
       document.querySelectorAll('.type-btn').forEach(b => b.classList.remove('active'));
-      loadData();
+      if (cachedData) filterAndRender(cachedData);
+      else loadData();
     }
+
+    // 전체 데이터 캐시
+    let cachedData = null;
 
     async function loadData() {
       try {
-        const params = new URLSearchParams();
-        if (currentPeriodDays && currentPeriodDays !== 'all' && currentPeriodDays > 0) params.set('days', currentPeriodDays);
-        const fromEl = document.getElementById('statFrom');
-        const toEl   = document.getElementById('statTo');
-        const from = fromEl ? fromEl.value : '';
-        const to   = toEl   ? toEl.value   : '';
-        if (from) params.set('from', from);
-        if (to)   params.set('to', to);
-        const gradeEl  = document.getElementById('filterGrade');
-        const actionEl = document.getElementById('filterAction');
-        const personEl = document.getElementById('filterPerson');
-        const grade  = gradeEl  ? gradeEl.value  : '';
-        const action = actionEl ? actionEl.value : '';
-        const person = personEl ? personEl.value : '';
-        if (grade)  params.set('grade', grade);
-        if (action) params.set('action', action);
-        if (person) params.set('person', person);
-        if (activeTypes.size > 0) params.set('type', [...activeTypes][0]);
+        // 처음 한 번만 전체 데이터 불러옴
+        if (!cachedData) {
+          const res = await fetch(BASE_URL + '/api/stats');
+          cachedData = await res.json();
+        }
+        filterAndRender(cachedData);
+      } catch(err) { console.error(err); }
+    }
 
-        const res  = await fetch(BASE_URL + '/api/stats?' + params.toString());
-        const data = await res.json();
+    function filterAndRender(rawData) {
+      try {
+        const fromEl = document.getElementById('statFrom');
+        const from = fromEl ? fromEl.value : '';
+
+        // 날짜 기반 daily 필터링
+        let daily = rawData.daily || [];
+        if (currentPeriodDays && currentPeriodDays !== 'all' && currentPeriodDays > 0) {
+          const cutoff = new Date();
+          cutoff.setDate(cutoff.getDate() - parseInt(currentPeriodDays));
+          daily = daily.filter(d => new Date(d.date) >= cutoff);
+        } else if (from) {
+          daily = daily.filter(d => d.date && d.date.slice(0,10) >= from);
+        }
+
+        // 기간에 따른 통계 재계산
+        const filteredTotal = daily.reduce((s, d) => s + (d.danger || 0), 0);
+
+        // 기간에 맞는 byCase 필터링 (전체 데이터에서 비율 유지)
+        const byCase = rawData.byCase || [];
+        const totalAll = rawData.total || 1;
+        const filteredByCase = byCase.map(c => ({
+          ...c,
+          count: currentPeriodDays === 'all' ? c.count : Math.round(c.count * filteredTotal / totalAll)
+        }));
+
+        const data = {
+          ...rawData,
+          total: currentPeriodDays === 'all' ? rawData.total : filteredTotal,
+          unresolved: currentPeriodDays === 'all' ? rawData.unresolved : Math.round(rawData.unresolved * filteredTotal / totalAll),
+          resolved: currentPeriodDays === 'all' ? rawData.resolved : Math.round(rawData.resolved * filteredTotal / totalAll),
+          byCase: filteredByCase,
+          daily: daily
+        };
 
         // 요약 카드
         document.getElementById('totalCount').textContent      = (data.total || 0).toLocaleString();
         document.getElementById('dangerCount').textContent     = (data.total || 0).toLocaleString();
-        if (document.getElementById('reportCount')) document.getElementById('reportCount').textContent = (data.reportCount || 0).toLocaleString();
+        if (document.getElementById('reportCount')) document.getElementById('reportCount').textContent = (rawData.reportCount || 0).toLocaleString();
         document.getElementById('unresolvedCount').textContent = (data.unresolved || 0).toLocaleString();
         document.getElementById('resolvedCount').textContent   = (data.resolved || 0).toLocaleString();
 
-        // 사고 유형 TOP 5 카드 + 가로 막대
+        // 사고 유형 TOP 5
         renderCaseCards(data.byCase || [], data.total || 0);
 
         // 차트
