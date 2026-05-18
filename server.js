@@ -144,22 +144,8 @@ app.get("/dashboard",    (req, res) => res.sendFile(path.join(__dirname, "public
 app.get("/archive",      (req, res) => res.sendFile(path.join(__dirname, "public", "archive.html")));
 app.get("/reports",      (req, res) => res.sendFile(path.join(__dirname, "public", "reports.html")));
 app.get("/reports/:id",  (req, res) => res.sendFile(path.join(__dirname, "public", "report-detail.html")));
-app.get("/video-upload", (req, res) => res.sendFile(path.join(__dirname, "public", "video-upload.html")));
 
-// ── 위험 감지 SMS API ────────────────────
-app.post('/api/danger-sms', async (req, res) => {
-  try {
-    const body = req.body || {};
-    const report_id  = body.report_id;
-    const danger_type = body.danger_type || '위험 감지';
-    const user = body.user || 'admin';
-    await sendDangerSms(report_id, danger_type, user);
-    res.json({ success: true });
-  } catch(err) {
-    console.error('danger-sms 오류:', err.message);
-    res.status(500).json({ error: err.message });
-  }
-});
+// danger-sms API 제거됨 (위험 감지 시 SMS 없음)
 
 // ────────────────────────────────────────
 // 로그인 (users 테이블 기반)
@@ -297,10 +283,24 @@ app.post("/analyze", upload.single("video"), async (req, res) => {
 });
 
 // ────────────────────────────────────────
-// 보고서 목록 (reports + risk_logs 조인)
+// 보고서 목록 (새 DB 구조)
 // ────────────────────────────────────────
 app.get("/api/reports", async (req, res) => {
   try {
+    const { days, from, to, shift, grade } = req.query;
+    let where = ['1=1'];
+    let params = [];
+
+    if (days && days !== 'all') {
+      where.push('r.report_date >= DATE_SUB(CURDATE(), INTERVAL ? DAY)');
+      params.push(parseInt(days));
+    }
+    if (from) { where.push('r.report_date >= ?'); params.push(from); }
+    if (to)   { where.push('r.report_date <= ?'); params.push(to); }
+    if (shift) { where.push('ms.shift_type = ?'); params.push(shift); }
+
+    const whereStr = where.join(' AND ');
+
     const [rows] = await db.query(`
       SELECT
         r.report_id,
@@ -308,22 +308,25 @@ app.get("/api/reports", async (req, res) => {
         r.report_date,
         r.created_at,
         r.report_content,
-        u.name AS created_by_name,
-        rl.risk_id,
-        rl.detection_status,
-        rl.description,
-        rl.image_path,
-        rl.action_status,
-        rl.detected_at,
-        sr.case_name,
-        sr.law_name
+        r.total_risk_events,
+        r.resolved_count,
+        r.unresolved_count,
+        r.major_risk_case,
+        r.max_risk_percent,
+        r.avg_risk_percent,
+        r.approval_status,
+        r.next_shift_note,
+        ms.shift_type,
+        ms.start_time,
+        ms.end_time,
+        u.name AS created_by_name
       FROM reports r
+      LEFT JOIN monitoring_sessions ms ON r.session_id = ms.session_id
       LEFT JOIN users u ON r.created_by = u.user_id
-      LEFT JOIN risk_logs rl ON r.risk_id = rl.risk_id
-      LEFT JOIN safety_rules sr ON rl.rule_id = sr.rule_id
+      WHERE ${whereStr}
       ORDER BY r.created_at DESC
-      LIMIT 50
-    `);
+      LIMIT 100
+    `, params);
     res.json({ success: true, reports: rows });
   } catch (err) {
     console.error(err);
@@ -332,39 +335,43 @@ app.get("/api/reports", async (req, res) => {
 });
 
 // ────────────────────────────────────────
-// 보고서 상세 (report + risk_log + safety_rule)
+// 보고서 상세 (새 DB 구조)
 // ────────────────────────────────────────
 app.get("/api/reports/:id", async (req, res) => {
   try {
-    const [rows] = await db.query(`
+    const [[report]] = await db.query(`
       SELECT
-        r.report_id,
-        r.report_title,
-        r.report_date,
-        r.report_content,
-        r.created_at,
-        u.name AS created_by_name,
-        rl.risk_id,
-        rl.detection_status,
-        rl.description,
-        rl.image_path,
-        rl.action_status,
-        rl.action_note,
-        rl.detected_at,
-        sr.case_name,
-        sr.law_name,
-        sr.law_content,
-        sr.recommendation
+        r.report_id, r.report_title, r.report_date, r.report_content,
+        r.created_at, r.total_risk_events, r.resolved_count, r.unresolved_count,
+        r.major_risk_case, r.max_risk_percent, r.avg_risk_percent,
+        r.approval_status, r.next_shift_note,
+        ms.shift_type, ms.start_time, ms.end_time, ms.camera_id,
+        u.name AS created_by_name
       FROM reports r
+      LEFT JOIN monitoring_sessions ms ON r.session_id = ms.session_id
       LEFT JOIN users u ON r.created_by = u.user_id
-      LEFT JOIN risk_logs rl ON r.risk_id = rl.risk_id
-      LEFT JOIN safety_rules sr ON rl.rule_id = sr.rule_id
       WHERE r.report_id = ?
     `, [req.params.id]);
 
-    if (rows.length === 0) return res.status(404).json({ error: "해당 보고서를 찾을 수 없습니다." });
+    if (!report) return res.status(404).json({ error: "해당 보고서를 찾을 수 없습니다." });
 
-    res.json({ 성공: true, report: rows[0] });
+    // 타임라인 데이터 (위험 이벤트 + 조치 기록)
+    const [timeline] = await db.query(`
+      SELECT
+        re.risk_id, re.detected_time, re.risk_case, re.accident_type,
+        re.likelihood_score, re.severity_score, re.risk_score,
+        re.risk_percent, re.risk_level, re.description,
+        re.image_path, re.bbox_image_path,
+        al.action_status, al.action_time,
+        sr.law_name, sr.law_content, sr.recommendation
+      FROM risk_events re
+      LEFT JOIN action_logs al ON re.risk_id = al.risk_id
+      LEFT JOIN safety_rules sr ON re.rule_id = sr.rule_id
+      WHERE re.session_id = (SELECT session_id FROM reports WHERE report_id = ?)
+      ORDER BY re.detected_time ASC
+    `, [req.params.id]);
+
+    res.json({ success: true, report, timeline });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "상세 데이터 조회 실패" });
@@ -372,32 +379,23 @@ app.get("/api/reports/:id", async (req, res) => {
 });
 
 // ────────────────────────────────────────
-// 조치 상태 저장 (risk_logs.action_status 업데이트)
+// 조치 상태 업데이트 (새 DB 구조)
 // ────────────────────────────────────────
-app.put("/api/reports/:id/action", async (req, res) => {
-  const { id } = req.params;
-  const { action_status, action_note } = req.body;
+app.put("/api/risk/:risk_id/action", async (req, res) => {
+  const { risk_id } = req.params;
+  const { action_status } = req.body;
 
-  if (!['조치완료', '미조치', '조치중', '즉각조치', '사후조치', '사후조치중'].includes(action_status)) {
+  if (!['조치완료', '미조치', '확인중', '오탐'].includes(action_status)) {
     return res.status(400).json({ error: "유효하지 않은 조치 상태입니다." });
   }
 
   try {
-    // report의 risk_id 찾기
-    const [[report]] = await db.query(
-      "SELECT risk_id FROM reports WHERE report_id = ?", [id]
-    );
-    if (!report) return res.status(404).json({ error: "보고서를 찾을 수 없습니다." });
-
-    // risk_logs 업데이트
     await db.query(
-      "UPDATE risk_logs SET action_status = ?, action_note = ? WHERE risk_id = ?",
-      [action_status, action_note || null, report.risk_id]
+      "UPDATE action_logs SET action_status = ?, action_time = ? WHERE risk_id = ?",
+      [action_status, action_status === '조치완료' ? new Date() : null, risk_id]
     );
-
     res.json({ success: true, message: `'${action_status}'으로 저장되었습니다.` });
   } catch (err) {
-    console.error(err);
     res.status(500).json({ error: "저장 오류", detail: err.message });
   }
 });
@@ -614,6 +612,266 @@ app.get("/api/stats", async (req, res) => {
   } catch (err) {
     console.error('통계 오류:', err.message);
     res.status(500).json({ error: "통계 조회 실패" });
+  }
+});
+
+
+// ────────────────────────────────────────
+// 알람 저장 API (위험 감지 시)
+// ────────────────────────────────────────
+app.post("/api/alarm", async (req, res) => {
+  try {
+    const { session_id, rule_id, risk_case, risk_percent, risk_level, bbox_image_url } = req.body;
+
+    // risk_events에 저장
+    const [result] = await db.query(`
+      INSERT INTO risk_events
+      (session_id, rule_id, detected_time, risk_case, accident_type,
+       likelihood_score, severity_score, risk_score, risk_percent, risk_level,
+       description, bbox_image_path, created_at)
+      SELECT ?, rule_id, NOW(), case_name, accident_type,
+             likelihood_score, severity_score, risk_score, ?, ?,
+             CONCAT(case_name, ' 상황이 감지되었습니다.'), ?, NOW()
+      FROM safety_rules WHERE rule_id = ?
+    `, [session_id, risk_percent, risk_level, bbox_image_url || '', rule_id]);
+
+    const risk_id = result.insertId;
+
+    // action_logs에 미조치로 저장
+    const [[session]] = await db.query('SELECT manager_id FROM monitoring_sessions WHERE session_id = ?', [session_id]);
+    await db.query(`
+      INSERT INTO action_logs (risk_id, action_status, action_manager_id, created_at)
+      VALUES (?, '미조치', ?, NOW())
+    `, [risk_id, session?.manager_id || 1]);
+
+    // 세션 위험 이벤트 수 업데이트
+    await db.query(`
+      UPDATE monitoring_sessions
+      SET risk_event_count = risk_event_count + 1, session_status = '위험발생'
+      WHERE session_id = ?
+    `, [session_id]);
+
+    res.json({ success: true, risk_id });
+  } catch (err) {
+    console.error('알람 저장 오류:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ────────────────────────────────────────
+// 현재 세션 조회 API
+// ────────────────────────────────────────
+app.get("/api/session/current", async (req, res) => {
+  try {
+    const now = new Date();
+    const hour = now.getHours();
+    let shiftType;
+    if (hour >= 6 && hour < 14) shiftType = '오전';
+    else if (hour >= 14 && hour < 22) shiftType = '오후';
+    else shiftType = '야간';
+
+    const today = now.toISOString().slice(0, 10);
+
+    const [[session]] = await db.query(`
+      SELECT * FROM monitoring_sessions
+      WHERE session_date = ? AND shift_type = ?
+      ORDER BY session_id DESC LIMIT 1
+    `, [today, shiftType]);
+
+    if (!session) {
+      // 세션 없으면 새로 생성
+      const [result] = await db.query(`
+        INSERT INTO monitoring_sessions
+        (camera_id, monitored_area, shift_type, session_date, start_time, end_time, manager_id, analyzed_frames, normal_frames, risk_event_count, session_status, handover_status)
+        VALUES ('CAM-01', '현장 모니터링 구역', ?, ?, NOW(), DATE_ADD(NOW(), INTERVAL 8 HOUR), 1, 0, 0, 0, '정상', '대기')
+      `, [shiftType, today]);
+      const [[newSession]] = await db.query('SELECT * FROM monitoring_sessions WHERE session_id = ?', [result.insertId]);
+      return res.json({ success: true, session: newSession });
+    }
+
+    res.json({ success: true, session });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ────────────────────────────────────────
+// 슬라이드 이미지 목록 API
+// ────────────────────────────────────────
+app.get("/api/slides", (req, res) => {
+  const slidesDir = path.join(__dirname, 'public', 'slides');
+  const fs = require('fs');
+  if (!fs.existsSync(slidesDir)) {
+    return res.json({ images: [] });
+  }
+  const files = fs.readdirSync(slidesDir)
+    .filter(f => /\.(jpg|jpeg|png|gif)$/i.test(f))
+    .map(f => '/slides/' + f);
+  res.json({ images: files });
+});
+
+// ────────────────────────────────────────
+// 통계 API (새 DB 구조)
+// ────────────────────────────────────────
+app.get("/api/stats", async (req, res) => {
+  try {
+    const { days, shift } = req.query;
+    let where = ['1=1'];
+    let params = [];
+
+    if (days && days !== 'all') {
+      where.push('ms.session_date >= DATE_SUB(CURDATE(), INTERVAL ? DAY)');
+      params.push(parseInt(days));
+    }
+    if (shift) { where.push('ms.shift_type = ?'); params.push(shift); }
+    const whereStr = where.join(' AND ');
+
+    const [[{ total }]] = await db.query(`SELECT COUNT(*) AS total FROM risk_events re JOIN monitoring_sessions ms ON re.session_id = ms.session_id WHERE ${whereStr}`, params);
+    const [[{ immediate }]] = await db.query(`SELECT COUNT(*) AS immediate FROM risk_events re JOIN monitoring_sessions ms ON re.session_id = ms.session_id WHERE re.risk_level = '즉각조치' AND ${whereStr}`, params);
+    const [[{ danger }]] = await db.query(`SELECT COUNT(*) AS danger FROM risk_events re JOIN monitoring_sessions ms ON re.session_id = ms.session_id WHERE re.risk_level = '위험' AND ${whereStr}`, params);
+    const [[{ caution }]] = await db.query(`SELECT COUNT(*) AS caution FROM risk_events re JOIN monitoring_sessions ms ON re.session_id = ms.session_id WHERE re.risk_level = '주의' AND ${whereStr}`, params);
+    const [[{ unresolved }]] = await db.query(`SELECT COUNT(*) AS unresolved FROM risk_events re JOIN monitoring_sessions ms ON re.session_id = ms.session_id JOIN action_logs al ON re.risk_id = al.risk_id WHERE al.action_status = '미조치' AND ${whereStr}`, params);
+    const [[{ resolved }]] = await db.query(`SELECT COUNT(*) AS resolved FROM risk_events re JOIN monitoring_sessions ms ON re.session_id = ms.session_id JOIN action_logs al ON re.risk_id = al.risk_id WHERE al.action_status = '조치완료' AND ${whereStr}`, params);
+    const [[{ reportCount }]] = await db.query(`SELECT COUNT(*) AS reportCount FROM reports r JOIN monitoring_sessions ms ON r.session_id = ms.session_id WHERE ${whereStr}`, params);
+
+    const [byCase] = await db.query(`
+      SELECT re.risk_case AS case_name, COUNT(*) AS count
+      FROM risk_events re JOIN monitoring_sessions ms ON re.session_id = ms.session_id
+      WHERE ${whereStr}
+      GROUP BY re.risk_case ORDER BY count DESC LIMIT 5
+    `, params);
+
+    const [daily] = await db.query(`
+      SELECT ms.session_date AS date, COUNT(*) AS danger
+      FROM risk_events re JOIN monitoring_sessions ms ON re.session_id = ms.session_id
+      WHERE ${whereStr}
+      GROUP BY ms.session_date ORDER BY date DESC LIMIT 30
+    `, params);
+
+    res.json({ success: true, total, immediate, danger, caution, unresolved, resolved, reportCount, byCase, daily });
+  } catch (err) {
+    console.error('통계 오류:', err.message);
+    res.status(500).json({ error: "통계 조회 실패" });
+  }
+});
+
+// ────────────────────────────────────────
+// 인수인계 요약 API (새 DB 구조)
+// ────────────────────────────────────────
+app.get("/api/handover/summary", async (req, res) => {
+  try {
+    const { user } = req.query;
+
+    // 미확인 인수인계 조회
+    const [handovers] = await db.query(`
+      SELECT
+        hl.handover_id, hl.handover_date, hl.handover_status, hl.handover_note,
+        r.report_id, r.report_title, r.report_date, r.total_risk_events,
+        r.unresolved_count, r.major_risk_case, r.avg_risk_percent,
+        ms.shift_type, ms.start_time, ms.end_time,
+        u.name AS from_user_name
+      FROM handover_logs hl
+      JOIN reports r ON hl.report_id = r.report_id
+      JOIN monitoring_sessions ms ON r.session_id = ms.session_id
+      JOIN users u ON hl.from_user_id = u.user_id
+      WHERE hl.handover_status = '대기'
+      ORDER BY hl.handover_date DESC
+      LIMIT 5
+    `);
+
+    res.json({ success: true, handovers });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ────────────────────────────────────────
+// 인수인계 승인 + 보고서 생성 API
+// ────────────────────────────────────────
+app.post("/api/handover/approve", async (req, res) => {
+  try {
+    const { handover_id, from_user, to_user, from_phone, to_phone } = req.body;
+
+    // 인수인계 승인
+    await db.query(`
+      UPDATE handover_logs
+      SET handover_status = '확인완료', confirmed_at = NOW(), sms_sent = TRUE, signature_check = TRUE
+      WHERE handover_id = ?
+    `, [handover_id]);
+
+    // SMS 발송 (양쪽)
+    const fromMsg = `[스마트 안전관제] ${from_user} 관리자님, 인수인계가 완료되었습니다.`;
+    const toMsg   = `[스마트 안전관제] ${to_user} 관리자님, 인수인계가 완료되었습니다. 근무를 시작하세요.`;
+
+    if (from_phone) await sendSms(from_phone, fromMsg);
+    if (to_phone)   await sendSms(to_phone, toMsg);
+
+    res.json({ success: true, message: '인수인계가 승인되었습니다.' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ────────────────────────────────────────
+// 보고서 생성 API (인수인계 직전)
+// ────────────────────────────────────────
+app.post("/api/reports/generate", async (req, res) => {
+  try {
+    const { session_id, created_by } = req.body;
+
+    // 세션 정보 조회
+    const [[session]] = await db.query('SELECT * FROM monitoring_sessions WHERE session_id = ?', [session_id]);
+    if (!session) return res.status(404).json({ error: '세션을 찾을 수 없습니다.' });
+
+    // 위험 이벤트 통계
+    const [[stats]] = await db.query(`
+      SELECT
+        COUNT(*) AS total_risk,
+        SUM(CASE WHEN al.action_status = '조치완료' THEN 1 ELSE 0 END) AS resolved,
+        SUM(CASE WHEN al.action_status = '미조치' THEN 1 ELSE 0 END) AS unresolved,
+        MAX(re.risk_percent) AS max_percent,
+        AVG(re.risk_percent) AS avg_percent
+      FROM risk_events re
+      LEFT JOIN action_logs al ON re.risk_id = al.risk_id
+      WHERE re.session_id = ?
+    `, [session_id]);
+
+    // 주요 위험 케이스
+    const [[majorCase]] = await db.query(`
+      SELECT risk_case FROM risk_events WHERE session_id = ?
+      GROUP BY risk_case ORDER BY COUNT(*) DESC LIMIT 1
+    `, [session_id]);
+
+    // 보고서 생성
+    const reportTitle = `${session.session_date} ${session.shift_type} 안전 인수인계 보고서`;
+    const [result] = await db.query(`
+      INSERT INTO reports
+      (session_id, report_title, report_date, created_by, total_analyzed_frames,
+       total_normal_frames, total_risk_events, resolved_count, unresolved_count,
+       major_risk_case, max_risk_percent, avg_risk_percent, approval_status, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, '승인대기', NOW())
+    `, [
+      session_id, reportTitle, session.session_date, created_by,
+      session.analyzed_frames, session.normal_frames,
+      stats.total_risk || 0, stats.resolved || 0, stats.unresolved || 0,
+      majorCase?.risk_case || '해당없음',
+      stats.max_percent || 0, stats.avg_percent || 0
+    ]);
+
+    const report_id = result.insertId;
+
+    // 인수인계 로그 생성
+    const nextManagerId = created_by >= 4 ? 1 : created_by + 1;
+    await db.query(`
+      INSERT INTO handover_logs
+      (report_id, from_user_id, to_user_id, handover_date, handover_status, created_at)
+      VALUES (?, ?, ?, NOW(), '대기', NOW())
+    `, [report_id, created_by, nextManagerId]);
+
+    res.json({ success: true, report_id, message: '보고서가 생성되었습니다.' });
+  } catch (err) {
+    console.error('보고서 생성 오류:', err.message);
+    res.status(500).json({ error: err.message });
   }
 });
 
