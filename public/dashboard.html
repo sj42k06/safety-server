@@ -275,7 +275,7 @@
   <script>
     const BASE_URL = 'https://safety-server-oqza.onrender.com';
     let monthlyChart, actionChart, dailyChart, personChart;
-    let currentPeriodDays = 7;
+    let currentPeriodDays = 'all';
     let activeTypes = new Set();
     const CASE_COLORS = ['#dc2626','#f97316','#f59e0b','#8b5cf6','#ec4899'];
     // 케이스 이름 매핑 (DB 기준)
@@ -353,7 +353,7 @@
     }
 
     function resetAllFilters() {
-      currentPeriodDays = 7;
+      currentPeriodDays = 'all';
       document.querySelectorAll('.period-btn').forEach((b,i) => b.classList.toggle('active', i===0));
       document.getElementById('statFrom').value = '';
       document.getElementById('statTo').value = '';
@@ -369,13 +369,18 @@
       try {
         const params = new URLSearchParams();
         if (currentPeriodDays && currentPeriodDays !== 'all' && currentPeriodDays > 0) params.set('days', currentPeriodDays);
-        const from = document.getElementById('statFrom').value;
-        const to   = document.getElementById('statTo').value;
+        const fromEl = document.getElementById('statFrom');
+        const toEl   = document.getElementById('statTo');
+        const from = fromEl ? fromEl.value : '';
+        const to   = toEl   ? toEl.value   : '';
         if (from) params.set('from', from);
         if (to)   params.set('to', to);
-        const grade  = document.getElementById('filterGrade').value;
-        const action = document.getElementById('filterAction').value;
-        const person = document.getElementById('filterPerson').value;
+        const gradeEl  = document.getElementById('filterGrade');
+        const actionEl = document.getElementById('filterAction');
+        const personEl = document.getElementById('filterPerson');
+        const grade  = gradeEl  ? gradeEl.value  : '';
+        const action = actionEl ? actionEl.value : '';
+        const person = personEl ? personEl.value : '';
         if (grade)  params.set('grade', grade);
         if (action) params.set('action', action);
         if (person) params.set('person', person);
