@@ -377,6 +377,8 @@
       var H = bboxCanvas.height = cameraVideo.videoHeight || cameraSection.offsetHeight;
       if (!W || !H) return;
       bboxCtx.clearRect(0, 0, W, H);
+      // 슬라이드 모드일 때는 구역 구분 표시 안 함
+      if (slideMode) return;
       var fX = W * 0.5;
       bboxCtx.fillStyle = 'rgba(34,197,94,0.06)';
       bboxCtx.fillRect(0, 0, fX, H);
@@ -767,6 +769,7 @@
       document.getElementById('slideBtn').classList.remove('active');
       document.getElementById('slideModeStatus').textContent = '';
       document.getElementById('cameraVideo').style.display = 'block';
+      drawFence();
     }
 
     function switchToSlide() {
