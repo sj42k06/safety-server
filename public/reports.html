@@ -331,18 +331,18 @@
 
     function getViewReports() {
       if (currentView === 'today')
-        return allReports.filter(r => r.created_at && r.created_at.slice(0,10) === todayStr);
+        return allReports.filter(r => (r.report_date && r.report_date.slice(0,10) === todayStr) || (r.created_at && r.created_at.slice(0,10) === todayStr));
       return allReports;
     }
 
     function updateFilterCounts() {
       const vr = getViewReports();
       document.getElementById('count-전체').textContent   = vr.length;
-      document.getElementById('count-위험').textContent   = vr.filter(r => r.detection_status === 'RISK').length;
-      document.getElementById('count-정상').textContent   = vr.filter(r => r.detection_status === 'NORMAL').length;
-      document.getElementById('count-미조치').textContent = vr.filter(r => r.action_status === '미조치' || !r.action_status).length;
+      document.getElementById('count-위험').textContent   = vr.filter(r => parseFloat(r.max_risk_percent||0) >= 60).length;
+      document.getElementById('count-정상').textContent   = vr.filter(r => parseFloat(r.max_risk_percent||0) < 31).length;
+      document.getElementById('count-미조치').textContent = vr.filter(r => (r.unresolved_count||0) > 0).length;
 
-      const todayCount = allReports.filter(r => r.created_at && r.created_at.slice(0,10) === todayStr).length;
+      const todayCount = allReports.filter(r => (r.report_date && r.report_date.slice(0,10) === todayStr) || (r.created_at && r.created_at.slice(0,10) === todayStr)).length;
       const badge = document.getElementById('todayCountBadge');
       badge.textContent = todayCount + '건';
       badge.className   = 'today-count' + (todayCount === 0 ? ' safe' : '');
@@ -354,9 +354,9 @@
       let viewReports = getViewReports();
 
       let filtered = viewReports;
-      if (currentFilter === '위험')   filtered = viewReports.filter(r => r.detection_status === 'RISK');
-      if (currentFilter === '정상')   filtered = viewReports.filter(r => r.detection_status === 'NORMAL');
-      if (currentFilter === '미조치') filtered = viewReports.filter(r => r.action_status === '미조치' || !r.action_status);
+      if (currentFilter === '위험')   filtered = viewReports.filter(r => parseFloat(r.max_risk_percent||0) >= 60);
+      if (currentFilter === '정상')   filtered = viewReports.filter(r => parseFloat(r.max_risk_percent||0) < 31);
+      if (currentFilter === '미조치') filtered = viewReports.filter(r => (r.unresolved_count||0) > 0);
 
       if (filtered.length === 0) {
         empty.style.display = 'flex';
@@ -370,14 +370,15 @@
       grid.style.display  = 'grid';
 
       grid.innerHTML = filtered.map((r, idx) => {
-        const grade  = r.detection_status === 'RISK' ? '고위험' : '정상';
-        const action = r.action_status || '미조치';
+        const maxPct = parseFloat(r.max_risk_percent || 0);
+        const grade  = maxPct >= 60 ? '즉각조치' : maxPct >= 31 ? '위험' : '주의';
+        const gradeClass = maxPct >= 60 ? 'RISK' : maxPct >= 31 ? 'WARNING' : 'NORMAL';
+        const hasUnresolved = (r.unresolved_count || 0) > 0;
+        const action = hasUnresolved ? '미조치 ' + r.unresolved_count + '건' : '조치완료';
+        const actionClass = hasUnresolved ? '미조치' : '조치완료';
         const isNew  = idx === 0 && currentView === 'today';
         const isSelected = selectedIds.has(r.report_id);
-
-        let cases = [];
-        try { cases = JSON.parse(r.report_content || '{}').detected_cases || []; } catch(_) {}
-        const caseText = r.case_name || (cases[0] || '-');
+        const caseText = r.major_risk_case || '-';
 
         return `
           <div class="report-card ${isSelected ? 'selected' : ''}"
