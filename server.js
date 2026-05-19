@@ -794,6 +794,26 @@ app.post("/api/reports/generate", async (req, res) => {
   }
 });
 
+
+// ────────────────────────────────────────
+// 세션별 위험 이벤트 조회 API
+// ────────────────────────────────────────
+app.get("/api/session/:session_id/events", async (req, res) => {
+  try {
+    const [events] = await db.query(`
+      SELECT re.risk_id, re.detected_time, re.risk_case, re.risk_percent, re.risk_level,
+             al.action_status, al.action_time
+      FROM risk_events re
+      LEFT JOIN action_logs al ON re.risk_id = al.risk_id
+      WHERE re.session_id = ?
+      ORDER BY re.detected_time ASC
+    `, [req.params.session_id]);
+    res.json({ success: true, events });
+  } catch(err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ────────────────────────────────────────
 // 헬스 체크
 // ────────────────────────────────────────
