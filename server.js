@@ -90,22 +90,28 @@ async function sendHandoverSms(approvedBy, unresolvedCount, todayCount) {
   }
 }
 
-// ── 위험 감지 SMS (양쪽 모두 발송) ─────────
-async function sendDangerSms(reportId, dangerType, detectedBy) {
+// ── 위험 감지 SMS (3명 발송) ─────────
+async function sendDangerSms(dangerType, riskPercent, action) {
   try {
     const from      = process.env.COOLSMS_FROM;
     const apiKey    = process.env.COOLSMS_API_KEY;
     const apiSecret = process.env.COOLSMS_API_SECRET;
-    const now       = new Date().toLocaleString('ko-KR');
-    const text      = `[🚨 위험 감지 알림]\n유형: ${dangerType}\n감지자: ${detectedBy}\n시각: ${now}\n보고서 #${reportId}가 생성되었습니다.\n즉시 확인 바랍니다.`;
+    const now       = new Date().toLocaleTimeString('ko-KR', {hour:'2-digit', minute:'2-digit'});
 
     if (!from || !apiKey || !apiSecret) {
       console.warn('⚠️  SMS 설정 누락');
       return;
     }
 
-    // 손광민(admin)에게만 발송
-    const phones = [process.env.ADMIN_PHONE].filter(Boolean);
+    const text = `[스마트 현장 안전관제]\n⚠️ 위험 감지!\n\n감지 시간: ${now}\n위험 요소: ${dangerType}\n위험도: ${riskPercent}%\n\n즉각 조치: ${action}`;
+
+    // 수신자: 손광민 + 정재학 + 수연
+    const phones = [
+      process.env.ADMIN_PHONE,       // 손광민
+      process.env.ADMIN2_PHONE,      // 정재학
+      process.env.WORKER_PHONE,      // 수연 (작업자)
+    ].filter(Boolean);
+
     for (const toPhone of phones) {
       await solapiSend(apiKey, apiSecret, from, toPhone, text);
       console.log(`✅ 위험 감지 SMS 발송 → ${toPhone}`);
@@ -145,7 +151,18 @@ app.get("/archive",      (req, res) => res.sendFile(path.join(__dirname, "public
 app.get("/reports",      (req, res) => res.sendFile(path.join(__dirname, "public", "reports.html")));
 app.get("/reports/:id",  (req, res) => res.sendFile(path.join(__dirname, "public", "report-detail.html")));
 
-// danger-sms API 제거됨 (위험 감지 시 SMS 없음)
+// ────────────────────────────────────────
+// 위험 감지 SMS API (1번만 발송)
+// ────────────────────────────────────────
+app.post('/api/danger-sms', async (req, res) => {
+  try {
+    const { danger_type, risk_percent, action } = req.body;
+    await sendDangerSms(danger_type, risk_percent, action);
+    res.json({ success: true });
+  } catch(err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
 // ────────────────────────────────────────
 // 로그인 (users 테이블 기반)
