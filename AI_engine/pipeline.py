@@ -436,7 +436,9 @@ def run_pipeline(video_path, user_id=1):
         }
 
         # 현재 세션 찾기
-        now = datetime.now()
+        import pytz
+        korea_tz = pytz.timezone('Asia/Seoul')
+        now = datetime.now(korea_tz)
         hour = now.hour
         if 6 <= hour < 14: shift_type = '오전'
         elif 14 <= hour < 22: shift_type = '오후'
