@@ -91,12 +91,12 @@ async function sendHandoverSms(approvedBy, unresolvedCount, todayCount) {
 }
 
 // ── 위험 감지 SMS (3명 발송) ─────────
-async function sendDangerSms(dangerType, riskPercent, action) {
+async function sendDangerSms(dangerType, riskPercent, action, detectedTime) {
   try {
     const from      = process.env.COOLSMS_FROM;
     const apiKey    = process.env.COOLSMS_API_KEY;
     const apiSecret = process.env.COOLSMS_API_SECRET;
-    const now       = new Date().toLocaleTimeString('ko-KR', {hour:'2-digit', minute:'2-digit'});
+    const now = detectedTime || new Date().toLocaleTimeString('ko-KR', {timeZone:'Asia/Seoul', hour:'2-digit', minute:'2-digit'});
 
     if (!from || !apiKey || !apiSecret) {
       console.warn('⚠️  SMS 설정 누락');
@@ -156,8 +156,8 @@ app.get("/reports/:id",  (req, res) => res.sendFile(path.join(__dirname, "public
 // ────────────────────────────────────────
 app.post('/api/danger-sms', async (req, res) => {
   try {
-    const { danger_type, risk_percent, action } = req.body;
-    await sendDangerSms(danger_type, risk_percent, action);
+    const { danger_type, risk_percent, action, detected_time } = req.body;
+    await sendDangerSms(danger_type, risk_percent, action, detected_time);
     res.json({ success: true });
   } catch(err) {
     res.status(500).json({ error: err.message });
