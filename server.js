@@ -599,14 +599,16 @@ app.post("/api/alarm", async (req, res) => {
 // ────────────────────────────────────────
 app.get("/api/session/current", async (req, res) => {
   try {
+    // 한국 시간 기준으로 계산 (UTC+9)
     const now = new Date();
-    const hour = now.getHours();
+    const koreaTime = new Date(now.getTime() + 9 * 60 * 60 * 1000);
+    const hour = koreaTime.getUTCHours();
     let shiftType;
     if (hour >= 6 && hour < 14) shiftType = '오전';
     else if (hour >= 14 && hour < 22) shiftType = '오후';
     else shiftType = '야간';
 
-    const today = now.toISOString().slice(0, 10);
+    const today = koreaTime.toISOString().slice(0, 10);
 
     const [[session]] = await db.query(`
       SELECT * FROM monitoring_sessions
@@ -827,6 +829,27 @@ app.get("/api/session/:session_id/events", async (req, res) => {
     `, [req.params.session_id]);
     res.json({ success: true, events });
   } catch(err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+
+// ────────────────────────────────────────
+// 바운딩박스 이미지 업로드 API (Cloudinary)
+// ────────────────────────────────────────
+app.post('/api/upload-bbox', async (req, res) => {
+  try {
+    const { image_data } = req.body; // base64 이미지
+    if (!image_data) return res.status(400).json({ error: '이미지 없음' });
+
+    const uploadResult = await cloudinary.uploader.upload(image_data, {
+      folder: 'safety_bbox',
+      resource_type: 'image'
+    });
+
+    res.json({ success: true, url: uploadResult.secure_url });
+  } catch(err) {
+    console.error('이미지 업로드 오류:', err.message);
     res.status(500).json({ error: err.message });
   }
 });
