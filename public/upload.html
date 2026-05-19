@@ -444,9 +444,17 @@
       isAnalyzing = true;
 
       var canvas = document.createElement('canvas');
-      canvas.width  = cameraVideo.videoWidth  || 640;
-      canvas.height = cameraVideo.videoHeight || 480;
-      canvas.getContext('2d').drawImage(cameraVideo, 0, 0);
+      if (slideMode) {
+        // 슬라이드 모드: bboxCanvas 내용 그대로 사용
+        var srcCanvas = document.getElementById('bboxCanvas');
+        canvas.width  = srcCanvas.width  || 640;
+        canvas.height = srcCanvas.height || 480;
+        canvas.getContext('2d').drawImage(srcCanvas, 0, 0);
+      } else {
+        canvas.width  = cameraVideo.videoWidth  || 640;
+        canvas.height = cameraVideo.videoHeight || 480;
+        canvas.getContext('2d').drawImage(cameraVideo, 0, 0);
+      }
 
       canvas.toBlob(function(blob) {
         var formData = new FormData();
@@ -662,6 +670,7 @@
       detectBtn.style.display = 'none';
       stopBtn.style.display   = 'flex';
       dangerDetected = false;
+      smsSent = false;
       isCreatingReport = false;
       // 입력 초기화
       var ni = document.getElementById('noteImmediate'); if(ni) ni.value='';
@@ -679,8 +688,15 @@
       cameraSection.classList.remove('camera-border-danger');
       cameraDot.classList.remove('danger');
 
-      drawFence();
+      if (!slideMode) drawFence();
       intervalId = true;
+
+      // 슬라이드 모드면 타이머 시작
+      if (slideMode) {
+        startSlideTimer();
+        document.getElementById('slideModeStatus').textContent = '슬라이드 모드 (1/' + slideImages.length + ')';
+      }
+
       loopAnalyze();
     }
 
@@ -707,6 +723,13 @@
       safeClass('currentStatus', 'status-value');
       cameraSection.classList.remove('camera-border-danger');
       cameraDot.classList.remove('danger');
+
+      // 슬라이드 타이머 멈추기
+      if (slideTimer) { clearInterval(slideTimer); slideTimer = null; }
+      if (slideMode) {
+        document.getElementById('slideModeStatus').textContent = '슬라이드 모드 (감지 시작 후 자동 전환)';
+      }
+
       drawFence();
     }
 
@@ -813,6 +836,8 @@
       var action = types.map(function(t) { return actionMap[t] || '즉각 조치 필요'; }).join(' / ');
       var riskPercents = { '안전복 미착용': 48, '위험구역 출입': 60, '중장비 접근': 60, '자재물 적치': 32, '작업자 밀집': 24 };
       var maxPct = Math.max.apply(null, types.map(function(t) { return riskPercents[t] || 48; }));
+      // 한국 시간으로 변환
+      var koreaTime = new Date().toLocaleTimeString('ko-KR', {timeZone: 'Asia/Seoul', hour: '2-digit', minute: '2-digit'});
 
       fetch(BASE_URL + '/api/danger-sms', {
         method: 'POST',
@@ -821,7 +846,8 @@
           danger_type: dangerMsg,
           risk_percent: maxPct,
           action: action,
-          user: user
+          user: user,
+          detected_time: koreaTime
         })
       }).catch(function(){});
     }
@@ -925,13 +951,23 @@
       document.getElementById('webcamBtn').classList.remove('active');
       document.getElementById('slideBtn').classList.add('active');
       document.getElementById('cameraVideo').style.display = 'none';
-      document.getElementById('slideModeStatus').textContent = '슬라이드 모드';
       slideIndex = 0;
       showSlide();
+
+      // 감지 중일 때만 자동 전환 타이머 시작
+      if (intervalId) {
+        startSlideTimer();
+      } else {
+        document.getElementById('slideModeStatus').textContent = '슬라이드 모드 (감지 시작 후 자동 전환)';
+      }
+    }
+
+    function startSlideTimer() {
+      if (slideTimer) clearInterval(slideTimer);
       slideTimer = setInterval(function() {
         slideIndex = (slideIndex + 1) % slideImages.length;
         showSlide();
-      }, 5000);
+      }, 10000);
     }
 
     function showSlide() {
