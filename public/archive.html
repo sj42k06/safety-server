@@ -272,12 +272,18 @@
       }).join('');
     }
 
-    ['filterGrade','filterAction','filterDateFrom','filterDateTo','filterCase'].forEach(id => {
-      document.getElementById(id).addEventListener('change', renderTable);
+    ['filterGrade','filterAction','filterDateFrom','filterCase'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.addEventListener('change', renderTable);
     });
 
     function resetFilter() {
-      ['filterGrade','filterAction','filterDateFrom','filterDateTo','filterCase'].forEach(id => document.getElementById(id).value = '');
+      ['filterGrade','filterAction','filterDateFrom','filterCase'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = '';
+      });
+      currentDays = 'all';
+      document.querySelectorAll('.period-btn').forEach((b,i) => b.classList.toggle('active', i===0));
       renderTable();
     }
 
