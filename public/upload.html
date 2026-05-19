@@ -870,21 +870,26 @@
         return;
       }
 
-      list.innerHTML = filtered.map(function(a) {
+      var html = '';
+      filtered.forEach(function(a) {
         var resolved = a.status === 'resolved';
-        return '<div class="alarm-item" style="border-color:' + (resolved ? '#e2e8f0' : '#fecaca') + ';opacity:' + (resolved ? '0.6' : '1') + ';">' +
-          '<div class="alarm-item-header">' +
-          '<span class="alarm-item-time">' + a.time + '</span>' +
-          '<span class="alarm-item-badge ' + a.level + '">' + a.grade + '</span>' +
-          '</div>' +
-          '<div class="alarm-item-name">' + a.type + '</div>' +
-          '<div style="font-size:11px;color:#94a3b8;margin-top:2px;">' + a.percent + '%</div>' +
-          (resolved
-            ? '<div style="font-size:11px;color:#16a34a;margin-top:4px;font-weight:700;">✅ 조치완료</div>'
-            : '<button onclick="resolveAlarm('' + a.id + '')" style="margin-top:6px;width:100%;padding:4px;border:1px solid #16a34a;border-radius:6px;background:#f0fdf4;color:#16a34a;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">✅ 조치완료</button>'
-          ) +
-          '</div>';
-      }).join('');
+        var borderColor = resolved ? '#e2e8f0' : '#fecaca';
+        var opacity = resolved ? '0.6' : '1';
+        html += '<div class="alarm-item" style="border-color:' + borderColor + ';opacity:' + opacity + ';">';
+        html += '<div class="alarm-item-header">';
+        html += '<span class="alarm-item-time">' + a.time + '</span>';
+        html += '<span class="alarm-item-badge ' + a.level + '">' + a.grade + '</span>';
+        html += '</div>';
+        html += '<div class="alarm-item-name">' + a.type + '</div>';
+        html += '<div style="font-size:11px;color:#94a3b8;margin-top:2px;">' + a.percent + '%</div>';
+        if (resolved) {
+          html += '<div style="font-size:11px;color:#16a34a;margin-top:4px;font-weight:700;">✅ 조치완료</div>';
+        } else {
+          html += '<button data-id="' + a.id + '" onclick="resolveAlarm(this.dataset.id)" style="margin-top:6px;width:100%;padding:4px;border:1px solid #16a34a;border-radius:6px;background:#f0fdf4;color:#16a34a;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">✅ 조치완료</button>';
+        }
+        html += '</div>';
+      });
+      list.innerHTML = html;
     }
 
     function resolveAlarm(id) {
