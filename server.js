@@ -637,15 +637,26 @@ app.get("/api/session/current", async (req, res) => {
 // 슬라이드 이미지 목록 API
 // ────────────────────────────────────────
 app.get("/api/slides", (req, res) => {
-  const slidesDir = path.join(__dirname, 'public', 'slides');
   const fs = require('fs');
-  if (!fs.existsSync(slidesDir)) {
-    return res.json({ images: [] });
-  }
-  const files = fs.readdirSync(slidesDir)
-    .filter(f => /\.(jpg|jpeg|png|gif)$/i.test(f))
-    .map(f => '/slides/' + f);
-  res.json({ images: files });
+  const slidesDir = path.join(__dirname, 'public', 'slides');
+
+  // 케이스별 폴더 분류
+  const cases = {
+    forklift: [],
+    material: [],
+    crowd: []
+  };
+
+  Object.keys(cases).forEach(function(caseName) {
+    const caseDir = path.join(slidesDir, caseName);
+    if (fs.existsSync(caseDir)) {
+      cases[caseName] = fs.readdirSync(caseDir)
+        .filter(f => /\.(jpg|jpeg|png|gif)$/i.test(f))
+        .map(f => '/slides/' + caseName + '/' + f);
+    }
+  });
+
+  res.json({ images: cases });
 });
 
 // ────────────────────────────────────────
