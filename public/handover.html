@@ -144,7 +144,7 @@
 
         <!-- 인수 승인 -->
         <button class="btn-approve" id="btnApprove" onclick="approveHandover()">
-          <i class="ri-check-double-line"></i> 인수인계 승인
+          <i class="ri-logout-box-line"></i> 근무 종료 및 보고서 생성
         </button>
       </div>
 
@@ -153,7 +153,7 @@
         <div class="done-circle">✅</div>
         <div class="done-title">인수인계 완료!</div>
         <div class="done-sub" id="doneMsg">인수인계가 완료되었습니다.</div>
-        <button class="btn-goto" onclick="window.location.href='/upload'">현장 모니터링으로 이동</button>
+        <button class="btn-goto" onclick="window.location.href='/login'">로그아웃</button>
       </div>
     </div>
   </div>
@@ -252,30 +252,26 @@
     btn.innerHTML = '<i class="ri-loader-4-line"></i> 처리 중...';
 
     try {
-      // 인수인계 승인 처리
-      if (generatedReportId) {
-        await fetch(`${BASE_URL}/api/handover/approve`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            handover_id: generatedReportId,
-            from_user: userName,
-            to_user: '다음 관리자'
-          })
-        });
+      // 보고서 자동 생성
+      const res = await fetch(`${BASE_URL}/api/reports/generate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ session_id: currentSessionId, created_by: 1 })
+      });
+      const data = await res.json();
+
+      if (data.success) {
+        generatedReportId = data.report_id;
       }
 
       // 완료 화면
       document.getElementById('hwContent').style.display = 'none';
       document.getElementById('hwDone').classList.add('show');
-      document.getElementById('doneMsg').textContent = `${userName} 관리자님의 인수인계가 완료되었습니다.`;
-
-      // 3초 후 현장 모니터링으로 이동
-      setTimeout(() => window.location.href = '/upload', 3000);
+      document.getElementById('doneMsg').textContent = `보고서가 생성되었습니다. 로그아웃 후 다음 관리자에게 인수인계해주세요.`;
 
     } catch(e) {
       btn.disabled = false;
-      btn.innerHTML = '<i class="ri-check-double-line"></i> 인수인계 승인';
+      btn.innerHTML = '<i class="ri-check-double-line"></i> 근무 종료';
     }
   }
 

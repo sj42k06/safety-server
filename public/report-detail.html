@@ -355,6 +355,59 @@
   }
 
   loadReport();
+
+  // 현재 관리자 이름 표시
+  function showCurrentManager() {
+    const user = localStorage.getItem('username') || 'admin';
+    const nameMap = {
+      'admin': '손광민',
+      'admin2': '정재학',
+      'admin3': '관리자 C',
+      'admin4': '관리자 D'
+    };
+    const el = document.getElementById('currentManagerName');
+    if (el) el.textContent = nameMap[user] || user;
+  }
+  showCurrentManager();
+
+  // 인수인계 승인
+  async function approveHandover() {
+    const nextManager = document.getElementById('nextManagerInput').value.trim();
+    if (!nextManager) {
+      alert('다음 관리자 이름을 입력해주세요.');
+      return;
+    }
+
+    const btn = document.getElementById('btnHandoverApprove');
+    btn.disabled = true;
+    btn.textContent = '처리 중...';
+
+    try {
+      // DB에 인수인계 승인 저장
+      await fetch(BASE_URL + '/api/handover/approve', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          report_id: reportId,
+          next_manager: nextManager
+        })
+      });
+
+      btn.style.display = 'none';
+      document.getElementById('handoverDone').style.display = 'block';
+      document.getElementById('nextManagerInput').disabled = true;
+
+      // 3초 후 현장 모니터링으로 이동
+      setTimeout(() => {
+        window.location.href = '/upload';
+      }, 3000);
+
+    } catch(e) {
+      btn.disabled = false;
+      btn.textContent = '✅ 인수인계 승인';
+      alert('오류가 발생했습니다. 다시 시도해주세요.');
+    }
+  }
 </script>
 </body>
 </html>
