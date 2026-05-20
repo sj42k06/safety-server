@@ -781,7 +781,11 @@ app.post("/api/reports/generate", async (req, res) => {
     `, [session_id]);
 
     // 보고서 생성
-    const reportTitle = `${session.session_date} ${session.shift_type} 안전 인수인계 보고서`;
+    // session_date를 한국 날짜 문자열로 변환
+    const sessionDateStr = session.session_date instanceof Date
+      ? session.session_date.toISOString().slice(0, 10)
+      : String(session.session_date).slice(0, 10);
+    const reportTitle = `${sessionDateStr} ${session.shift_type} 안전 인수인계 보고서`;
     const [result] = await db.query(`
       INSERT INTO reports
       (session_id, report_title, report_date, created_by, total_analyzed_frames,
@@ -843,7 +847,7 @@ app.post('/api/upload-bbox', async (req, res) => {
     if (!image_data) return res.status(400).json({ error: '이미지 없음' });
 
     const uploadResult = await cloudinary.uploader.upload(image_data, {
-      folder: 'safety_bbox',
+      folder: 'safety_frames',
       resource_type: 'image'
     });
 
