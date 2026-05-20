@@ -189,8 +189,8 @@
         <div class="camera-section" id="cameraSection">
           <video id="cameraVideo" autoplay muted playsinline></video>
           <canvas id="bboxCanvas"></canvas>
-          <div class="zone-label zone-safe">🟢 정상구역</div>
-          <div class="zone-label zone-danger">🔴 위험구역</div>
+          <div class="zone-label zone-safe" id="zoneSafe">🟢 정상구역</div>
+          <div class="zone-label zone-danger" id="zoneDanger">🔴 위험구역</div>
           <div class="camera-badge">
             <div class="camera-dot" id="cameraDot"></div>
             <span id="cameraStatus">카메라 연결 중...</span>
@@ -207,6 +207,21 @@
           <button class="slide-btn" id="slideBtn" onclick="switchToSlide()">🏗️ 슬라이드</button>
           <span style="font-size:12px;color:#94a3b8;" id="slideModeStatus"></span>
           <button onclick="endShift()" style="margin-left:auto;padding:6px 14px;background:#1e293b;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">🔚 근무 종료</button>
+        </div>
+
+        <!-- 슬라이드 케이스 선택 + 이전/다음 -->
+        <div id="slideControls" style="display:none;flex-direction:column;gap:8px;background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:12px 16px;">
+          <div style="display:flex;gap:6px;flex-wrap:wrap;">
+            <span style="font-size:11px;font-weight:700;color:#64748b;align-self:center;">케이스:</span>
+            <button class="slide-case-btn active" data-case="forklift" onclick="selectCase(this)">🚜 중장비 접근</button>
+            <button class="slide-case-btn" data-case="material" onclick="selectCase(this)">📦 자재물 적치</button>
+            <button class="slide-case-btn" data-case="crowd" onclick="selectCase(this)">👥 작업자 밀집</button>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:center;gap:16px;">
+            <button onclick="prevSlide()" style="padding:6px 16px;border:1px solid #e2e8f0;border-radius:8px;background:#f8fafc;cursor:pointer;font-size:16px;font-family:inherit;">◀ 이전</button>
+            <span id="slidePageInfo" style="font-size:13px;font-weight:700;color:#1e293b;">1 / 2</span>
+            <button onclick="nextSlide()" style="padding:6px 16px;border:1px solid #e2e8f0;border-radius:8px;background:#f8fafc;cursor:pointer;font-size:16px;font-family:inherit;">다음 ▶</button>
+          </div>
         </div>
 
         <!-- 알람 목록 패널 -->
@@ -438,6 +453,45 @@
       });
     }
 
+
+    // ── 슬라이드 모드 바운딩박스 그리기 ─────────────────────────
+    function drawSlideWithBoxes(boxes) {
+      var canvas = document.getElementById('bboxCanvas');
+      var ctx = canvas.getContext('2d');
+      var W = canvas.width;
+      var H = canvas.height;
+
+      // 현재 슬라이드 이미지 다시 그리기
+      if (slideImages.length > 0) {
+        var W = canvas.width;
+        var H = canvas.height;
+        ctx.clearRect(0, 0, W, H);
+        if (currentSlideImg) {
+          ctx.drawImage(currentSlideImg, 0, 0, W, H);
+          // 바운딩박스 그리기
+          if (boxes && boxes.length) {
+            boxes.forEach(function(box) {
+              var color = box.in_danger_zone ? '#ef4444' : (COLOR_MAP[box.label] || '#94a3b8');
+              var px = box.x * W, py = box.y * H, pw = box.w * W, ph = box.h * H;
+              ctx.strokeStyle = color;
+              ctx.lineWidth = 2.5;
+              ctx.strokeRect(px, py, pw, ph);
+              var labelKr = LABEL_KR[box.label] || box.label;
+              var conf = box.confidence ? (' ' + Math.round(box.confidence*100) + '%') : '';
+              var text = labelKr + conf;
+              ctx.font = 'bold 12px sans-serif';
+              var tw = ctx.measureText(text).width + 10;
+              ctx.fillStyle = color;
+              ctx.fillRect(px, py - 20, tw, 20);
+              ctx.fillStyle = '#fff';
+              ctx.fillText(text, px + 5, py - 5);
+            });
+          }
+        };
+        img.src = slideImages[slideIndex];
+      }
+    }
+
     // ── 빠른 분석 ─────────────────────────
     function analyzeQuick() {
       if (isAnalyzing) return;
@@ -445,11 +499,16 @@
 
       var canvas = document.createElement('canvas');
       if (slideMode) {
-        // 슬라이드 모드: bboxCanvas 내용 그대로 사용
-        var srcCanvas = document.getElementById('bboxCanvas');
-        canvas.width  = srcCanvas.width  || 640;
-        canvas.height = srcCanvas.height || 480;
-        canvas.getContext('2d').drawImage(srcCanvas, 0, 0);
+        // 슬라이드 모드: 현재 슬라이드 이미지 전송
+        canvas.width  = 640;
+        canvas.height = 480;
+        var actx = canvas.getContext('2d');
+        if (currentSlideImg) {
+          actx.drawImage(currentSlideImg, 0, 0, 640, 480);
+        } else {
+          actx.fillStyle = '#000';
+          actx.fillRect(0, 0, 640, 480);
+        }
       } else {
         canvas.width  = cameraVideo.videoWidth  || 640;
         canvas.height = cameraVideo.videoHeight || 480;
@@ -482,8 +541,13 @@
             safeSet('analyzeCount', analyzeCount);
             safeSet('lastDetected', new Date().toLocaleTimeString('ko-KR'));
 
-            // 바운딩박스 실시간 표시 (항상)
-            drawAll(data.boxes || []);
+            // 바운딩박스 실시간 표시
+            if (slideMode) {
+              // 슬라이드 모드: 현재 슬라이드 사진 다시 그린 후 바운딩박스만 추가
+              drawSlideWithBoxes(data.boxes || []);
+            } else {
+              drawAll(data.boxes || []);
+            }
 
             if (data.danger && !dangerDetected) {
               dangerDetected = true;
@@ -791,6 +855,22 @@
           if (sesData.session) currentSessionId = sesData.session.session_id;
         }
 
+        // 바운딩박스 캔버스 캡처 → Cloudinary 업로드
+        var bboxImageUrl = '';
+        try {
+          var canvas = document.getElementById('bboxCanvas');
+          var imageData = canvas.toDataURL('image/jpeg', 0.8);
+          var uploadRes = await fetch(BASE_URL + '/api/upload-bbox', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ image_data: imageData })
+          });
+          var uploadData = await uploadRes.json();
+          if (uploadData.url) bboxImageUrl = uploadData.url;
+        } catch(imgErr) {
+          console.warn('이미지 업로드 실패:', imgErr);
+        }
+
         // 케이스별 rule_id 매핑
         var ruleMap = {
           '안전복 미착용': 3,
@@ -801,7 +881,8 @@
         };
 
         var types = dangerMsg.split(' + ');
-        types.forEach(async function(type) {
+        for (var i = 0; i < types.length; i++) {
+          var type = types[i];
           var ruleId = ruleMap[type] || 3;
           var riskPercents = { '안전복 미착용': 48, '위험구역 출입': 60, '중장비 접근': 60, '자재물 적치': 32, '작업자 밀집': 24 };
           var riskLevels = { '안전복 미착용': '위험', '위험구역 출입': '즉각조치', '중장비 접근': '즉각조치', '자재물 적치': '위험', '작업자 밀집': '주의' };
@@ -815,10 +896,10 @@
               risk_case: type,
               risk_percent: riskPercents[type] || 48,
               risk_level: riskLevels[type] || '위험',
-              bbox_image_url: ''
+              bbox_image_url: bboxImageUrl
             })
           });
-        });
+        }
       } catch(e) { console.error('DB 저장 오류:', e); }
     }
 
@@ -928,9 +1009,11 @@
 
     // ── 카메라 슬라이드 ─────────────────────────
     var slideMode = false;
-    var slideImages = [];
+    var slideImages = {};  // 케이스별 이미지 {forklift:[], material:[], crowd:[]}
+    var currentCase = 'forklift';
     var slideIndex = 0;
     var slideTimer = null;
+    var currentSlideImg = null;
 
     function switchToWebcam() {
       slideMode = false;
@@ -939,6 +1022,9 @@
       document.getElementById('slideBtn').classList.remove('active');
       document.getElementById('slideModeStatus').textContent = '';
       document.getElementById('cameraVideo').style.display = 'block';
+      document.getElementById('zoneSafe').style.display = 'block';
+      document.getElementById('zoneDanger').style.display = 'block';
+      document.getElementById('slideControls').style.display = 'none';
       drawFence();
     }
 
@@ -951,6 +1037,8 @@
       document.getElementById('webcamBtn').classList.remove('active');
       document.getElementById('slideBtn').classList.add('active');
       document.getElementById('cameraVideo').style.display = 'none';
+      document.getElementById('zoneSafe').style.display = 'none';
+      document.getElementById('zoneDanger').style.display = 'none';
       slideIndex = 0;
       showSlide();
 
@@ -971,22 +1059,47 @@
     }
 
     function showSlide() {
+      var imgs = slideImages[currentCase] || [];
       var canvas = document.getElementById('bboxCanvas');
       var ctx = canvas.getContext('2d');
+      var section = document.getElementById('cameraSection');
+      var W = section.offsetWidth || 640;
+      var H = section.offsetHeight || 480;
+      canvas.width = W;
+      canvas.height = H;
+
+      if (imgs.length === 0) {
+        ctx.clearRect(0, 0, W, H);
+        ctx.fillStyle = '#1e293b';
+        ctx.fillRect(0, 0, W, H);
+        ctx.fillStyle = '#94a3b8';
+        ctx.font = '14px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('사진을 slides 폴더에 추가해주세요', W/2, H/2);
+        ctx.textAlign = 'left';
+        document.getElementById('slidePageInfo').textContent = '0 / 0';
+        return;
+      }
+
       var img = new Image();
       img.onload = function() {
-        canvas.width = img.width;
-        canvas.height = img.height;
-        ctx.drawImage(img, 0, 0);
+        ctx.clearRect(0, 0, W, H);
+        ctx.drawImage(img, 0, 0, W, H);
+        currentSlideImg = img;
       };
-      img.src = slideImages[slideIndex];
-      document.getElementById('slideModeStatus').textContent = '슬라이드 모드 (' + (slideIndex+1) + '/' + slideImages.length + ')';
+      img.src = imgs[slideIndex];
+      document.getElementById('slidePageInfo').textContent = (slideIndex+1) + ' / ' + imgs.length;
+      document.getElementById('slideModeStatus').textContent = '';
     }
 
-    // 슬라이드 이미지 로드
+    // 슬라이드 이미지 로드 (폴더별 분류)
     fetch(BASE_URL + '/api/slides')
       .then(function(r) { return r.json(); })
-      .then(function(data) { if (data.images) slideImages = data.images; })
+      .then(function(data) {
+        if (data.images) {
+          slideImages = data.images;
+        }
+      })
       .catch(function(){});
 
     function toggleNav() {
