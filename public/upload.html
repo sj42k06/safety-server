@@ -307,7 +307,7 @@
     var BASE_URL = 'https://safety-server-oqza.onrender.com';
 
     // 인수인계 확인 - 안 했으면 강제 이동
-    var user = localStorage.getItem('username') || 'admin';
+    var user = localStorage.getItem('username') || 'admin1';
 
     var cameraVideo   = document.getElementById('cameraVideo');
     var cameraSection = document.getElementById('cameraSection');
@@ -318,7 +318,7 @@
     var detectBtn     = document.getElementById('detectBtn');
     var stopBtn       = document.getElementById('stopBtn');
 
-    document.getElementById('sidebarUser').textContent = user === 'admin2' ? '정재학 (admin2)' : '손광민 (admin)';
+    document.getElementById('sidebarUser').textContent = user === 'admin2' ? '정재학 (admin2)' : user === 'admin1' ? '손광민 (admin1)' : user;
 
     var analyzeCount     = 0;
     var isAnalyzing      = false;
@@ -420,6 +420,7 @@
 
     // ── 바운딩박스 + 펜스 그리기 ───────────
     function drawAll(boxes) {
+      lastBboxes = boxes || [];
       var W = bboxCanvas.width  = cameraVideo.videoWidth  || cameraSection.offsetWidth;
       var H = bboxCanvas.height = cameraVideo.videoHeight || cameraSection.offsetHeight;
       bboxCtx.clearRect(0, 0, W, H);
@@ -905,7 +906,7 @@
 
     // ── 위험 감지 SMS ─────────────────────────
     function sendDangerSms(dangerMsg) {
-      var user = localStorage.getItem('username') || 'admin';
+      var user = localStorage.getItem('username') || 'admin1';
       var actionMap = {
         '안전복 미착용': '안전모/조끼/안전화 착용 여부 확인 후 즉시 착용 지시',
         '위험구역 출입': '즉시 위험구역 이탈 지시 및 출입 통제 강화',
@@ -1110,6 +1111,123 @@
     }
 
     initCamera();
+    loadSafetyRules();
+
+    // safety_rules DB에서 불러오기
+    var safetyRules = {};
+    function loadSafetyRules() {
+      fetch(BASE_URL + '/api/safety-rules')
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          if (data.rules) {
+            data.rules.forEach(function(r) {
+              safetyRules[r.case_name] = r;
+            });
+          }
+        }).catch(function(){});
+    }
+
+    // 마지막 감지 바운딩박스 저장
+    var lastBboxes = [];
+
+    // 바운딩박스 마우스 호버 툴팁
+    function handleCanvasHover(e) {
+      if (!lastBboxes || lastBboxes.length === 0) return;
+      var overlay = document.getElementById('bboxOverlay');
+      var rect = overlay.getBoundingClientRect();
+      var mx = e.clientX - rect.left;
+      var my = e.clientY - rect.top;
+      var W = rect.width;
+      var H = rect.height;
+
+      var found = null;
+      lastBboxes.forEach(function(box) {
+        var px = box.x * W, py = box.y * H, pw = box.w * W, ph = box.h * H;
+        if (mx >= px && mx <= px + pw && my >= py && my <= py + ph) {
+          found = box;
+        }
+      });
+
+      if (found) {
+        var caseName = found.label_kr || found.label;
+        var rule = null;
+        // safety_rules에서 매핑
+        Object.keys(safetyRules).forEach(function(key) {
+          if (key.includes(caseName) || caseName.includes('미착용') && key.includes('안전복')) {
+            rule = safetyRules[key];
+          }
+        });
+
+        var tooltip = document.getElementById('bboxTooltip');
+        document.getElementById('ttTitle').textContent = caseName || '-';
+        document.getElementById('ttLikelihood').textContent = rule ? rule.likelihood_score + '점' : '-';
+        document.getElementById('ttSeverity').textContent = rule ? rule.severity_score + '점' : '-';
+        document.getElementById('ttPercent').textContent = rule ? rule.risk_percent + '%' : '-';
+        document.getElementById('ttLevel').textContent = rule ? rule.risk_level : '-';
+        document.getElementById('ttAccident').textContent = rule ? rule.accident_type : '-';
+
+        tooltip.style.display = 'block';
+        tooltip.style.left = (e.clientX + 16) + 'px';
+        tooltip.style.top = (e.clientY - 20) + 'px';
+      } else {
+        hideBboxTooltip();
+      }
+    }
+
+    function hideBboxTooltip() {
+      document.getElementById('bboxTooltip').style.display = 'none';
+    }
+
+    // Help 모달
+    function toggleHelp() {
+      document.getElementById('helpModal').classList.toggle('show');
+    }
+
   </script>
+  <!-- 바운딩박스 툴팁 -->
+  <div id="bboxTooltip">
+    <div class="tt-title" id="ttTitle">-</div>
+    <div class="tt-row"><span class="tt-label">가능성</span><span class="tt-val" id="ttLikelihood">-</span></div>
+    <div class="tt-row"><span class="tt-label">중대성</span><span class="tt-val" id="ttSeverity">-</span></div>
+    <div class="tt-row"><span class="tt-label">위험도</span><span class="tt-val" id="ttPercent">-</span></div>
+    <div class="tt-row"><span class="tt-label">등급</span><span class="tt-val" id="ttLevel">-</span></div>
+    <div class="tt-row"><span class="tt-label">사고유형</span><span class="tt-val" id="ttAccident">-</span></div>
+  </div>
+
+  <!-- Help 버튼 -->
+  <button id="helpBtn" onclick="toggleHelp()">?</button>
+
+  <!-- Help 모달 -->
+  <div id="helpModal" onclick="if(event.target===this)toggleHelp()">
+    <div class="help-box">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+        <div class="help-title">⚠️ 위험도 기준표</div>
+        <button onclick="toggleHelp()" style="background:none;border:none;font-size:20px;cursor:pointer;">✕</button>
+      </div>
+      <div class="help-formula">
+        📐 위험도 = 가능성 × 중대성 ÷ 25 × 100<br>
+        <span style="font-size:11px;color:#94a3b8;">근거: 고용노동부 고시 제2024-76호 사업장 위험성평가에 관한 지침</span>
+      </div>
+      <table class="help-table">
+        <thead><tr><th>등급</th><th>범위</th><th>조치사항</th></tr></thead>
+        <tbody>
+          <tr><td>🔴 즉각조치</td><td>60~100%</td><td>즉각 작업 중지</td></tr>
+          <tr><td>🟡 위험</td><td>31~59%</td><td>주의 및 모니터링</td></tr>
+          <tr><td>🟢 주의</td><td>0~30%</td><td>지속 관찰</td></tr>
+        </tbody>
+      </table>
+      <table class="help-table" id="helpRulesTable">
+        <thead><tr><th>케이스</th><th>가능성</th><th>중대성</th><th>위험도</th><th>등급</th></tr></thead>
+        <tbody>
+          <tr><td>위험구역 출입</td><td>3점</td><td>5점</td><td>60%</td><td>🔴 즉각조치</td></tr>
+          <tr><td>중장비 접근</td><td>3점</td><td>5점</td><td>60%</td><td>🔴 즉각조치</td></tr>
+          <tr><td>안전복 미착용</td><td>4점</td><td>3점</td><td>48%</td><td>🟡 위험</td></tr>
+          <tr><td>자재물 적치</td><td>4점</td><td>2점</td><td>32%</td><td>🟡 위험</td></tr>
+          <tr><td>작업자 밀집</td><td>3점</td><td>2점</td><td>24%</td><td>🟢 주의</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
 </body>
 </html>
