@@ -66,7 +66,7 @@ const PHONE_MAP = {
 // ── SMS 발송 ─────────────────────────────
 async function sendHandoverSms(approvedBy, unresolvedCount, todayCount) {
   try {
-    const toUser  = approvedBy === 'admin' ? 'admin2' : 'admin';
+    const toUser  = approvedBy === 'admin1' ? 'admin2' : 'admin';
     const toPhone = PHONE_MAP[toUser];
     const from    = process.env.COOLSMS_FROM;
     const apiKey    = process.env.COOLSMS_API_KEY;
@@ -512,7 +512,7 @@ app.post("/api/handover/approve", async (req, res) => {
     // from_user, to_user를 users 테이블에서 조회
     const [users] = await db.query("SELECT user_id, login_id FROM users");
     const fromUser = users.find(u => u.login_id === user);
-    const toUser   = users.find(u => u.login_id !== user);
+    const toUser   = users.find(u => u.login_id !== user && u.login_id !== null);
 
     if (fromUser && toUser) {
       // 오늘 날짜 보고서 중 최신 보고서에 인수인계 기록
@@ -865,6 +865,26 @@ app.post('/api/upload-bbox', async (req, res) => {
     res.json({ success: true, url: uploadResult.secure_url });
   } catch(err) {
     console.error('이미지 업로드 오류:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+
+// ────────────────────────────────────────
+// 위험도 기준표 API (safety_rules)
+// ────────────────────────────────────────
+app.get('/api/safety-rules', async (req, res) => {
+  try {
+    const [rules] = await db.query(`
+      SELECT rule_id, case_name, accident_type,
+             likelihood_score, severity_score, risk_score,
+             risk_percent, risk_level, risk_formula,
+             law_name, law_content, recommendation
+      FROM safety_rules
+      ORDER BY rule_id
+    `);
+    res.json({ success: true, rules });
+  } catch(err) {
     res.status(500).json({ error: err.message });
   }
 });
