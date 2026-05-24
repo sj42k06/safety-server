@@ -141,10 +141,8 @@
         localStorage.setItem('username_display', account.name);
         localStorage.removeItem('handover_done');
 
-        // 미확인 보고서 있는지 체크
-        const checkRes = await fetch('/api/handover/pending', {
-          headers: { 'Authorization': 'Bearer ' + token }
-        });
+        // 미확인 보고서 있는지 체크 (token 없이 userId로)
+        const checkRes = await fetch('/api/handover/pending?user=' + userId);
         const checkData = await checkRes.json();
 
         if (checkData.hasPending) {
