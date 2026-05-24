@@ -7,7 +7,9 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/remixicon/4.2.0/remixicon.min.css" />
   <link rel="stylesheet" href="upload.css" />
   <style>
-    .monitoring-wrap { display:flex; flex-direction:column; gap:14px; }
+    .monitoring-wrap { display:flex; flex-direction:row; gap:24px; align-items:flex-start; }
+    .monitoring-left { flex:1; min-width:0; display:flex; flex-direction:column; gap:14px; }
+    .monitoring-right { width:300px; flex-shrink:0; position:sticky; top:20px; }
 
     .camera-section {
       background:#000; border-radius:16px; overflow:hidden;
@@ -113,7 +115,7 @@
     .alarm-confirm-btn { width:100%; padding:12px; background:#dc2626; color:#fff; border:none; border-radius:10px; font-size:14px; font-weight:700; cursor:pointer; font-family:inherit; margin-top:16px; }
 
     /* 알람 목록 패널 */
-    .alarm-panel { background:#fff; border:1px solid #e2e8f0; border-radius:14px; padding:16px; margin-top:12px; }
+    .alarm-panel { background:#fff; border:1px solid #e2e8f0; border-radius:14px; padding:16px; }
     .alarm-panel-title { font-size:14px; font-weight:700; color:#1e293b; margin-bottom:12px; display:flex; align-items:center; gap:6px; }
     .alarm-empty { text-align:center; color:#94a3b8; font-size:13px; padding:20px; }
     .alarm-item { border:1px solid #e2e8f0; border-radius:10px; padding:10px 12px; margin-bottom:8px; cursor:pointer; transition:all .2s; }
@@ -185,6 +187,9 @@
 
       <div class="monitoring-wrap">
 
+        <!-- 왼쪽: 카메라 + 컨트롤 -->
+        <div class="monitoring-left">
+
         <!-- 카메라 화면 -->
         <div class="camera-section" id="cameraSection">
           <video id="cameraVideo" autoplay muted playsinline></video>
@@ -225,7 +230,18 @@
           </div>
         </div>
 
-        <!-- 알람 목록 패널 -->
+        <!-- 줌 슬라이더 -->
+        <div id="zoomWrap" style="display:none;align-items:center;gap:10px;background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:10px 16px;">
+          <i class="ri-zoom-in-line" style="color:#64748b;"></i>
+          <span style="font-size:12px;color:#64748b;font-weight:600;">줌</span>
+          <input type="range" id="zoomInput" style="flex:1;" />
+          <span id="zoomValue" style="font-size:12px;font-weight:700;color:#1e293b;width:32px;">1.0x</span>
+        </div>
+
+        </div><!-- monitoring-left 끝 -->
+
+        <!-- 오른쪽: 알람 패널 -->
+        <div class="monitoring-right">
         <div class="alarm-panel">
           <div class="alarm-panel-title">
             <i class="ri-alarm-warning-line"></i> 알람 목록
@@ -237,22 +253,9 @@
           </div>
           <div id="alarmList"><div class="alarm-empty">감지된 알람이 없습니다</div></div>
         </div>
+        </div><!-- monitoring-right 끝 -->
 
 
-        <!-- 줌 슬라이더 -->
-        <div id="zoomWrap" style="display:none;align-items:center;gap:10px;background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:10px 16px;">
-          <i class="ri-zoom-in-line" style="color:#64748b;"></i>
-          <span style="font-size:12px;color:#64748b;font-weight:600;">줌</span>
-          <input type="range" id="zoomInput" style="flex:1;" />
-          <span id="zoomValue" style="font-size:12px;font-weight:700;color:#1e293b;width:32px;">1.0x</span>
-        </div>
-
-        <!-- 상태 카드 -->
-        <div class="status-grid">
-          <div class="status-card"><div class="status-title">현재 상태</div><div class="status-value" id="currentStatus">대기 중</div></div>
-          <div class="status-card"><div class="status-title">마지막 감지</div><div class="status-value" id="lastDetected">-</div></div>
-          <div class="status-card"><div class="status-title">분석 횟수</div><div class="status-value" id="analyzeCount">0</div></div>
-        </div>
 
         <!-- 위험 감지 패널 (감지 후 표시) -->
         <div class="danger-panel" id="dangerPanel">
@@ -300,7 +303,15 @@
           </button>
         </div>
 
+      </div><!-- monitoring-wrap 끝 -->
+
+      <!-- 상태 카드 (full width) -->
+      <div class="status-grid" style="margin-top:16px;">
+        <div class="status-card"><div class="status-title">현재 상태</div><div class="status-value" id="currentStatus">대기 중</div></div>
+        <div class="status-card"><div class="status-title">마지막 감지</div><div class="status-value" id="lastDetected">-</div></div>
+        <div class="status-card"><div class="status-title">분석 횟수</div><div class="status-value" id="analyzeCount">0</div></div>
       </div>
+
     </div>
   </main>
 
