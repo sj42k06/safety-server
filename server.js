@@ -889,6 +889,76 @@ app.get('/api/safety-rules', async (req, res) => {
   }
 });
 
+
+// ────────────────────────────────────────
+// 미확인 보고서 체크 API
+// ────────────────────────────────────────
+app.get('/api/handover/pending', async (req, res) => {
+  try {
+    const token = (req.headers.authorization || '').replace('Bearer ', '');
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'smart_safe_key');
+    const userId = decoded.user_id;
+
+    // 내가 받아야 할 미확인 보고서 조회
+    const [rows] = await db.query(`
+      SELECT hl.handover_id, r.report_id, r.report_title,
+             u.name AS from_user
+      FROM handover_logs hl
+      JOIN reports r ON hl.report_id = r.report_id
+      JOIN users u ON hl.from_user_id = u.user_id
+      WHERE hl.to_user_id = ?
+        AND hl.handover_status = '대기'
+      ORDER BY hl.created_at DESC
+      LIMIT 1
+    `, [userId]);
+
+    if (rows.length > 0) {
+      res.json({
+        hasPending: true,
+        report_id: rows[0].report_id,
+        report_title: rows[0].report_title,
+        from_user: rows[0].from_user
+      });
+    } else {
+      res.json({ hasPending: false });
+    }
+  } catch(err) {
+    res.json({ hasPending: false });
+  }
+});
+
+
+// ────────────────────────────────────────
+// 인수인계 승인 API
+// ────────────────────────────────────────
+app.post('/api/handover/confirm', async (req, res) => {
+  try {
+    const { report_id, next_manager } = req.body;
+
+    // handover_logs 상태 업데이트
+    await db.query(`
+      UPDATE handover_logs
+      SET handover_status = '확인완료',
+          confirmed_at = NOW(),
+          signature_check = TRUE
+      WHERE report_id = ?
+        AND handover_status = '대기'
+    `, [report_id]);
+
+    // reports 승인 상태 업데이트
+    await db.query(`
+      UPDATE reports
+      SET approval_status = '승인완료',
+          approved_at = NOW()
+      WHERE report_id = ?
+    `, [report_id]);
+
+    res.json({ success: true });
+  } catch(err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ────────────────────────────────────────
 // 헬스 체크
 // ────────────────────────────────────────
