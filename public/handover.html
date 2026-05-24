@@ -277,10 +277,10 @@
       currentSessionId = sesData.session.session_id;
 
       // 해당 세션 보고서 조회
-      var repRes = await fetch(`${BASE_URL}/api/reports?session_id=${currentSessionId}`);
+      var repRes = await fetch(`${BASE_URL}/api/reports/by-session/${currentSessionId}`);
       var repData = await repRes.json();
-      if (repData.reports && repData.reports.length > 0) {
-        generatedReportId = repData.reports[0].report_id;
+      if (repData.success && repData.report) {
+        generatedReportId = repData.report.report_id;
         var rc = document.getElementById('reportCreated');
         if (rc) rc.style.display = 'flex';
       }
