@@ -1027,35 +1027,54 @@
       document.getElementById('zoneSafe').style.display = 'block';
       document.getElementById('zoneDanger').style.display = 'block';
       document.getElementById('slideControls').style.display = 'none';
+      currentSlideImg = null;
       drawFence();
     }
 
     function switchToSlide() {
-      if (slideImages.length === 0) {
-        alert('슬라이드 이미지가 없습니다. /public/slides/ 폴더에 이미지를 추가해주세요.');
-        return;
-      }
       slideMode = true;
       document.getElementById('webcamBtn').classList.remove('active');
       document.getElementById('slideBtn').classList.add('active');
       document.getElementById('cameraVideo').style.display = 'none';
       document.getElementById('zoneSafe').style.display = 'none';
       document.getElementById('zoneDanger').style.display = 'none';
+      document.getElementById('slideControls').style.display = 'flex';
+      currentCase = 'forklift';
+      slideIndex = 0;
+      document.querySelectorAll('.slide-case-btn').forEach(function(b) { b.classList.remove('active'); });
+      var firstBtn = document.querySelector('.slide-case-btn[data-case="forklift"]');
+      if (firstBtn) firstBtn.classList.add('active');
+      showSlide();
+    }
+
+    function selectCase(btn) {
+      document.querySelectorAll('.slide-case-btn').forEach(function(b) { b.classList.remove('active'); });
+      btn.classList.add('active');
+      currentCase = btn.dataset.case;
       slideIndex = 0;
       showSlide();
+    }
 
-      // 감지 중일 때만 자동 전환 타이머 시작
-      if (intervalId) {
-        startSlideTimer();
-      } else {
-        document.getElementById('slideModeStatus').textContent = '슬라이드 모드 (감지 시작 후 자동 전환)';
-      }
+    function prevSlide() {
+      var imgs = (slideImages && slideImages[currentCase]) || [];
+      if (imgs.length === 0) return;
+      slideIndex = (slideIndex - 1 + imgs.length) % imgs.length;
+      showSlide();
+    }
+
+    function nextSlide() {
+      var imgs = (slideImages && slideImages[currentCase]) || [];
+      if (imgs.length === 0) return;
+      slideIndex = (slideIndex + 1) % imgs.length;
+      showSlide();
     }
 
     function startSlideTimer() {
       if (slideTimer) clearInterval(slideTimer);
+      var imgs = (slideImages && slideImages[currentCase]) || [];
+      if (imgs.length === 0) return;
       slideTimer = setInterval(function() {
-        slideIndex = (slideIndex + 1) % slideImages.length;
+        slideIndex = (slideIndex + 1) % imgs.length;
         showSlide();
       }, 10000);
     }
