@@ -895,9 +895,15 @@ app.get('/api/safety-rules', async (req, res) => {
 // ────────────────────────────────────────
 app.get('/api/handover/pending', async (req, res) => {
   try {
-    const token = (req.headers.authorization || '').replace('Bearer ', '');
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'smart_safe_key');
-    const userId = decoded.user_id;
+    const loginId = req.query.user;
+    if (!loginId) return res.json({ hasPending: false });
+
+    // login_id로 user_id 조회
+    const [userRows] = await db.query(
+      'SELECT user_id FROM users WHERE login_id = ?', [loginId]
+    );
+    if (userRows.length === 0) return res.json({ hasPending: false });
+    const userId = userRows[0].user_id;
 
     // 내가 받아야 할 미확인 보고서 조회
     const [rows] = await db.query(`
