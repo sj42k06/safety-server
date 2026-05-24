@@ -383,10 +383,15 @@
     btn.textContent = '처리 중...';
 
     try {
-      // DB에 인수인계 승인 저장
-      await fetch(BASE_URL + '/api/handover/approve', {
+      const token = localStorage.getItem('token') || '';
+
+      // 인수인계 승인 API 호출
+      await fetch(BASE_URL + '/api/handover/confirm', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + token
+        },
         body: JSON.stringify({
           report_id: reportId,
           next_manager: nextManager
