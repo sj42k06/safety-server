@@ -7,10 +7,7 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/remixicon/4.2.0/remixicon.min.css" />
   <link rel="stylesheet" href="upload.css" />
   <style>
-    .monitoring-wrap { display:flex; flex-direction:row; gap:24px; align-items:flex-start; }
-    .monitoring-left { flex:1; min-width:0; display:flex; flex-direction:column; gap:14px; }
-    .monitoring-right { width:300px; flex-shrink:0; position:sticky; top:20px; }
-
+    .monitoring-wrap { display:flex; flex-direction:column; gap:14px; }
     .camera-section {
       background:#000; border-radius:16px; overflow:hidden;
       position:relative; width:100%; height:75vh;
@@ -18,26 +15,20 @@
     }
     .camera-section video { width:100%; height:100%; object-fit:cover; display:block; }
     .camera-border-danger { border-color:#ef4444 !important; box-shadow:0 0 20px rgba(239,68,68,.4); }
-
     #bboxCanvas { position:absolute; inset:0; width:100%; height:100%; pointer-events:none; z-index:5; }
-
     .zone-label { position:absolute; top:10px; font-size:12px; font-weight:700; padding:4px 12px; border-radius:20px; z-index:10; pointer-events:none; }
     .zone-safe   { left:10px;  background:rgba(34,197,94,.8); color:#fff; }
     .zone-danger { right:10px; background:rgba(239,68,68,.8); color:#fff; }
-
     .camera-badge { position:absolute; top:10px; left:50%; transform:translateX(-50%); background:rgba(0,0,0,.7); color:#fff; padding:4px 12px; border-radius:20px; font-size:12px; display:flex; align-items:center; gap:6px; z-index:10; }
     .camera-dot { width:8px; height:8px; background:#22c55e; border-radius:50%; animation:blink 1s infinite; }
     .camera-dot.danger { background:#ef4444; }
     @keyframes blink { 0%,100%{opacity:1}50%{opacity:0} }
     .fullscreen-btn { position:absolute; bottom:10px; right:10px; background:rgba(0,0,0,.7); color:#fff; border:none; padding:6px 10px; border-radius:8px; cursor:pointer; font-size:15px; z-index:10; }
-
     .status-grid { display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; }
     .status-card { background:#fff; border:1px solid #e2e8f0; border-radius:12px; padding:14px; }
     .status-title { font-size:11px; color:#94a3b8; margin-bottom:6px; }
     .status-value { font-size:16px; font-weight:700; color:#1e293b; }
     .status-value.danger { color:#dc2626; }
-
-    /* 위험 감지 패널 */
     .danger-panel { display:none; background:#fff; border:2px solid #ef4444; border-radius:16px; overflow:hidden; }
     .danger-panel.show { display:block; }
     .danger-panel-header { background:#fef2f2; padding:14px 16px; display:flex; align-items:center; gap:8px; font-size:14px; font-weight:700; color:#dc2626; border-bottom:1px solid #fecaca; }
@@ -48,44 +39,23 @@
     .d-zone { font-size:11px; font-weight:700; padding:2px 8px; border-radius:10px; }
     .d-zone.danger { background:#fee2e2; color:#dc2626; }
     .d-zone.safe { background:#dcfce7; color:#16a34a; }
-
-    /* 조치 선택 영역 */
     .action-area { padding:16px; border-top:1px solid #fecaca; background:#fffbfb; }
     .action-area-title { font-size:13px; font-weight:700; color:#1e293b; margin-bottom:12px; }
-    .action-btns { display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; margin-bottom:14px; }
     .action-btn { background:#f8fafc; border:2px solid #e2e8f0; border-radius:14px; padding:14px 8px; cursor:pointer; text-align:center; transition:all .2s; font-family:inherit; }
     .action-btn:hover { border-color:#1e293b; }
-    .action-btn.sel-immediate { border-color:#dc2626; background:#fee2e2; }
-    .action-btn.sel-deferred  { border-color:#d97706; background:#fef3c7; }
-    .action-btn.sel-done      { border-color:#16a34a; background:#dcfce7; }
-    .action-btn-icon  { font-size:22px; margin-bottom:4px; }
-    .action-btn-label { font-size:12px; font-weight:700; color:#1e293b; }
-    .action-btn-sub   { font-size:10px; color:#94a3b8; margin-top:2px; }
-
-    /* 입력 필드 */
-    .action-fields { display:none; flex-direction:column; gap:10px; margin-bottom:14px; }
-    .action-fields.show { display:flex; }
+    .action-section { background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:14px; margin-bottom:12px; }
+    .action-section-title { font-size:13px; font-weight:700; color:#1e293b; margin-bottom:10px; }
     .field-label { font-size:12px; font-weight:600; color:#475569; margin-bottom:4px; }
     .field-input { width:100%; border:1px solid #e2e8f0; border-radius:8px; padding:9px 12px; font-size:13px; font-family:inherit; }
     .field-textarea { width:100%; border:1px solid #e2e8f0; border-radius:8px; padding:9px 12px; font-size:13px; font-family:inherit; resize:none; height:70px; }
-
-    /* 조치 섹션 */
-    .action-section { background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:14px; margin-bottom:12px; }
-    .action-section-title { font-size:13px; font-weight:700; color:#1e293b; margin-bottom:10px; }
-
-    /* 보고서 생성 버튼 */
     .create-report-btn { width:100%; padding:14px; background:#1e293b; color:#fff; border:none; border-radius:12px; font-size:14px; font-weight:700; cursor:pointer; font-family:inherit; display:none; align-items:center; justify-content:center; gap:8px; }
     .create-report-btn.show { display:flex; }
-    .create-report-btn:disabled { background:#94a3b8; cursor:not-allowed; }
     .creating-msg { text-align:center; font-size:13px; color:#64748b; padding:8px; display:none; }
     .creating-msg.show { display:block; }
-
     .btn-area { display:flex; gap:12px; }
     .detect-btn { flex:1; background:#1e293b; color:#fff; border:none; padding:13px; border-radius:10px; font-size:14px; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; font-family:inherit; transition:background .2s; }
     .detect-btn:disabled { background:#94a3b8; cursor:not-allowed; }
     .detect-btn.stop { background:#dc2626; }
-
-    /* nav */
     .nav-group-title { display:flex; align-items:center; gap:10px; padding:10px 16px; color:#94a3b8; font-size:13px; cursor:pointer; transition:all .2s; user-select:none; }
     .nav-group-title:hover { background:rgba(255,255,255,.05); color:#fff; }
     .nav-group-title.open { color:#fff; }
@@ -96,10 +66,7 @@
     .nav-sub a { display:flex; align-items:center; gap:8px; padding:8px 14px; border-radius:8px; color:#94a3b8; font-size:12px; text-decoration:none; transition:all .2s; }
     .nav-sub a:hover { background:rgba(255,255,255,.05); color:#fff; }
     .nav-sub a.active { background:rgba(59,130,246,.15); color:#60a5fa; font-weight:600; }
-
     :fullscreen .camera-section { border-radius:0; height:100vh; }
-
-    /* 알람 팝업 */
     .alarm-popup { display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.6); z-index:9999; align-items:center; justify-content:center; }
     .alarm-popup.show { display:flex; }
     .alarm-popup-inner { background:#fff; border-radius:16px; padding:24px; max-width:420px; width:90%; box-shadow:0 20px 60px rgba(0,0,0,0.3); }
@@ -113,9 +80,7 @@
     .alarm-popup-item-risk.caution { background:#dcfce7; color:#16a34a; }
     .alarm-popup-action { font-size:13px; color:#475569; margin-top:8px; padding:8px; background:#f8fafc; border-radius:8px; }
     .alarm-confirm-btn { width:100%; padding:12px; background:#dc2626; color:#fff; border:none; border-radius:10px; font-size:14px; font-weight:700; cursor:pointer; font-family:inherit; margin-top:16px; }
-
-    /* 알람 목록 패널 */
-    .alarm-panel { background:#fff; border:1px solid #e2e8f0; border-radius:14px; padding:16px; }
+    .alarm-panel { background:#fff; border:1px solid #e2e8f0; border-radius:14px; padding:16px; margin-top:12px; }
     .alarm-panel-title { font-size:14px; font-weight:700; color:#1e293b; margin-bottom:12px; display:flex; align-items:center; gap:6px; }
     .alarm-empty { text-align:center; color:#94a3b8; font-size:13px; padding:20px; }
     .alarm-item { border:1px solid #e2e8f0; border-radius:10px; padding:10px 12px; margin-bottom:8px; cursor:pointer; transition:all .2s; }
@@ -127,11 +92,50 @@
     .alarm-item-badge.emergency { background:#fee2e2; color:#dc2626; }
     .alarm-item-badge.warning { background:#fef3c7; color:#d97706; }
     .alarm-item-badge.caution { background:#dcfce7; color:#16a34a; }
-
-    /* 카메라 슬라이드 버튼 */
     .slide-btn { padding:8px 16px; border:1px solid #e2e8f0; border-radius:8px; background:#f8fafc; color:#64748b; font-size:12px; font-weight:600; cursor:pointer; font-family:inherit; transition:all .2s; }
     .slide-btn.active { background:#1e293b; color:#fff; border-color:#1e293b; }
     .slide-mode-bar { display:flex; align-items:center; gap:8px; margin-bottom:8px; }
+    .slide-case-btn { padding:4px 12px; border:1px solid #e2e8f0; border-radius:8px; background:#f8fafc; color:#64748b; font-size:12px; font-weight:700; cursor:pointer; font-family:inherit; transition:all .2s; }
+    .slide-case-btn.active { background:#1e293b; color:#fff; border-color:#1e293b; }
+
+    /* ── ? 플로팅 버튼 ── */
+    #helpBtn {
+      position:fixed; bottom:24px; right:24px; z-index:8000;
+      width:44px; height:44px; border-radius:50%;
+      background:#1e293b; color:#fff;
+      border:none; font-size:18px; font-weight:700;
+      cursor:pointer; font-family:inherit;
+      box-shadow:0 4px 16px rgba(0,0,0,.25);
+      display:flex; align-items:center; justify-content:center;
+      transition:background .2s, transform .2s;
+    }
+    #helpBtn:hover { background:#334155; transform:scale(1.08); }
+
+    /* ── Help 모달 ── */
+    #helpModal {
+      display:none; position:fixed; inset:0;
+      background:rgba(0,0,0,.55); z-index:9999;
+      align-items:center; justify-content:center;
+    }
+    #helpModal.show { display:flex; }
+    .help-box {
+      background:#fff; border-radius:16px; padding:24px;
+      width:90%; max-width:480px;
+      box-shadow:0 20px 60px rgba(0,0,0,.25);
+      max-height:85vh; overflow-y:auto;
+    }
+    .help-title { font-size:16px; font-weight:800; color:#1e293b; }
+    .help-formula {
+      background:#f8fafc; border:1px solid #e2e8f0;
+      border-radius:10px; padding:12px 14px;
+      font-size:13px; font-weight:600; color:#334155;
+      line-height:1.7; margin-bottom:14px; margin-top:12px;
+    }
+    .help-table { width:100%; border-collapse:collapse; font-size:12px; margin-bottom:12px; }
+    .help-table th { background:#f1f5f9; color:#475569; font-weight:700; padding:8px 10px; text-align:left; font-size:11px; }
+    .help-table td { padding:8px 10px; border-bottom:1px solid #f1f5f9; color:#334155; }
+    .help-table tr:last-child td { border-bottom:none; }
+    .help-table tr:hover td { background:#f8fafc; }
   </style>
 </head>
 <body>
@@ -161,7 +165,6 @@
         </div>
       </div>
       <a href="/upload" class="active"><i class="ri-camera-line"></i> 현장 모니터링</a>
-      
       <a href="/reports"><i class="ri-file-chart-line"></i> AI 보고서</a>
     </nav>
     <div class="user-section">
@@ -184,20 +187,15 @@
         웹캠으로 현장을 실시간 모니터링합니다. 화면 왼쪽은 🟢정상구역, 오른쪽은 🔴위험구역입니다.<br/>
         위험 감지 시 즉시 알람 팝업이 표시됩니다. 감지된 알람은 오른쪽 패널에서 확인할 수 있습니다.
       </p>
-
       <div class="monitoring-wrap">
-
-        <!-- 왼쪽: 카메라 + 컨트롤 -->
-        <div class="monitoring-left">
-
         <!-- 카메라 화면 -->
         <div class="camera-section" id="cameraSection">
           <video id="cameraVideo" autoplay muted playsinline></video>
           <canvas id="bboxCanvas"></canvas>
-        <div id="bboxOverlay" style="position:absolute;top:0;left:0;width:100%;height:100%;z-index:10;" onmousemove="handleCanvasHover(event)" onmouseleave="hideBboxTooltip()"></div>
+          <div id="bboxOverlay" style="position:absolute;top:0;left:0;width:100%;height:100%;z-index:10;" onmousemove="handleCanvasHover(event)" onmouseleave="hideBboxTooltip()"></div>
           <div class="zone-label zone-safe" id="zoneSafe">🟢 정상구역</div>
           <div class="zone-label zone-danger" id="zoneDanger">🔴 위험구역</div>
-          <div class="camera-badge">
+          <div class="camera-badge" id="cameraBadge">
             <div class="camera-dot" id="cameraDot"></div>
             <span id="cameraStatus">카메라 연결 중...</span>
           </div>
@@ -205,7 +203,6 @@
             <i class="ri-fullscreen-line"></i>
           </button>
         </div>
-
 
         <!-- 카메라 슬라이드 모드 -->
         <div class="slide-mode-bar">
@@ -217,31 +214,20 @@
 
         <!-- 슬라이드 케이스 선택 + 이전/다음 -->
         <div id="slideControls" style="display:none;flex-direction:column;gap:8px;background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:12px 16px;">
-          <div style="display:flex;gap:6px;flex-wrap:wrap;">
-            <span style="font-size:11px;font-weight:700;color:#64748b;align-self:center;">케이스:</span>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
+            <span style="font-size:11px;font-weight:700;color:#64748b;">케이스:</span>
             <button class="slide-case-btn active" data-case="forklift" onclick="selectCase(this)">🚜 중장비 접근</button>
             <button class="slide-case-btn" data-case="material" onclick="selectCase(this)">📦 자재물 적치</button>
             <button class="slide-case-btn" data-case="crowd" onclick="selectCase(this)">👥 작업자 밀집</button>
-          </div>
-          <div style="display:flex;align-items:center;justify-content:center;gap:16px;">
-            <button onclick="prevSlide()" style="padding:6px 16px;border:1px solid #e2e8f0;border-radius:8px;background:#f8fafc;cursor:pointer;font-size:16px;font-family:inherit;">◀ 이전</button>
-            <span id="slidePageInfo" style="font-size:13px;font-weight:700;color:#1e293b;">1 / 2</span>
-            <button onclick="nextSlide()" style="padding:6px 16px;border:1px solid #e2e8f0;border-radius:8px;background:#f8fafc;cursor:pointer;font-size:16px;font-family:inherit;">다음 ▶</button>
+            <div style="margin-left:auto;display:flex;align-items:center;gap:10px;">
+              <button onclick="prevSlide()" style="padding:6px 14px;border:1px solid #e2e8f0;border-radius:8px;background:#f8fafc;cursor:pointer;font-family:inherit;">◀ 이전</button>
+              <span id="slidePageInfo" style="font-size:13px;font-weight:700;color:#1e293b;">1 / 2</span>
+              <button onclick="nextSlide()" style="padding:6px 14px;border:1px solid #e2e8f0;border-radius:8px;background:#f8fafc;cursor:pointer;font-family:inherit;">다음 ▶</button>
+            </div>
           </div>
         </div>
 
-        <!-- 줌 슬라이더 -->
-        <div id="zoomWrap" style="display:none;align-items:center;gap:10px;background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:10px 16px;">
-          <i class="ri-zoom-in-line" style="color:#64748b;"></i>
-          <span style="font-size:12px;color:#64748b;font-weight:600;">줌</span>
-          <input type="range" id="zoomInput" style="flex:1;" />
-          <span id="zoomValue" style="font-size:12px;font-weight:700;color:#1e293b;width:32px;">1.0x</span>
-        </div>
-
-        </div><!-- monitoring-left 끝 -->
-
-        <!-- 오른쪽: 알람 패널 -->
-        <div class="monitoring-right">
+        <!-- 알람 목록 패널 -->
         <div class="alarm-panel">
           <div class="alarm-panel-title">
             <i class="ri-alarm-warning-line"></i> 알람 목록
@@ -253,43 +239,44 @@
           </div>
           <div id="alarmList"><div class="alarm-empty">감지된 알람이 없습니다</div></div>
         </div>
-        </div><!-- monitoring-right 끝 -->
 
+        <!-- 줌 슬라이더 -->
+        <div id="zoomWrap" style="display:none;align-items:center;gap:10px;background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:10px 16px;">
+          <i class="ri-zoom-in-line" style="color:#64748b;"></i>
+          <span style="font-size:12px;color:#64748b;font-weight:600;">줌</span>
+          <input type="range" id="zoomInput" style="flex:1;" />
+          <span id="zoomValue" style="font-size:12px;font-weight:700;color:#1e293b;width:32px;">1.0x</span>
+        </div>
 
+        <!-- 상태 카드 -->
+        <div class="status-grid">
+          <div class="status-card"><div class="status-title">현재 상태</div><div class="status-value" id="currentStatus">대기 중</div></div>
+          <div class="status-card"><div class="status-title">마지막 감지</div><div class="status-value" id="lastDetected">-</div></div>
+          <div class="status-card"><div class="status-title">분석 횟수</div><div class="status-value" id="analyzeCount">0</div></div>
+        </div>
 
-        <!-- 위험 감지 패널 (감지 후 표시) -->
+        <!-- 위험 감지 패널 -->
         <div class="danger-panel" id="dangerPanel">
-          <div class="danger-panel-header">
-            🔴 위험 감지!
-          </div>
+          <div class="danger-panel-header">🔴 위험 감지!</div>
           <div class="danger-list" id="dangerList"></div>
-
-          <!-- 조치 내용 입력 -->
           <div class="action-area">
             <div class="action-area-title">📋 조치 내용을 입력하고 보고서를 생성하세요</div>
-
-            <!-- 즉각조치 -->
             <div class="action-section">
               <div class="action-section-title">🚨 즉각 조치 내용</div>
               <div class="field-label">현장에서 즉시 조치한 내용</div>
               <textarea class="field-textarea" id="noteImmediate" placeholder="예) 작업자 안전모 착용 지시, 위험구역 즉시 퇴거 조치&#10;해당사항 없으면 비워두세요"></textarea>
             </div>
-
-            <!-- 사후조치 -->
             <div class="action-section">
               <div class="action-section-title">⏳ 사후 조치 내용</div>
               <div class="field-label">추후 처리할 내용</div>
               <textarea class="field-textarea" id="noteDeferred" placeholder="예) 내일 오전 안전망 설치 예정&#10;해당사항 없으면 비워두세요"></textarea>
               <div class="field-label" style="margin-top:8px;">담당자</div>
               <input type="text" class="field-input" id="managerDeferred" placeholder="담당자 이름 (선택)" />
-
             </div>
-
             <button id="createReportBtn" style="width:100%;padding:14px;background:#1e293b;color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;margin-top:4px;" onclick="createReport()">
               📋 보고서 생성하기
             </button>
             <div class="creating-msg" id="creatingMsg"></div>
-            <div class="creating-msg" id="creatingMsg">⏳ 보고서 생성 중... 잠시만 기다려주세요</div>
           </div>
         </div>
 
@@ -302,25 +289,57 @@
             <i class="ri-stop-circle-line"></i> 감지 중지
           </button>
         </div>
-
-      </div><!-- monitoring-wrap 끝 -->
-
-      <!-- 상태 카드 (full width) -->
-      <div class="status-grid" style="margin-top:16px;">
-        <div class="status-card"><div class="status-title">현재 상태</div><div class="status-value" id="currentStatus">대기 중</div></div>
-        <div class="status-card"><div class="status-title">마지막 감지</div><div class="status-value" id="lastDetected">-</div></div>
-        <div class="status-card"><div class="status-title">분석 횟수</div><div class="status-value" id="analyzeCount">0</div></div>
       </div>
-
     </div>
   </main>
 
+  <!-- ? 플로팅 버튼 -->
+  <button id="helpBtn" onclick="toggleHelp()">?</button>
+
+  <!-- Help 모달 -->
+  <div id="helpModal" style="display:none;" onclick="if(event.target===this)toggleHelp()">
+    <div class="help-box">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+        <div class="help-title">⚠️ 위험도 기준표</div>
+        <button onclick="toggleHelp()" style="background:none;border:none;font-size:20px;cursor:pointer;">✕</button>
+      </div>
+      <div class="help-formula">
+        📐 위험도 = 가능성 × 중대성 ÷ 25 × 100<br>
+        <span style="font-size:11px;color:#94a3b8;">근거: 고용노동부 고시 제2024-76호 사업장 위험성평가에 관한 지침</span>
+      </div>
+      <table class="help-table">
+        <thead><tr><th>등급</th><th>범위</th><th>조치사항</th></tr></thead>
+        <tbody>
+          <tr><td>🔴 즉각조치</td><td>60~100%</td><td>즉각 작업 중지</td></tr>
+          <tr><td>🟡 위험</td><td>31~59%</td><td>주의 및 모니터링</td></tr>
+          <tr><td>🟢 주의</td><td>0~30%</td><td>지속 관찰</td></tr>
+        </tbody>
+      </table>
+      <table class="help-table">
+        <thead><tr><th>케이스</th><th>가능성</th><th>중대성</th><th>위험도</th><th>등급</th></tr></thead>
+        <tbody>
+          <tr><td>위험구역 출입</td><td>3점</td><td>5점</td><td>60%</td><td>🔴 즉각조치</td></tr>
+          <tr><td>중장비 접근</td><td>3점</td><td>5점</td><td>60%</td><td>🔴 즉각조치</td></tr>
+          <tr><td>안전복 미착용</td><td>4점</td><td>3점</td><td>48%</td><td>🟡 위험</td></tr>
+          <tr><td>자재물 적치</td><td>4점</td><td>2점</td><td>32%</td><td>🟡 위험</td></tr>
+          <tr><td>작업자 밀집</td><td>3점</td><td>2점</td><td>24%</td><td>🟢 주의</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- 바운딩박스 툴팁 -->
+  <div id="bboxTooltip" style="display:none;position:fixed;z-index:9000;background:#0f172a;color:#fff;border-radius:10px;padding:10px 14px;font-size:12px;pointer-events:none;box-shadow:0 4px 20px rgba(0,0,0,.4);min-width:160px;">
+    <div style="font-weight:700;font-size:13px;margin-bottom:8px;color:#f0f9ff;border-bottom:1px solid rgba(255,255,255,.1);padding-bottom:6px;" id="ttTitle">-</div>
+    <div style="display:flex;justify-content:space-between;margin-top:4px;"><span style="color:#94a3b8;font-size:11px;">가능성</span><span style="font-weight:700;" id="ttLikelihood">-</span></div>
+    <div style="display:flex;justify-content:space-between;margin-top:4px;"><span style="color:#94a3b8;font-size:11px;">중대성</span><span style="font-weight:700;" id="ttSeverity">-</span></div>
+    <div style="display:flex;justify-content:space-between;margin-top:4px;"><span style="color:#94a3b8;font-size:11px;">위험도</span><span style="font-weight:700;" id="ttPercent">-</span></div>
+    <div style="display:flex;justify-content:space-between;margin-top:4px;"><span style="color:#94a3b8;font-size:11px;">등급</span><span style="font-weight:700;" id="ttLevel">-</span></div>
+  </div>
+
   <script>
     var BASE_URL = 'https://safety-server-oqza.onrender.com';
-
-    // 인수인계 확인 - 안 했으면 강제 이동
     var user = localStorage.getItem('username') || 'admin1';
-
     var cameraVideo   = document.getElementById('cameraVideo');
     var cameraSection = document.getElementById('cameraSection');
     var bboxCanvas    = document.getElementById('bboxCanvas');
@@ -337,13 +356,11 @@
     var intervalId       = null;
     var isCreatingReport = false;
     var dangerDetected   = false;
-    var smsSent = false; // SMS 1번만 발송 플래그
+    var smsSent          = false;
     var currentSessionId = null;
     var lastDangerData   = null;
-    var selectedAction   = null;
-
-    function safeSet(id, val) { var el = document.getElementById(id); if (el) el.textContent = val; }
-    function safeClass(id, cls) { var el = document.getElementById(id); if (el) el.className = cls; }
+    var lastBboxes       = [];
+    var safetyRules      = {};
 
     var COLOR_MAP = {
       'hardhat':'#22c55e','no-hardhat':'#ef4444',
@@ -359,11 +376,11 @@
       'box':'박스','pallet':'팔레트','danger_zone':'위험구역'
     };
 
-    // ── 카메라 초기화 ──────────────────────
+    function safeSet(id, val) { var el = document.getElementById(id); if (el) el.textContent = val; }
+    function safeClass(id, cls) { var el = document.getElementById(id); if (el) el.className = cls; }
+
+    // ── 카메라 초기화
     var currentStream = null;
-
-
-
     function initCamera() {
       navigator.mediaDevices.getUserMedia({ video: { width:{ideal:1280}, height:{ideal:720} } })
         .then(function(stream) {
@@ -377,8 +394,6 @@
           cameraDot.className      = 'camera-dot';
           cameraStatus.textContent = 'LIVE';
           detectBtn.disabled       = false;
-
-          // 줌 지원 확인
           var track = stream.getVideoTracks()[0];
           var caps  = track.getCapabilities();
           if (caps.zoom) {
@@ -408,36 +423,13 @@
       }
     }
 
-    // ── 가상펜스 그리기 ────────────────────
+    // ── 가상펜스
     function drawFence() {
       var W = bboxCanvas.width  = cameraVideo.videoWidth  || cameraSection.offsetWidth;
       var H = bboxCanvas.height = cameraVideo.videoHeight || cameraSection.offsetHeight;
       if (!W || !H) return;
       bboxCtx.clearRect(0, 0, W, H);
-      // 슬라이드 모드일 때는 구역 구분 표시 안 함
       if (slideMode) return;
-      var fX = W * 0.5;
-      bboxCtx.fillStyle = 'rgba(34,197,94,0.06)';
-      bboxCtx.fillRect(0, 0, fX, H);
-      bboxCtx.fillStyle = 'rgba(239,68,68,0.06)';
-      bboxCtx.fillRect(fX, 0, W - fX, H);
-      bboxCtx.strokeStyle = 'rgba(255,255,255,0.8)';
-      bboxCtx.lineWidth = 2;
-      bboxCtx.setLineDash([10, 6]);
-      bboxCtx.beginPath();
-      bboxCtx.moveTo(fX, 0); bboxCtx.lineTo(fX, H);
-      bboxCtx.stroke();
-      bboxCtx.setLineDash([]);
-    }
-
-    // ── 바운딩박스 + 펜스 그리기 ───────────
-    function drawAll(boxes) {
-      lastBboxes = boxes || [];
-      var W = bboxCanvas.width  = cameraVideo.videoWidth  || cameraSection.offsetWidth;
-      var H = bboxCanvas.height = cameraVideo.videoHeight || cameraSection.offsetHeight;
-      bboxCtx.clearRect(0, 0, W, H);
-
-      // 펜스
       var fX = W * 0.5;
       bboxCtx.fillStyle = 'rgba(34,197,94,0.06)'; bboxCtx.fillRect(0, 0, fX, H);
       bboxCtx.fillStyle = 'rgba(239,68,68,0.06)';  bboxCtx.fillRect(fX, 0, W - fX, H);
@@ -445,7 +437,21 @@
       bboxCtx.lineWidth = 2; bboxCtx.setLineDash([10, 6]);
       bboxCtx.beginPath(); bboxCtx.moveTo(fX, 0); bboxCtx.lineTo(fX, H); bboxCtx.stroke();
       bboxCtx.setLineDash([]);
+    }
 
+    // ── 바운딩박스
+    function drawAll(boxes) {
+      lastBboxes = boxes || [];
+      var W = bboxCanvas.width  = cameraVideo.videoWidth  || cameraSection.offsetWidth;
+      var H = bboxCanvas.height = cameraVideo.videoHeight || cameraSection.offsetHeight;
+      bboxCtx.clearRect(0, 0, W, H);
+      var fX = W * 0.5;
+      bboxCtx.fillStyle = 'rgba(34,197,94,0.06)'; bboxCtx.fillRect(0, 0, fX, H);
+      bboxCtx.fillStyle = 'rgba(239,68,68,0.06)';  bboxCtx.fillRect(fX, 0, W - fX, H);
+      bboxCtx.strokeStyle = 'rgba(255,255,255,0.8)';
+      bboxCtx.lineWidth = 2; bboxCtx.setLineDash([10, 6]);
+      bboxCtx.beginPath(); bboxCtx.moveTo(fX, 0); bboxCtx.lineTo(fX, H); bboxCtx.stroke();
+      bboxCtx.setLineDash([]);
       if (!boxes || !boxes.length) return;
       boxes.forEach(function(box) {
         var color = box.in_danger_zone ? '#ef4444' : (COLOR_MAP[box.label] || '#94a3b8');
@@ -466,361 +472,139 @@
       });
     }
 
-
-    // ── 슬라이드 모드 바운딩박스 그리기 ─────────────────────────
+    // ── 슬라이드 바운딩박스
     function drawSlideWithBoxes(boxes) {
+      lastBboxes = boxes || [];
       var canvas = document.getElementById('bboxCanvas');
       var ctx = canvas.getContext('2d');
-      var W = canvas.width;
-      var H = canvas.height;
-
-      // 현재 슬라이드 이미지 다시 그리기
-      if (slideImages.length > 0) {
-        var W = canvas.width;
-        var H = canvas.height;
-        ctx.clearRect(0, 0, W, H);
-        if (currentSlideImg) {
-          ctx.drawImage(currentSlideImg, 0, 0, W, H);
-          // 바운딩박스 그리기
-          if (boxes && boxes.length) {
-            boxes.forEach(function(box) {
-              var color = box.in_danger_zone ? '#ef4444' : (COLOR_MAP[box.label] || '#94a3b8');
-              var px = box.x * W, py = box.y * H, pw = box.w * W, ph = box.h * H;
-              ctx.strokeStyle = color;
-              ctx.lineWidth = 2.5;
-              ctx.strokeRect(px, py, pw, ph);
-              var labelKr = LABEL_KR[box.label] || box.label;
-              var conf = box.confidence ? (' ' + Math.round(box.confidence*100) + '%') : '';
-              var text = labelKr + conf;
-              ctx.font = 'bold 12px sans-serif';
-              var tw = ctx.measureText(text).width + 10;
-              ctx.fillStyle = color;
-              ctx.fillRect(px, py - 20, tw, 20);
-              ctx.fillStyle = '#fff';
-              ctx.fillText(text, px + 5, py - 5);
-            });
-          }
-        };
-        img.src = slideImages[slideIndex];
+      var W = canvas.width || 640;
+      var H = canvas.height || 480;
+      ctx.clearRect(0, 0, W, H);
+      if (currentSlideImg) ctx.drawImage(currentSlideImg, 0, 0, W, H);
+      if (boxes && boxes.length) {
+        boxes.forEach(function(box) {
+          var color = box.in_danger_zone ? '#ef4444' : (COLOR_MAP[box.label] || '#94a3b8');
+          var px = box.x * W, py = box.y * H, pw = box.w * W, ph = box.h * H;
+          ctx.strokeStyle = color; ctx.lineWidth = 2.5;
+          ctx.strokeRect(px, py, pw, ph);
+          var labelKr = LABEL_KR[box.label] || box.label;
+          var conf = box.confidence ? (' ' + Math.round(box.confidence*100) + '%') : '';
+          var text = labelKr + conf;
+          ctx.font = 'bold 12px sans-serif';
+          var tw = ctx.measureText(text).width + 10;
+          ctx.fillStyle = color; ctx.fillRect(px, py - 20, tw, 20);
+          ctx.fillStyle = '#fff'; ctx.fillText(text, px + 5, py - 5);
+        });
       }
     }
 
-    // ── 빠른 분석 ─────────────────────────
+    // ── 분석
     function analyzeQuick() {
       if (isAnalyzing) return;
       isAnalyzing = true;
-
       var canvas = document.createElement('canvas');
       if (slideMode) {
-        // 슬라이드 모드: 현재 슬라이드 이미지 전송
-        canvas.width  = 640;
-        canvas.height = 480;
+        canvas.width = 640; canvas.height = 480;
         var actx = canvas.getContext('2d');
-        if (currentSlideImg) {
-          actx.drawImage(currentSlideImg, 0, 0, 640, 480);
-        } else {
-          actx.fillStyle = '#000';
-          actx.fillRect(0, 0, 640, 480);
-        }
+        if (currentSlideImg) actx.drawImage(currentSlideImg, 0, 0, 640, 480);
+        else { actx.fillStyle = '#000'; actx.fillRect(0, 0, 640, 480); }
       } else {
         canvas.width  = cameraVideo.videoWidth  || 640;
         canvas.height = cameraVideo.videoHeight || 480;
         canvas.getContext('2d').drawImage(cameraVideo, 0, 0);
       }
-
       canvas.toBlob(function(blob) {
         var formData = new FormData();
         formData.append('video', blob, 'capture.jpg');
-
         fetch(BASE_URL + '/analyze-quick', { method:'POST', body:formData })
           .then(function(res) {
             var ct = res.headers.get('content-type') || '';
-            if (!ct.includes('application/json')) {
-              isAnalyzing = false;
-              return;
-            }
+            if (!ct.includes('application/json')) { isAnalyzing = false; return; }
             return res.json();
           })
           .then(function(data) {
             if (!data) { isAnalyzing = false; return; }
-
-            if (data.not_ready) {
-              safeSet('currentStatus', 'AI 준비 중...');
-              isAnalyzing = false;
-              return;
-            }
-
+            if (data.not_ready) { safeSet('currentStatus', 'AI 준비 중...'); isAnalyzing = false; return; }
             analyzeCount++;
             safeSet('analyzeCount', analyzeCount);
             safeSet('lastDetected', new Date().toLocaleTimeString('ko-KR'));
-
-            // 바운딩박스 실시간 표시
-            if (slideMode) {
-              // 슬라이드 모드: 현재 슬라이드 사진 다시 그린 후 바운딩박스만 추가
-              drawSlideWithBoxes(data.boxes || []);
-            } else {
-              drawAll(data.boxes || []);
-            }
-
+            if (slideMode) drawSlideWithBoxes(data.boxes || []);
+            else drawAll(data.boxes || []);
             if (data.danger && !dangerDetected) {
               dangerDetected = true;
-
-              // 분석 계속 진행 (멈추지 않음)
               cameraSection.classList.add('camera-border-danger');
               cameraDot.classList.add('danger');
               safeSet('currentStatus', '🔴 위험 감지!');
               safeClass('currentStatus', 'status-value danger');
-
               lastDangerData = data;
-
-              // 위험 요소 파악
               var hasDangerZone = (data.boxes || []).some(function(b) { return b.in_danger_zone; });
               var dangerTypes = [];
               if (data.ppe_violation) dangerTypes.push('안전복 미착용');
               if (hasDangerZone)      dangerTypes.push('위험구역 출입');
               var dangerMsg = dangerTypes.join(' + ') || '위험 감지';
-
-              // 알람 팝업 표시
               showAlarmPopup(data.boxes || [], dangerMsg);
-
-              // DB에 알람 저장
               saveAlarmToDB(dangerMsg, data.boxes || []);
-
-              // SMS 발송 (1번만)
-              if (!smsSent) {
-                smsSent = true;
-                sendDangerSms(dangerMsg);
-              }
-
-              // 알람 목록에 추가
+              if (!smsSent) { smsSent = true; sendDangerSms(dangerMsg); }
               addAlarmToList(dangerMsg, data.boxes || []);
-
             } else if (!data.danger) {
               cameraSection.classList.remove('camera-border-danger');
               cameraDot.classList.remove('danger');
               safeSet('currentStatus', '감지 중...');
               safeClass('currentStatus', 'status-value');
             }
-
             isAnalyzing = false;
           })
           .catch(function() { isAnalyzing = false; });
       }, 'image/jpeg', 0.7);
     }
 
-    // ── 위험 패널 표시 ────────────────────
-    function showDangerPanel(boxes, dangerMsg) {
-      var panel  = document.getElementById('dangerPanel');
-      var list   = document.getElementById('dangerList');
-      var header = panel.querySelector('.danger-panel-header');
-
-      if (header) header.textContent = '🔴 위험 감지: ' + dangerMsg;
-
-      var dangerBoxes = (boxes || []).filter(function(b) {
-        return b.in_danger_zone || b.label === 'no-hardhat' || b.label === 'no-safety vest';
-      });
-
-      if (list) {
-        if (dangerBoxes.length > 0) {
-          list.innerHTML = dangerBoxes.map(function(box) {
-            var lk   = LABEL_KR[box.label] || box.label;
-            var zone = box.in_danger_zone ? 'danger' : 'safe';
-            var zoneText = box.in_danger_zone ? '위험구역' : '정상구역';
-            var icon = box.label.includes('no-') ? '🚫' : '👷';
-            return '<div class="danger-item"><span class="d-icon">' + icon + '</span>' +
-              '<span class="d-label">' + lk + '</span>' +
-              '<span class="d-zone ' + zone + '">' + zoneText + '</span></div>';
-          }).join('');
-        } else {
-          list.innerHTML = '<div class="danger-item"><span class="d-icon">⚠️</span><span class="d-label">위험 상황 감지됨</span></div>';
-        }
-      }
-
-      panel.classList.add('show');
-
-      // 보고서 생성 버튼 표시
-      var btn = document.getElementById('createReportBtn');
-      if (btn) btn.className = 'create-report-btn show';
-
-      // 스크롤 이동
-      panel.scrollIntoView({ behavior:'smooth', block:'start' });
-    }
-
-    // ── 조치 선택 ─────────────────────────
-    function selectAction(status) {
-      selectedAction = status;
-
-      document.getElementById('btnImmediate').className = 'action-btn' + (status === '즉각조치' ? ' sel-immediate' : '');
-      document.getElementById('btnDeferred').className  = 'action-btn' + (status === '사후조치' ? ' sel-deferred'  : '');
-      document.getElementById('btnDone').className      = 'action-btn' + (status === '조치완료' ? ' sel-done'      : '');
-
-      document.getElementById('fieldsImmediate').className = 'action-fields' + (status === '즉각조치' ? ' show' : '');
-      document.getElementById('fieldsDeferred').className  = 'action-fields' + (status === '사후조치' ? ' show' : '');
-      document.getElementById('fieldsDone').className      = 'action-fields' + (status === '조치완료' ? ' show' : '');
-
-      var btn = document.getElementById('createReportBtn');
-      btn.className = 'create-report-btn show';
-    }
-
-    // ── 보고서 생성 ───────────────────────
-    function createReport() {
-      if (isCreatingReport) return;
-      if (!selectedAction) selectedAction = '즉각조치';
-      isCreatingReport = true;
-
-      var btn = document.getElementById('createReportBtn');
-      var msg = document.getElementById('creatingMsg');
-      btn.disabled = true;
-      msg.className = 'creating-msg show';
-
-      // 즉각조치 + 사후조치 내용 수집
-      var noteImmediate = document.getElementById('noteImmediate').value.trim();
-      var noteDeferred  = document.getElementById('noteDeferred').value.trim();
-      var manager       = document.getElementById('managerDeferred').value.trim();
-      var schedule      = '';
-
-      // 조치 상태 결정
-      var actionStatus = '즉각조치';
-      if (noteDeferred || manager || schedule) {
-        actionStatus = '사후조치중';
-      }
-      if (noteImmediate && !noteDeferred && !manager && !schedule) {
-        actionStatus = '조치완료';
-      }
-
-      // 노트 구성
-      var note = '';
-      if (noteImmediate) note += '[즉각조치] ' + noteImmediate + String.fromCharCode(10);
-      if (noteDeferred)  note += '[사후조치] ' + noteDeferred + String.fromCharCode(10);
-      if (manager)       note += '담당자: ' + manager + String.fromCharCode(10);
-      if (schedule)      note += '처리 예정: ' + new Date(schedule).toLocaleString('ko-KR');
-      note = note.trim();
-
-      var hasDangerZone = lastDangerData && (lastDangerData.boxes || []).some(function(b) { return b.in_danger_zone; });
-      var dangerTypes = [];
-      if (lastDangerData && lastDangerData.ppe_violation) dangerTypes.push('보호구 미착용');
-      if (hasDangerZone) dangerTypes.push('위험구역 출입 사고');
-      if (dangerTypes.length === 0) dangerTypes.push('위험 감지');
-
-      // 바운딩박스 포함 사진 캡처 (비디오 + 캔버스 합성)
-      var canvas = document.createElement('canvas');
-      canvas.width  = cameraVideo.videoWidth  || 640;
-      canvas.height = cameraVideo.videoHeight || 480;
-      var ctx = canvas.getContext('2d');
-      ctx.drawImage(cameraVideo, 0, 0);
-      // 바운딩박스 캔버스 합성
-      if (bboxCanvas.width > 0 && bboxCanvas.height > 0) {
-        ctx.drawImage(bboxCanvas, 0, 0, canvas.width, canvas.height);
-      }
-
-      canvas.toBlob(function(blob) {
-        var formData = new FormData();
-        formData.append('video', blob, 'capture.jpg');
-        formData.append('danger_types',  JSON.stringify(dangerTypes));
-        formData.append('action_status', actionStatus);
-        formData.append('action_note',   note);
-
-        fetch(BASE_URL + '/analyze', { method:'POST', body:formData })
-          .then(function(res) { return res.json(); })
-          .then(function(data) {
-            if (data.report_id) {
-              msg.textContent = '✅ 보고서 생성 완료! 이동 중...';
-              setTimeout(function() {
-                window.location.href = '/reports';
-              }, 2000);
-            } else {
-              msg.textContent = '❌ 보고서 생성 실패';
-              isCreatingReport = false;
-              btn.disabled = false;
-            }
-          })
-          .catch(function() {
-            msg.textContent = '❌ 오류가 발생했습니다';
-            isCreatingReport = false;
-            btn.disabled = false;
-          });
-      }, 'image/jpeg', 0.9);
-    }
-
-    // ── 감지 시작 ─────────────────────────
+    // ── 감지 시작/중지
     function startDetection() {
       detectBtn.style.display = 'none';
       stopBtn.style.display   = 'flex';
-      dangerDetected = false;
-      smsSent = false;
-      isCreatingReport = false;
-      // 입력 초기화
+      dangerDetected = false; smsSent = false; isCreatingReport = false;
       var ni = document.getElementById('noteImmediate'); if(ni) ni.value='';
       var nd = document.getElementById('noteDeferred'); if(nd) nd.value='';
       var md = document.getElementById('managerDeferred'); if(md) md.value='';
-      var sd = document.getElementById('scheduleDeferred'); if(sd) sd.value='';
       lastDangerData = null;
-
       document.getElementById('dangerPanel').classList.remove('show');
-      var crb = document.getElementById('createReportBtn'); if(crb) crb.className = 'create-report-btn';
-      var cm = document.getElementById('creatingMsg'); if(cm) cm.className = 'creating-msg';
-
-      safeSet('currentStatus', '감지 중...');
-      safeClass('currentStatus', 'status-value');
+      safeSet('currentStatus', '감지 중...'); safeClass('currentStatus', 'status-value');
       cameraSection.classList.remove('camera-border-danger');
       cameraDot.classList.remove('danger');
-
       if (!slideMode) drawFence();
       intervalId = true;
-
-      // 슬라이드 모드면 타이머 시작
-      if (slideMode) {
-        startSlideTimer();
-        document.getElementById('slideModeStatus').textContent = '슬라이드 모드 (1/' + slideImages.length + ')';
-      }
-
+      if (slideMode) startSlideTimer();
       loopAnalyze();
     }
 
-    // ── 분석 루프 ─────────────────────────
     function loopAnalyze() {
       if (!intervalId) return;
       analyzeQuick();
-      setTimeout(function() {
-        if (intervalId) loopAnalyze();
-      }, 3000);
+      setTimeout(function() { if (intervalId) loopAnalyze(); }, 3000);
     }
 
-    // ── 감지 중지 ─────────────────────────
     function stopDetection() {
-      intervalId   = null;
-      isAnalyzing  = false;
-      dangerDetected = false;
-
-      detectBtn.style.display = 'flex';
-      detectBtn.disabled      = false;
+      intervalId = null; isAnalyzing = false; dangerDetected = false;
+      detectBtn.style.display = 'flex'; detectBtn.disabled = false;
       stopBtn.style.display   = 'none';
-
-      safeSet('currentStatus', '대기 중');
-      safeClass('currentStatus', 'status-value');
+      safeSet('currentStatus', '대기 중'); safeClass('currentStatus', 'status-value');
       cameraSection.classList.remove('camera-border-danger');
       cameraDot.classList.remove('danger');
-
-      // 슬라이드 타이머 멈추기
       if (slideTimer) { clearInterval(slideTimer); slideTimer = null; }
-      if (slideMode) {
-        document.getElementById('slideModeStatus').textContent = '슬라이드 모드 (감지 시작 후 자동 전환)';
-      }
-
       drawFence();
     }
 
-
-    // ── 알람 팝업 ─────────────────────────
+    // ── 알람 팝업
     var alarmCount = 0;
-
+    var alarmFilter = 'all';
+    var alarmData = [];
     var RISK_INFO = {
-      '안전복 미착용':   { percent: 48, level: 'warning', grade: '위험', action: '안전모/조끼/안전화 착용 여부 확인 후 즉시 착용 지시' },
-      '위험구역 출입':   { percent: 60, level: 'emergency', grade: '즉각조치', action: '즉시 위험구역 이탈 지시 및 출입 통제 강화' },
-      '중장비 접근':     { percent: 60, level: 'emergency', grade: '즉각조치', action: '중장비 작업 반경 내 인원 즉시 대피' },
-      '자재물 적치':     { percent: 32, level: 'warning', grade: '위험', action: '통로 내 자재물 즉시 제거 및 이동 경로 확보' },
-      '작업자 밀집':     { percent: 24, level: 'caution', grade: '주의', action: '작업자 분산 배치 및 작업 동선 조정' },
-      '위험 감지':       { percent: 48, level: 'warning', grade: '위험', action: '현장 상황 즉시 확인 및 조치' },
+      '안전복 미착용': { percent:48, level:'warning', grade:'위험', action:'안전모/조끼/안전화 착용 여부 확인 후 즉시 착용 지시' },
+      '위험구역 출입': { percent:60, level:'emergency', grade:'즉각조치', action:'즉시 위험구역 이탈 지시 및 출입 통제 강화' },
+      '중장비 접근':   { percent:60, level:'emergency', grade:'즉각조치', action:'중장비 작업 반경 내 인원 즉시 대피' },
+      '자재물 적치':   { percent:32, level:'warning', grade:'위험', action:'통로 내 자재물 즉시 제거 및 이동 경로 확보' },
+      '작업자 밀집':   { percent:24, level:'caution', grade:'주의', action:'작업자 분산 배치 및 작업 동선 조정' },
+      '위험 감지':     { percent:48, level:'warning', grade:'위험', action:'현장 상황 즉시 확인 및 조치' },
     };
 
     function showAlarmPopup(boxes, dangerMsg) {
@@ -841,14 +625,7 @@
       popup.classList.add('show');
     }
 
-    function closeAlarmPopup() {
-      document.getElementById('alarmPopup').classList.remove('show');
-    }
-
-
-    // ── DB 알람 저장 ─────────────────────────
-    var alarmFilter = 'all';
-    var alarmData = []; // 알람 데이터 배열
+    function closeAlarmPopup() { document.getElementById('alarmPopup').classList.remove('show'); }
 
     function setAlarmFilter(filter) {
       alarmFilter = filter;
@@ -859,94 +636,95 @@
       renderAlarmList();
     }
 
+    function addAlarmToList(dangerMsg, boxes) {
+      alarmCount++;
+      document.getElementById('alarmCount').textContent = alarmCount;
+      var types = dangerMsg.split(' + ');
+      var time = new Date().toLocaleTimeString('ko-KR');
+      var riskPercents = { '안전복 미착용':48, '위험구역 출입':60, '중장비 접근':60, '자재물 적치':32, '작업자 밀집':24 };
+      var riskLevels   = { '안전복 미착용':'warning', '위험구역 출입':'emergency', '중장비 접근':'emergency', '자재물 적치':'warning', '작업자 밀집':'caution' };
+      var gradeNames   = { '안전복 미착용':'위험', '위험구역 출입':'즉각조치', '중장비 접근':'즉각조치', '자재물 적치':'위험', '작업자 밀집':'주의' };
+      types.forEach(function(type) {
+        var id = 'alarm_' + Date.now() + '_' + Math.random();
+        alarmData.unshift({ id:id, type:type, time:time, percent:riskPercents[type]||48, level:riskLevels[type]||'warning', grade:gradeNames[type]||'위험', status:'unresolved' });
+      });
+      renderAlarmList();
+    }
+
+    function renderAlarmList() {
+      var list = document.getElementById('alarmList');
+      var filtered = alarmFilter === 'unresolved' ? alarmData.filter(function(a) { return a.status === 'unresolved'; }) : alarmData;
+      if (filtered.length === 0) {
+        list.innerHTML = '<div class="alarm-empty">' + (alarmFilter === 'unresolved' ? '미조치 알람이 없습니다' : '감지된 알람이 없습니다') + '</div>';
+        return;
+      }
+      var html = '';
+      filtered.forEach(function(a) {
+        var resolved = a.status === 'resolved';
+        html += '<div class="alarm-item" style="border-color:' + (resolved?'#e2e8f0':'#fecaca') + ';opacity:' + (resolved?'0.6':'1') + ';">';
+        html += '<div class="alarm-item-header"><span class="alarm-item-time">' + a.time + '</span><span class="alarm-item-badge ' + a.level + '">' + a.grade + '</span></div>';
+        html += '<div class="alarm-item-name">' + a.type + '</div>';
+        html += '<div style="font-size:11px;color:#94a3b8;margin-top:2px;">' + a.percent + '%</div>';
+        if (resolved) html += '<div style="font-size:11px;color:#16a34a;margin-top:4px;font-weight:700;">✅ 조치완료</div>';
+        else html += '<button data-id="' + a.id + '" onclick="resolveAlarm(this.dataset.id)" style="margin-top:6px;width:100%;padding:4px;border:1px solid #16a34a;border-radius:6px;background:#f0fdf4;color:#16a34a;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">✅ 조치완료</button>';
+        html += '</div>';
+      });
+      list.innerHTML = html;
+    }
+
+    function resolveAlarm(id) {
+      alarmData.forEach(function(a) { if (a.id === id) a.status = 'resolved'; });
+      renderAlarmList();
+    }
+
+    // ── DB 저장
     async function saveAlarmToDB(dangerMsg, boxes) {
       try {
-        // 현재 세션 조회
         if (!currentSessionId) {
           var sesRes = await fetch(BASE_URL + '/api/session/current');
           var sesData = await sesRes.json();
           if (sesData.session) currentSessionId = sesData.session.session_id;
         }
-
-        // 바운딩박스 캔버스 캡처 → Cloudinary 업로드
         var bboxImageUrl = '';
         try {
           var canvas = document.getElementById('bboxCanvas');
           var imageData = canvas.toDataURL('image/jpeg', 0.8);
           var uploadRes = await fetch(BASE_URL + '/api/upload-bbox', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            method:'POST', headers:{'Content-Type':'application/json'},
             body: JSON.stringify({ image_data: imageData })
           });
           var uploadData = await uploadRes.json();
           if (uploadData.url) bboxImageUrl = uploadData.url;
-        } catch(imgErr) {
-          console.warn('이미지 업로드 실패:', imgErr);
-        }
-
-        // 케이스별 rule_id 매핑
-        var ruleMap = {
-          '안전복 미착용': 3,
-          '위험구역 출입': 1,
-          '중장비 접근': 5,
-          '자재물 적치': 2,
-          '작업자 밀집': 4,
-        };
-
+        } catch(imgErr) {}
+        var ruleMap = { '안전복 미착용':3, '위험구역 출입':1, '중장비 접근':5, '자재물 적치':2, '작업자 밀집':4 };
+        var riskPercents = { '안전복 미착용':48, '위험구역 출입':60, '중장비 접근':60, '자재물 적치':32, '작업자 밀집':24 };
+        var riskLevels   = { '안전복 미착용':'위험', '위험구역 출입':'즉각조치', '중장비 접근':'즉각조치', '자재물 적치':'위험', '작업자 밀집':'주의' };
         var types = dangerMsg.split(' + ');
         for (var i = 0; i < types.length; i++) {
           var type = types[i];
-          var ruleId = ruleMap[type] || 3;
-          var riskPercents = { '안전복 미착용': 48, '위험구역 출입': 60, '중장비 접근': 60, '자재물 적치': 32, '작업자 밀집': 24 };
-          var riskLevels = { '안전복 미착용': '위험', '위험구역 출입': '즉각조치', '중장비 접근': '즉각조치', '자재물 적치': '위험', '작업자 밀집': '주의' };
-
           await fetch(BASE_URL + '/api/alarm', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              session_id: currentSessionId,
-              rule_id: ruleId,
-              risk_case: type,
-              risk_percent: riskPercents[type] || 48,
-              risk_level: riskLevels[type] || '위험',
-              bbox_image_url: bboxImageUrl
-            })
+            method:'POST', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({ session_id:currentSessionId, rule_id:ruleMap[type]||3, risk_case:type, risk_percent:riskPercents[type]||48, risk_level:riskLevels[type]||'위험', bbox_image_url:bboxImageUrl })
           });
         }
-      } catch(e) { console.error('DB 저장 오류:', e); }
+      } catch(e) {}
     }
 
-    // ── 위험 감지 SMS ─────────────────────────
+    // ── SMS
     function sendDangerSms(dangerMsg) {
-      var user = localStorage.getItem('username') || 'admin1';
-      var actionMap = {
-        '안전복 미착용': '안전모/조끼/안전화 착용 여부 확인 후 즉시 착용 지시',
-        '위험구역 출입': '즉시 위험구역 이탈 지시 및 출입 통제 강화',
-        '중장비 접근': '중장비 작업 반경 내 인원 즉시 대피',
-        '자재물 적치': '통로 내 자재물 즉시 제거',
-        '작업자 밀집': '작업자 분산 배치 및 작업 동선 조정',
-      };
+      var actionMap = { '안전복 미착용':'안전모/조끼/안전화 착용 여부 확인 후 즉시 착용 지시', '위험구역 출입':'즉시 위험구역 이탈 지시 및 출입 통제 강화', '중장비 접근':'중장비 작업 반경 내 인원 즉시 대피', '자재물 적치':'통로 내 자재물 즉시 제거', '작업자 밀집':'작업자 분산 배치 및 작업 동선 조정' };
+      var riskPercents = { '안전복 미착용':48, '위험구역 출입':60, '중장비 접근':60, '자재물 적치':32, '작업자 밀집':24 };
       var types = dangerMsg.split(' + ');
       var action = types.map(function(t) { return actionMap[t] || '즉각 조치 필요'; }).join(' / ');
-      var riskPercents = { '안전복 미착용': 48, '위험구역 출입': 60, '중장비 접근': 60, '자재물 적치': 32, '작업자 밀집': 24 };
       var maxPct = Math.max.apply(null, types.map(function(t) { return riskPercents[t] || 48; }));
-      // 한국 시간으로 변환
-      var koreaTime = new Date().toLocaleTimeString('ko-KR', {timeZone: 'Asia/Seoul', hour: '2-digit', minute: '2-digit'});
-
+      var koreaTime = new Date().toLocaleTimeString('ko-KR', {timeZone:'Asia/Seoul', hour:'2-digit', minute:'2-digit'});
       fetch(BASE_URL + '/api/danger-sms', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          danger_type: dangerMsg,
-          risk_percent: maxPct,
-          action: action,
-          user: user,
-          detected_time: koreaTime
-        })
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ danger_type:dangerMsg, risk_percent:maxPct, action:action, user:user, detected_time:koreaTime })
       }).catch(function(){});
     }
 
-    // ── 근무 종료 ─────────────────────────
+    // ── 근무 종료
     function endShift() {
       if (confirm('근무를 종료하고 인수인계 화면으로 이동하시겠습니까?')) {
         if (intervalId) clearInterval(intervalId);
@@ -954,94 +732,72 @@
       }
     }
 
-    // ── 알람 목록 수정 (조치완료 버튼 포함) ─────────────────────────
-    function addAlarmToList(dangerMsg, boxes) {
-      alarmCount++;
-      document.getElementById('alarmCount').textContent = alarmCount;
-      var types = dangerMsg.split(' + ');
-      var time = new Date().toLocaleTimeString('ko-KR');
-      var riskPercents = { '안전복 미착용': 48, '위험구역 출입': 60, '중장비 접근': 60, '자재물 적치': 32, '작업자 밀집': 24 };
-      var riskLevels = { '안전복 미착용': 'warning', '위험구역 출입': 'emergency', '중장비 접근': 'emergency', '자재물 적치': 'warning', '작업자 밀집': 'caution' };
-      var gradeNames = { '안전복 미착용': '위험', '위험구역 출입': '즉각조치', '중장비 접근': '즉각조치', '자재물 적치': '위험', '작업자 밀집': '주의' };
-
-      types.forEach(function(type) {
-        var id = 'alarm_' + Date.now() + '_' + Math.random();
-        alarmData.unshift({
-          id: id,
-          type: type,
-          time: time,
-          percent: riskPercents[type] || 48,
-          level: riskLevels[type] || 'warning',
-          grade: gradeNames[type] || '위험',
-          status: 'unresolved'
-        });
-      });
-      renderAlarmList();
+    // ── 보고서 생성
+    function createReport() {
+      if (isCreatingReport) return;
+      isCreatingReport = true;
+      var btn = document.getElementById('createReportBtn');
+      var msg = document.getElementById('creatingMsg');
+      btn.disabled = true;
+      msg.className = 'creating-msg show';
+      msg.textContent = '⏳ 보고서 생성 중...';
+      var noteImmediate = document.getElementById('noteImmediate').value.trim();
+      var noteDeferred  = document.getElementById('noteDeferred').value.trim();
+      var manager       = document.getElementById('managerDeferred').value.trim();
+      var note = '';
+      if (noteImmediate) note += '[즉각조치] ' + noteImmediate + '\n';
+      if (noteDeferred)  note += '[사후조치] ' + noteDeferred + '\n';
+      if (manager)       note += '담당자: ' + manager;
+      note = note.trim();
+      var dangerTypes = [];
+      if (lastDangerData && lastDangerData.ppe_violation) dangerTypes.push('보호구 미착용');
+      if (lastDangerData && (lastDangerData.boxes||[]).some(function(b){return b.in_danger_zone;})) dangerTypes.push('위험구역 출입');
+      if (dangerTypes.length === 0) dangerTypes.push('위험 감지');
+      var canvas = document.createElement('canvas');
+      canvas.width  = cameraVideo.videoWidth  || 640;
+      canvas.height = cameraVideo.videoHeight || 480;
+      var ctx = canvas.getContext('2d');
+      ctx.drawImage(cameraVideo, 0, 0);
+      if (bboxCanvas.width > 0) ctx.drawImage(bboxCanvas, 0, 0, canvas.width, canvas.height);
+      canvas.toBlob(function(blob) {
+        var formData = new FormData();
+        formData.append('video', blob, 'capture.jpg');
+        formData.append('danger_types', JSON.stringify(dangerTypes));
+        formData.append('action_note', note);
+        fetch(BASE_URL + '/analyze', { method:'POST', body:formData })
+          .then(function(res) { return res.json(); })
+          .then(function(data) {
+            if (data.report_id) {
+              msg.textContent = '✅ 보고서 생성 완료!';
+              setTimeout(function() { window.location.href = '/reports'; }, 2000);
+            } else {
+              msg.textContent = '❌ 보고서 생성 실패';
+              isCreatingReport = false; btn.disabled = false;
+            }
+          })
+          .catch(function() { msg.textContent = '❌ 오류가 발생했습니다'; isCreatingReport = false; btn.disabled = false; });
+      }, 'image/jpeg', 0.9);
     }
 
-    function renderAlarmList() {
-      var list = document.getElementById('alarmList');
-      var filtered = alarmFilter === 'unresolved'
-        ? alarmData.filter(function(a) { return a.status === 'unresolved'; })
-        : alarmData;
-
-      if (filtered.length === 0) {
-        list.innerHTML = '<div class="alarm-empty">' + (alarmFilter === 'unresolved' ? '미조치 알람이 없습니다' : '감지된 알람이 없습니다') + '</div>';
-        return;
-      }
-
-      var html = '';
-      filtered.forEach(function(a) {
-        var resolved = a.status === 'resolved';
-        var borderColor = resolved ? '#e2e8f0' : '#fecaca';
-        var opacity = resolved ? '0.6' : '1';
-        html += '<div class="alarm-item" style="border-color:' + borderColor + ';opacity:' + opacity + ';">';
-        html += '<div class="alarm-item-header">';
-        html += '<span class="alarm-item-time">' + a.time + '</span>';
-        html += '<span class="alarm-item-badge ' + a.level + '">' + a.grade + '</span>';
-        html += '</div>';
-        html += '<div class="alarm-item-name">' + a.type + '</div>';
-        html += '<div style="font-size:11px;color:#94a3b8;margin-top:2px;">' + a.percent + '%</div>';
-        if (resolved) {
-          html += '<div style="font-size:11px;color:#16a34a;margin-top:4px;font-weight:700;">✅ 조치완료</div>';
-        } else {
-          html += '<button data-id="' + a.id + '" onclick="resolveAlarm(this.dataset.id)" style="margin-top:6px;width:100%;padding:4px;border:1px solid #16a34a;border-radius:6px;background:#f0fdf4;color:#16a34a;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">✅ 조치완료</button>';
-        }
-        html += '</div>';
-      });
-      list.innerHTML = html;
-    }
-
-    function resolveAlarm(id) {
-      alarmData.forEach(function(a) {
-        if (a.id === id) a.status = 'resolved';
-      });
-      renderAlarmList();
-    }
-
-
-    // ── 카메라 슬라이드 ─────────────────────────
+    // ── 슬라이드
     var slideMode = false;
-    var slideImages = {};  // 케이스별 이미지 {forklift:[], material:[], crowd:[]}
+    var slideImages = {};
     var currentCase = 'forklift';
     var slideIndex = 0;
     var slideTimer = null;
     var currentSlideImg = null;
 
     function switchToWebcam() {
-      slideMode = false;
-      currentSlideImg = null;
+      slideMode = false; currentSlideImg = null;
       if (slideTimer) { clearInterval(slideTimer); slideTimer = null; }
       document.getElementById('webcamBtn').classList.add('active');
       document.getElementById('slideBtn').classList.remove('active');
       document.getElementById('slideModeStatus').textContent = '';
       document.getElementById('cameraVideo').style.display = 'block';
-      document.getElementById('zoneSafe').style.display = 'block';
-      document.getElementById('zoneDanger').style.display = 'block';
+      document.getElementById('zoneSafe').style.display = '';
+      document.getElementById('zoneDanger').style.display = '';
+      document.getElementById('cameraBadge').style.display = '';
       document.getElementById('slideControls').style.display = 'none';
-      currentSlideImg = null;
-      var badge = document.querySelector('.camera-badge');
-      if (badge) badge.style.display = '';
       drawFence();
     }
 
@@ -1052,24 +808,19 @@
       document.getElementById('cameraVideo').style.display = 'none';
       document.getElementById('zoneSafe').style.display = 'none';
       document.getElementById('zoneDanger').style.display = 'none';
+      document.getElementById('cameraBadge').style.display = 'none';
       document.getElementById('slideControls').style.display = 'flex';
-      document.getElementById('zoneSafe').style.display = 'none';
-      document.getElementById('zoneDanger').style.display = 'none';
-      var badge = document.querySelector('.camera-badge');
-      if (badge) badge.style.display = 'none';
-      currentCase = 'forklift';
-      slideIndex = 0;
+      currentCase = 'forklift'; slideIndex = 0;
       document.querySelectorAll('.slide-case-btn').forEach(function(b) { b.classList.remove('active'); });
-      var firstBtn = document.querySelector('.slide-case-btn[data-case="forklift"]');
-      if (firstBtn) firstBtn.classList.add('active');
+      var fb = document.querySelector('.slide-case-btn[data-case="forklift"]');
+      if (fb) fb.classList.add('active');
       showSlide();
     }
 
     function selectCase(btn) {
       document.querySelectorAll('.slide-case-btn').forEach(function(b) { b.classList.remove('active'); });
       btn.classList.add('active');
-      currentCase = btn.dataset.case;
-      slideIndex = 0;
+      currentCase = btn.dataset.case; slideIndex = 0;
       showSlide();
     }
 
@@ -1098,28 +849,23 @@
     }
 
     function showSlide() {
-      var imgs = slideImages[currentCase] || [];
+      var imgs = (slideImages && slideImages[currentCase]) || [];
       var canvas = document.getElementById('bboxCanvas');
       var ctx = canvas.getContext('2d');
       var section = document.getElementById('cameraSection');
       var W = section.offsetWidth || 640;
       var H = section.offsetHeight || 480;
-      canvas.width = W;
-      canvas.height = H;
-
+      canvas.width = W; canvas.height = H;
       if (imgs.length === 0) {
         ctx.clearRect(0, 0, W, H);
-        ctx.fillStyle = '#1e293b';
-        ctx.fillRect(0, 0, W, H);
-        ctx.fillStyle = '#94a3b8';
-        ctx.font = '14px sans-serif';
+        ctx.fillStyle = '#1e293b'; ctx.fillRect(0, 0, W, H);
+        ctx.fillStyle = '#94a3b8'; ctx.font = '14px sans-serif';
         ctx.textAlign = 'center';
-        ctx.fillText('사진을 slides 폴더에 추가해주세요', W/2, H/2);
+        ctx.fillText('사진을 slides/' + currentCase + ' 폴더에 추가해주세요', W/2, H/2);
         ctx.textAlign = 'left';
         document.getElementById('slidePageInfo').textContent = '0 / 0';
         return;
       }
-
       var img = new Image();
       img.onload = function() {
         ctx.clearRect(0, 0, W, H);
@@ -1128,21 +874,65 @@
       };
       img.src = imgs[slideIndex];
       document.getElementById('slidePageInfo').textContent = (slideIndex+1) + ' / ' + imgs.length;
-      document.getElementById('slideModeStatus').textContent = '';
     }
 
-    // 슬라이드 이미지 로드 (폴더별 분류)
     fetch(BASE_URL + '/api/slides')
       .then(function(r) { return r.json(); })
-      .then(function(data) {
-        if (data.images) {
-          slideImages = data.images;
-        }
-      })
+      .then(function(data) { if (data.images) slideImages = data.images; })
       .catch(function(){});
 
+    // ── 바운딩박스 툴팁
+    function loadSafetyRules() {
+      fetch(BASE_URL + '/api/safety-rules')
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          if (data.rules) data.rules.forEach(function(r) { safetyRules[r.case_name] = r; });
+        }).catch(function(){});
+    }
+
+    function handleCanvasHover(e) {
+      if (!lastBboxes || lastBboxes.length === 0) return;
+      var overlay = document.getElementById('bboxOverlay');
+      var rect = overlay.getBoundingClientRect();
+      var mx = e.clientX - rect.left;
+      var my = e.clientY - rect.top;
+      var W = rect.width; var H = rect.height;
+      var found = null;
+      lastBboxes.forEach(function(box) {
+        var px = box.x*W, py = box.y*H, pw = box.w*W, ph = box.h*H;
+        if (mx >= px && mx <= px+pw && my >= py && my <= py+ph) found = box;
+      });
+      if (found) {
+        var caseName = LABEL_KR[found.label] || found.label;
+        var rule = null;
+        Object.keys(safetyRules).forEach(function(key) {
+          if (key.includes(caseName) || (caseName.includes('미착용') && key.includes('안전복'))) rule = safetyRules[key];
+        });
+        var tooltip = document.getElementById('bboxTooltip');
+        document.getElementById('ttTitle').textContent = caseName || '-';
+        document.getElementById('ttLikelihood').textContent = rule ? rule.likelihood_score + '점' : '-';
+        document.getElementById('ttSeverity').textContent   = rule ? rule.severity_score + '점' : '-';
+        document.getElementById('ttPercent').textContent    = rule ? rule.risk_percent + '%' : '-';
+        document.getElementById('ttLevel').textContent      = rule ? rule.risk_level : '-';
+        tooltip.style.display = 'block';
+        tooltip.style.left = (e.clientX + 16) + 'px';
+        tooltip.style.top  = (e.clientY - 20) + 'px';
+      } else {
+        hideBboxTooltip();
+      }
+    }
+
+    function hideBboxTooltip() { document.getElementById('bboxTooltip').style.display = 'none'; }
+
+    // ── Help
+    function toggleHelp() {
+      var modal = document.getElementById('helpModal');
+      if (modal.style.display === 'none' || modal.style.display === '') modal.style.display = 'flex';
+      else modal.style.display = 'none';
+    }
+
     function toggleNav() {
-      var sub   = document.getElementById('navSub');
+      var sub = document.getElementById('navSub');
       var arrow = document.getElementById('navArrow');
       var title = document.getElementById('navGroupTitle');
       if (sub) { sub.classList.toggle('open'); arrow.classList.toggle('open'); title.classList.toggle('open'); }
@@ -1150,128 +940,6 @@
 
     initCamera();
     loadSafetyRules();
-
-    // safety_rules DB에서 불러오기
-    var safetyRules = {};
-    function loadSafetyRules() {
-      fetch(BASE_URL + '/api/safety-rules')
-        .then(function(r) { return r.json(); })
-        .then(function(data) {
-          if (data.rules) {
-            data.rules.forEach(function(r) {
-              safetyRules[r.case_name] = r;
-            });
-          }
-        }).catch(function(){});
-    }
-
-    // 마지막 감지 바운딩박스 저장
-    var lastBboxes = [];
-
-    // 바운딩박스 마우스 호버 툴팁
-    function handleCanvasHover(e) {
-      if (!lastBboxes || lastBboxes.length === 0) return;
-      var overlay = document.getElementById('bboxOverlay');
-      var rect = overlay.getBoundingClientRect();
-      var mx = e.clientX - rect.left;
-      var my = e.clientY - rect.top;
-      var W = rect.width;
-      var H = rect.height;
-
-      var found = null;
-      lastBboxes.forEach(function(box) {
-        var px = box.x * W, py = box.y * H, pw = box.w * W, ph = box.h * H;
-        if (mx >= px && mx <= px + pw && my >= py && my <= py + ph) {
-          found = box;
-        }
-      });
-
-      if (found) {
-        var caseName = found.label_kr || found.label;
-        var rule = null;
-        // safety_rules에서 매핑
-        Object.keys(safetyRules).forEach(function(key) {
-          if (key.includes(caseName) || caseName.includes('미착용') && key.includes('안전복')) {
-            rule = safetyRules[key];
-          }
-        });
-
-        var tooltip = document.getElementById('bboxTooltip');
-        document.getElementById('ttTitle').textContent = caseName || '-';
-        document.getElementById('ttLikelihood').textContent = rule ? rule.likelihood_score + '점' : '-';
-        document.getElementById('ttSeverity').textContent = rule ? rule.severity_score + '점' : '-';
-        document.getElementById('ttPercent').textContent = rule ? rule.risk_percent + '%' : '-';
-        document.getElementById('ttLevel').textContent = rule ? rule.risk_level : '-';
-        document.getElementById('ttAccident').textContent = rule ? rule.accident_type : '-';
-
-        tooltip.style.display = 'block';
-        tooltip.style.left = (e.clientX + 16) + 'px';
-        tooltip.style.top = (e.clientY - 20) + 'px';
-      } else {
-        hideBboxTooltip();
-      }
-    }
-
-    function hideBboxTooltip() {
-      document.getElementById('bboxTooltip').style.display = 'none';
-    }
-
-    // Help 모달
-    function toggleHelp() {
-      document.getElementById('helpModal').classList.toggle('show');
-    }
-
   </script>
-  <!-- 바운딩박스 툴팁 -->
-  <div id="bboxTooltip" style="display:none;">
-    <div class="tt-title" id="ttTitle">-</div>
-    <div class="tt-row"><span class="tt-label">가능성</span><span class="tt-val" id="ttLikelihood">-</span></div>
-    <div class="tt-row"><span class="tt-label">중대성</span><span class="tt-val" id="ttSeverity">-</span></div>
-    <div class="tt-row"><span class="tt-label">위험도</span><span class="tt-val" id="ttPercent">-</span></div>
-    <div class="tt-row"><span class="tt-label">등급</span><span class="tt-val" id="ttLevel">-</span></div>
-    <div class="tt-row"><span class="tt-label">사고유형</span><span class="tt-val" id="ttAccident">-</span></div>
-  </div>
-
-  <!-- Help 버튼 -->
-  <button id="helpBtn" onclick="toggleHelp()">?</button>
-  <div id="helpHoverTip" style="display:none;">
-    🔴 즉각조치 &nbsp;60~100%<br>
-    🟡 위험 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;31~59%<br>
-    🟢 주의 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;0~30%<br>
-    <span style="font-size:10px;color:#94a3b8;">클릭하면 전체 기준표 보기</span>
-  </div>
-
-  <!-- Help 모달 -->
-  <div id="helpModal" style="display:none;" onclick="if(event.target===this)toggleHelp()">
-    <div class="help-box">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-        <div class="help-title">⚠️ 위험도 기준표</div>
-        <button onclick="toggleHelp()" style="background:none;border:none;font-size:20px;cursor:pointer;">✕</button>
-      </div>
-      <div class="help-formula">
-        📐 위험도 = 가능성 × 중대성 ÷ 25 × 100<br>
-        <span style="font-size:11px;color:#94a3b8;">근거: 고용노동부 고시 제2024-76호 사업장 위험성평가에 관한 지침</span>
-      </div>
-      <table class="help-table">
-        <thead><tr><th>등급</th><th>범위</th><th>조치사항</th></tr></thead>
-        <tbody>
-          <tr><td>🔴 즉각조치</td><td>60~100%</td><td>즉각 작업 중지</td></tr>
-          <tr><td>🟡 위험</td><td>31~59%</td><td>주의 및 모니터링</td></tr>
-          <tr><td>🟢 주의</td><td>0~30%</td><td>지속 관찰</td></tr>
-        </tbody>
-      </table>
-      <table class="help-table" id="helpRulesTable">
-        <thead><tr><th>케이스</th><th>가능성</th><th>중대성</th><th>위험도</th><th>등급</th></tr></thead>
-        <tbody>
-          <tr><td>위험구역 출입</td><td>3점</td><td>5점</td><td>60%</td><td>🔴 즉각조치</td></tr>
-          <tr><td>중장비 접근</td><td>3점</td><td>5점</td><td>60%</td><td>🔴 즉각조치</td></tr>
-          <tr><td>안전복 미착용</td><td>4점</td><td>3점</td><td>48%</td><td>🟡 위험</td></tr>
-          <tr><td>자재물 적치</td><td>4점</td><td>2점</td><td>32%</td><td>🟡 위험</td></tr>
-          <tr><td>작업자 밀집</td><td>3점</td><td>2점</td><td>24%</td><td>🟢 주의</td></tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
-
 </body>
 </html>
