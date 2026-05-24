@@ -139,7 +139,8 @@
         // 로그인 정보 저장 후 인수인계 페이지로 이동
         localStorage.setItem('username', userId);
         localStorage.setItem('username_display', account.name);
-        window.location.href = '/handover';
+        localStorage.removeItem('handover_done');
+        window.location.href = '/upload';
       } else {
         showError("아이디 또는 비밀번호가 올바르지 않습니다.");
         btn.disabled = false;
