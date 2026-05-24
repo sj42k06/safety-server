@@ -123,8 +123,8 @@ async function sendDangerSms(dangerType, riskPercent, action, detectedTime) {
 
 // ── 미들웨어 ─────────────────────────────
 app.use(cors({ origin: "*", credentials: true }));
-app.use(express.urlencoded({ extended: true }));
-app.use(express.json());
+app.use(express.urlencoded({ extended: true, limit: "50mb" }));
+app.use(express.json({ limit: "50mb" }));
 app.use(express.static("public", { index: false }));
 
 const uploadDir = 'uploads/';
@@ -959,6 +959,26 @@ app.post('/api/handover/confirm', async (req, res) => {
     `, [report_id]);
 
     res.json({ success: true });
+  } catch(err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+
+// ────────────────────────────────────────
+// 세션별 보고서 조회
+// ────────────────────────────────────────
+app.get('/api/reports/by-session/:session_id', async (req, res) => {
+  try {
+    const [rows] = await db.query(
+      'SELECT * FROM reports WHERE session_id = ? ORDER BY created_at DESC LIMIT 1',
+      [req.params.session_id]
+    );
+    if (rows.length > 0) {
+      res.json({ success: true, report: rows[0] });
+    } else {
+      res.json({ success: false });
+    }
   } catch(err) {
     res.status(500).json({ error: err.message });
   }
