@@ -132,29 +132,20 @@
 
         <div class="divider"></div>
 
-        <!-- 보고서 생성 -->
-        <div class="report-created" id="reportCreated">
+        <!-- 보고서 확인 -->
+        <div id="reportCreated" style="display:none;background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:12px 14px;margin-bottom:12px;display:none;align-items:center;gap:10px;font-size:13px;color:#2563eb;">
           <i class="ri-file-check-line" style="font-size:18px;"></i>
-          <span>보고서가 생성되었습니다. <strong id="reportLink" style="cursor:pointer;text-decoration:underline;">보고서 확인</strong></span>
+          <span>보고서가 생성되었습니다.</span>
+          <button id="reportLink" onclick="goToReport()" style="margin-left:auto;padding:6px 14px;background:#2563eb;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">상세 보기</button>
         </div>
 
-        <button class="btn-generate" id="btnGenerate" onclick="generateReport()">
-          <i class="ri-file-add-line"></i> 보고서 생성
-        </button>
-
-        <!-- 인수 승인 -->
-        <button class="btn-approve" id="btnApprove" onclick="approveHandover()">
-          <i class="ri-logout-box-line"></i> 근무 종료 및 보고서 생성
+        <!-- 로그아웃 -->
+        <button class="btn-approve" id="btnLogout" onclick="doLogout()" style="background:linear-gradient(135deg,#dc2626,#b91c1c);">
+          <i class="ri-logout-box-line"></i> 로그아웃
         </button>
       </div>
 
-      <!-- 완료 화면 -->
-      <div class="hw-done" id="hwDone">
-        <div class="done-circle">✅</div>
-        <div class="done-title">인수인계 완료!</div>
-        <div class="done-sub" id="doneMsg">인수인계가 완료되었습니다.</div>
-        <button class="btn-goto" onclick="window.location.href='/login'">로그아웃</button>
-      </div>
+
     </div>
   </div>
 </div>
@@ -276,6 +267,36 @@
   }
 
   loadHandover();
+
+  // 페이지 로드 시 최신 보고서 확인
+  async function checkLatestReport() {
+    try {
+      var sesRes = await fetch(`${BASE_URL}/api/session/current`);
+      var sesData = await sesRes.json();
+      if (!sesData.session) return;
+      currentSessionId = sesData.session.session_id;
+
+      // 해당 세션 보고서 조회
+      var repRes = await fetch(`${BASE_URL}/api/reports?session_id=${currentSessionId}`);
+      var repData = await repRes.json();
+      if (repData.reports && repData.reports.length > 0) {
+        generatedReportId = repData.reports[0].report_id;
+        var rc = document.getElementById('reportCreated');
+        if (rc) rc.style.display = 'flex';
+      }
+    } catch(e) {}
+  }
+  checkLatestReport();
+
+  function goToReport() {
+    if (generatedReportId) window.location.href = '/reports/' + generatedReportId;
+  }
+
+  function doLogout() {
+    localStorage.removeItem('username');
+    localStorage.removeItem('token');
+    window.location.href = '/';
+  }
 </script>
 </body>
 </html>

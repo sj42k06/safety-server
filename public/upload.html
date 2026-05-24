@@ -740,11 +740,25 @@
     }
 
     // ── 근무 종료
-    function endShift() {
-      if (confirm('근무를 종료하고 인수인계 화면으로 이동하시겠습니까?')) {
-        if (intervalId) clearInterval(intervalId);
-        window.location.href = '/handover';
-      }
+    async function endShift() {
+      if (!confirm('근무를 종료하시겠습니까?')) return;
+      if (intervalId) { clearInterval(intervalId); intervalId = null; }
+
+      // 보고서 자동 생성
+      try {
+        var sesRes = await fetch(BASE_URL + '/api/session/current');
+        var sesData = await sesRes.json();
+        if (sesData.session) {
+          var sessionId = sesData.session.session_id;
+          await fetch(BASE_URL + '/api/reports/generate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ session_id: sessionId, created_by: 1 })
+          });
+        }
+      } catch(e) { console.error('보고서 생성 오류:', e); }
+
+      window.location.href = '/handover';
     }
 
     // ── 보고서 생성
