@@ -422,16 +422,16 @@ app.put("/api/risk/:risk_id/action", async (req, res) => {
 // ────────────────────────────────────────
 app.delete("/api/reports/:id", async (req, res) => {
   try {
-    const [[report]] = await db.query(
-      "SELECT risk_id FROM reports WHERE report_id = ?", [req.params.id]
-    );
-    await db.query("DELETE FROM reports WHERE report_id = ?", [req.params.id]);
-    if (report) {
-      await db.query("DELETE FROM risk_logs WHERE risk_id = ?", [report.risk_id]);
-    }
+    const id = req.params.id;
+    await db.query("SET FOREIGN_KEY_CHECKS = 0");
+    await db.query("DELETE FROM handover_logs WHERE report_id = ?", [id]);
+    await db.query("DELETE FROM reports WHERE report_id = ?", [id]);
+    await db.query("SET FOREIGN_KEY_CHECKS = 1");
     res.json({ 성공: true });
   } catch (err) {
-    res.status(500).json({ error: "삭제 실패" });
+    await db.query("SET FOREIGN_KEY_CHECKS = 1").catch(()=>{});
+    console.error('삭제 오류:', err.message);
+    res.status(500).json({ error: err.message });
   }
 });
 
@@ -858,7 +858,6 @@ app.post('/api/upload-bbox', async (req, res) => {
     if (!image_data) return res.status(400).json({ error: '이미지 없음' });
 
     const uploadResult = await cloudinary.uploader.upload(image_data, {
-      folder: 'safety_frames',
       resource_type: 'image'
     });
 
