@@ -410,6 +410,7 @@
         .catch(function() {
           cameraStatus.textContent = '카메라 연결 실패';
           cameraDot.style.background = '#ef4444';
+          detectBtn.disabled = false;
         });
     }
 
@@ -940,6 +941,7 @@
 
     initCamera();
     loadSafetyRules();
+    detectBtn.disabled = false;
   </script>
 </body>
 </html>
