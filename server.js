@@ -107,9 +107,9 @@ async function sendDangerSms(dangerType, riskPercent, action, detectedTime) {
 
     // 수신자: 손광민 + 정재학 + 수연
     const phones = [
-      process.env.ADMIN_PHONE,       // 손광민
-      process.env.ADMIN2_PHONE,      // 정재학
-      process.env.WORKER_PHONE,      // 수연 (작업자)
+      process.env.ADMIN_PHONE,       // 손광민 (테스트용 1명만)
+      // process.env.ADMIN2_PHONE,   // 정재학 (전시회 때 주석 해제)
+      // process.env.WORKER_PHONE,   // 수연 (전시회 때 주석 해제)
     ].filter(Boolean);
 
     for (const toPhone of phones) {
