@@ -539,9 +539,23 @@
               safeClass('currentStatus', 'status-value danger');
               lastDangerData = data;
               var hasDangerZone = (data.boxes || []).some(function(b) { return b.in_danger_zone; });
+              var boxes = data.boxes || [];
               var dangerTypes = [];
-              if (data.ppe_violation) dangerTypes.push('안전복 미착용');
-              if (hasDangerZone)      dangerTypes.push('위험구역 출입');
+              // 안전모 착용 확인 - 착용 시 안전복 미착용 알람 제외
+              var hasHardhat = boxes.some(function(b) { return b.label === 'hardhat'; });
+              if (data.ppe_violation && !hasHardhat) dangerTypes.push('안전복 미착용');
+              // 슬라이드 모드에서는 위험구역 출입 알람 제외
+              if (hasDangerZone && !slideMode) dangerTypes.push('위험구역 출입');
+              // 중장비 감지
+              var hasHeavy = boxes.some(function(b) { return b.label === 'forklift' || b.label === 'excavator' || b.label === 'machinery' || b.label === 'vehicle'; });
+              var hasPerson = boxes.some(function(b) { return b.label === 'person'; });
+              if (hasHeavy && hasPerson) dangerTypes.push('중장비 접근');
+              // 자재물 감지
+              var hasMaterial = boxes.some(function(b) { return b.label === 'box' || b.label === 'pallet' || b.label === 'material'; });
+              if (hasMaterial) dangerTypes.push('자재물 적치');
+              // 작업자 밀집
+              var personCount = boxes.filter(function(b) { return b.label === 'person'; }).length;
+              if (personCount >= 5) dangerTypes.push('작업자 밀집');
               var dangerMsg = dangerTypes.join(' + ') || '위험 감지';
               showAlarmPopup(data.boxes || [], dangerMsg);
               saveAlarmToDB(dangerMsg, data.boxes || []);
