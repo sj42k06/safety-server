@@ -189,6 +189,7 @@
         <div class="camera-section" id="cameraSection">
           <video id="cameraVideo" autoplay muted playsinline></video>
           <canvas id="bboxCanvas"></canvas>
+        <div id="bboxOverlay" style="position:absolute;top:0;left:0;width:100%;height:100%;z-index:10;" onmousemove="handleCanvasHover(event)" onmouseleave="hideBboxTooltip()"></div>
           <div class="zone-label zone-safe" id="zoneSafe">🟢 정상구역</div>
           <div class="zone-label zone-danger" id="zoneDanger">🔴 위험구역</div>
           <div class="camera-badge">
@@ -1216,6 +1217,12 @@
 
   <!-- Help 버튼 -->
   <button id="helpBtn" onclick="toggleHelp()">?</button>
+  <div id="helpHoverTip">
+    🔴 즉각조치 &nbsp;60~100%<br>
+    🟡 위험 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;31~59%<br>
+    🟢 주의 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;0~30%<br>
+    <span style="font-size:10px;color:#94a3b8;">클릭하면 전체 기준표 보기</span>
+  </div>
 
   <!-- Help 모달 -->
   <div id="helpModal" onclick="if(event.target===this)toggleHelp()">
