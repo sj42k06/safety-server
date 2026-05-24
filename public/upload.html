@@ -1029,6 +1029,8 @@
       document.getElementById('zoneDanger').style.display = 'block';
       document.getElementById('slideControls').style.display = 'none';
       currentSlideImg = null;
+      var badge = document.querySelector('.camera-badge');
+      if (badge) badge.style.display = '';
       drawFence();
     }
 
@@ -1040,6 +1042,10 @@
       document.getElementById('zoneSafe').style.display = 'none';
       document.getElementById('zoneDanger').style.display = 'none';
       document.getElementById('slideControls').style.display = 'flex';
+      document.getElementById('zoneSafe').style.display = 'none';
+      document.getElementById('zoneDanger').style.display = 'none';
+      var badge = document.querySelector('.camera-badge');
+      if (badge) badge.style.display = 'none';
       currentCase = 'forklift';
       slideIndex = 0;
       document.querySelectorAll('.slide-case-btn').forEach(function(b) { b.classList.remove('active'); });
@@ -1206,7 +1212,7 @@
 
   </script>
   <!-- 바운딩박스 툴팁 -->
-  <div id="bboxTooltip">
+  <div id="bboxTooltip" style="display:none;">
     <div class="tt-title" id="ttTitle">-</div>
     <div class="tt-row"><span class="tt-label">가능성</span><span class="tt-val" id="ttLikelihood">-</span></div>
     <div class="tt-row"><span class="tt-label">중대성</span><span class="tt-val" id="ttSeverity">-</span></div>
@@ -1217,7 +1223,7 @@
 
   <!-- Help 버튼 -->
   <button id="helpBtn" onclick="toggleHelp()">?</button>
-  <div id="helpHoverTip">
+  <div id="helpHoverTip" style="display:none;">
     🔴 즉각조치 &nbsp;60~100%<br>
     🟡 위험 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;31~59%<br>
     🟢 주의 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;0~30%<br>
@@ -1225,7 +1231,7 @@
   </div>
 
   <!-- Help 모달 -->
-  <div id="helpModal" onclick="if(event.target===this)toggleHelp()">
+  <div id="helpModal" style="display:none;" onclick="if(event.target===this)toggleHelp()">
     <div class="help-box">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
         <div class="help-title">⚠️ 위험도 기준표</div>
