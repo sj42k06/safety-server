@@ -130,88 +130,6 @@
     .slide-btn { padding:8px 16px; border:1px solid #e2e8f0; border-radius:8px; background:#f8fafc; color:#64748b; font-size:12px; font-weight:600; cursor:pointer; font-family:inherit; transition:all .2s; }
     .slide-btn.active { background:#1e293b; color:#fff; border-color:#1e293b; }
     .slide-mode-bar { display:flex; align-items:center; gap:8px; margin-bottom:8px; }
-
-    /* ── ? 플로팅 버튼 ── */
-    #helpBtn {
-      position:fixed; bottom:24px; right:24px; z-index:8000;
-      width:44px; height:44px; border-radius:50%;
-      background:#1e293b; color:#fff;
-      border:none; font-size:18px; font-weight:700;
-      cursor:pointer; font-family:inherit;
-      box-shadow:0 4px 16px rgba(0,0,0,.25);
-      display:flex; align-items:center; justify-content:center;
-      transition:background .2s, transform .2s;
-    }
-    #helpBtn:hover { background:#334155; transform:scale(1.08); }
-
-    /* ── 호버 미니 툴팁 ── */
-    #helpHoverTip {
-      display:none; position:fixed; bottom:76px; right:20px; z-index:8100;
-      background:#1e293b; color:#fff;
-      border-radius:10px; padding:10px 14px;
-      font-size:12px; line-height:1.8;
-      box-shadow:0 4px 16px rgba(0,0,0,.3);
-      white-space:nowrap; pointer-events:none;
-    }
-    #helpHoverTip::after {
-      content:''; position:absolute; bottom:-6px; right:18px;
-      border:6px solid transparent; border-bottom:none;
-      border-top-color:#1e293b;
-    }
-    #helpBtn:hover + #helpHoverTip,
-    #helpHoverTip:hover { display:block; }
-
-    /* ── Help 모달 오버레이 ── */
-    #helpModal {
-      display:none; position:fixed;
-      inset:0; background:rgba(0,0,0,.55);
-      z-index:9999; align-items:center; justify-content:center;
-    }
-    #helpModal.show { display:flex; }
-
-    /* ── Help 박스 ── */
-    .help-box {
-      background:#fff; border-radius:16px;
-      padding:24px; width:90%; max-width:480px;
-      box-shadow:0 20px 60px rgba(0,0,0,.25);
-      max-height:85vh; overflow-y:auto;
-    }
-    .help-title { font-size:16px; font-weight:800; color:#1e293b; }
-    .help-formula {
-      background:#f8fafc; border:1px solid #e2e8f0;
-      border-radius:10px; padding:12px 14px;
-      font-size:13px; font-weight:600; color:#334155;
-      line-height:1.7; margin-bottom:14px;
-    }
-    .help-table {
-      width:100%; border-collapse:collapse;
-      font-size:12px; margin-bottom:12px;
-    }
-    .help-table th {
-      background:#f1f5f9; color:#475569;
-      font-weight:700; padding:8px 10px;
-      text-align:left; font-size:11px;
-    }
-    .help-table td {
-      padding:8px 10px; border-bottom:1px solid #f1f5f9;
-      color:#334155;
-    }
-    .help-table tr:last-child td { border-bottom:none; }
-    .help-table tr:hover td { background:#f8fafc; }
-
-    /* ── 바운딩박스 툴팁 ── */
-    #bboxTooltip {
-      display:none; position:fixed; z-index:9000;
-      background:#0f172a; color:#fff;
-      border-radius:10px; padding:10px 14px;
-      font-size:12px; pointer-events:none;
-      box-shadow:0 4px 20px rgba(0,0,0,.4);
-      min-width:160px;
-    }
-    .tt-title { font-weight:700; font-size:13px; margin-bottom:8px; color:#f0f9ff; border-bottom:1px solid rgba(255,255,255,.1); padding-bottom:6px; }
-    .tt-row { display:flex; justify-content:space-between; align-items:center; margin-top:4px; }
-    .tt-label { color:#94a3b8; font-size:11px; }
-    .tt-val { font-weight:700; color:#fff; font-size:12px; }
   </style>
 </head>
 <body>
@@ -313,7 +231,7 @@
             <span id="alarmCount" style="background:#dc2626;color:#fff;border-radius:10px;padding:1px 8px;font-size:11px;margin-left:4px;">0</span>
             <div style="margin-left:auto;display:flex;gap:4px;">
               <button onclick="setAlarmFilter('all')" id="filterAll" style="padding:2px 8px;border-radius:6px;border:1px solid #e2e8f0;background:#1e293b;color:#fff;font-size:10px;cursor:pointer;font-family:inherit;">전체</button>
-              <button onclick="setAlarmFilter('unresolved')" id="filterUnresolved" style="padding:2px 8px;border-radius:6px;border:1px solid #e2e8f0;background:#f8fafc;color:#64748b;font-size:10px;cursor:pointer;font-family:inherit;"></button>
+              <button onclick="setAlarmFilter('unresolved')" id="filterUnresolved" style="padding:2px 8px;border-radius:6px;border:1px solid #e2e8f0;background:#f8fafc;color:#64748b;font-size:10px;cursor:pointer;font-family:inherit;">미조치만</button>
             </div>
           </div>
           <div id="alarmList"><div class="alarm-empty">감지된 알람이 없습니다</div></div>
@@ -1100,6 +1018,7 @@
 
     function switchToWebcam() {
       slideMode = false;
+      currentSlideImg = null;
       if (slideTimer) { clearInterval(slideTimer); slideTimer = null; }
       document.getElementById('webcamBtn').classList.add('active');
       document.getElementById('slideBtn').classList.remove('active');
@@ -1260,21 +1179,10 @@
       document.getElementById('bboxTooltip').style.display = 'none';
     }
 
+    // Help 모달
     function toggleHelp() {
-      var tip = document.getElementById('helpHoverTip');
-      if (tip) tip.style.display = 'none';
       document.getElementById('helpModal').classList.toggle('show');
     }
-
-    // Help 호버 툴팁 - DOM 로드 후 이벤트 연결
-    window.addEventListener('DOMContentLoaded', function() {
-      var helpBtn = document.getElementById('helpBtn');
-      var helpHoverTip = document.getElementById('helpHoverTip');
-      if (helpBtn && helpHoverTip) {
-        helpBtn.addEventListener('mouseenter', function() { helpHoverTip.style.display = 'block'; });
-        helpBtn.addEventListener('mouseleave', function() { helpHoverTip.style.display = 'none'; });
-      }
-    });
 
   </script>
   <!-- 바운딩박스 툴팁 -->
@@ -1287,14 +1195,8 @@
     <div class="tt-row"><span class="tt-label">사고유형</span><span class="tt-val" id="ttAccident">-</span></div>
   </div>
 
-  <!-- ? 플로팅 버튼 + 호버 미니툴팁 -->
+  <!-- Help 버튼 -->
   <button id="helpBtn" onclick="toggleHelp()">?</button>
-  <div id="helpHoverTip">
-    🔴 즉각조치 &nbsp;60~100%<br>
-    🟡 위험 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;31~59%<br>
-    🟢 주의 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;0~30%<br>
-    <span style="font-size:10px;color:#94a3b8;">클릭하면 전체 기준표 보기</span>
-  </div>
 
   <!-- Help 모달 -->
   <div id="helpModal" onclick="if(event.target===this)toggleHelp()">
