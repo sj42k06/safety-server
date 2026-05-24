@@ -1260,20 +1260,21 @@
       document.getElementById('bboxTooltip').style.display = 'none';
     }
 
-    // Help 버튼 - 호버: 미니툴팁, 클릭: 전체 모달
-    var helpBtn = document.getElementById('helpBtn');
-    var helpHoverTip = document.getElementById('helpHoverTip');
-    helpBtn.addEventListener('mouseenter', function() {
-      helpHoverTip.style.display = 'block';
-    });
-    helpBtn.addEventListener('mouseleave', function() {
-      helpHoverTip.style.display = 'none';
-    });
-
     function toggleHelp() {
-      helpHoverTip.style.display = 'none';
+      var tip = document.getElementById('helpHoverTip');
+      if (tip) tip.style.display = 'none';
       document.getElementById('helpModal').classList.toggle('show');
     }
+
+    // Help 호버 툴팁 - DOM 로드 후 이벤트 연결
+    window.addEventListener('DOMContentLoaded', function() {
+      var helpBtn = document.getElementById('helpBtn');
+      var helpHoverTip = document.getElementById('helpHoverTip');
+      if (helpBtn && helpHoverTip) {
+        helpBtn.addEventListener('mouseenter', function() { helpHoverTip.style.display = 'block'; });
+        helpBtn.addEventListener('mouseleave', function() { helpHoverTip.style.display = 'none'; });
+      }
+    });
 
   </script>
   <!-- 바운딩박스 툴팁 -->
