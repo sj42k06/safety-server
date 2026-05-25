@@ -335,6 +335,9 @@
       </div>
     `;
 
+    // 인수인계 섹션 표시 여부 결정
+    checkHandoverSection(r.created_by || 0);
+
     // 도넛 차트
     const ctx = document.getElementById('donutChart');
     if (ctx) {
@@ -371,6 +374,7 @@
   loadReport();
 
   // 현재 관리자 표시
+  // 현재 관리자 이름 표시
   function showCurrentManager() {
     const user = localStorage.getItem('username') || 'admin1';
     const nameMap = { 'admin1':'손광민', 'admin2':'정재학', 'admin3':'관리자 C', 'admin4':'관리자 D' };
@@ -379,38 +383,29 @@
   }
   showCurrentManager();
 
+  // 인수인계 섹션 - 보고서 생성자가 아닌 사람에게만 표시
+  function checkHandoverSection(createdById) {
+    const user = localStorage.getItem('username') || 'admin1';
+    const userIdMap = { 'admin1':1, 'admin2':2, 'admin3':3, 'admin4':4 };
+    const currentUserId = userIdMap[user] || 1;
+    const section = document.getElementById('handoverSection');
+    if (!section) return;
+    // 보고서 생성자와 현재 로그인 사람이 다를 때만 표시
+    if (currentUserId !== createdById) {
+      section.style.display = 'block';
+    } else {
+      section.style.display = 'none';
+    }
+  }
+
   // 사진 확대
   function openImgModal(src) {
-    var modal = document.getElementById('imgModal');
     document.getElementById('imgModalSrc').src = src;
-    modal.style.display = 'flex';
+    document.getElementById('imgModal').style.display = 'flex';
   }
   function closeImgModal() {
     document.getElementById('imgModal').style.display = 'none';
   }
-
-  function openImgModal(src) {
-    document.getElementById('imgModalSrc').src = src;
-    document.getElementById('imgModal').classList.add('show');
-  }
-
-  function closeImgModal() {
-    document.getElementById('imgModal').classList.remove('show');
-  }
-
-  // 현재 관리자 이름 표시
-  function showCurrentManager() {
-    const user = localStorage.getItem('username') || 'admin1';
-    const nameMap = {
-      'admin1': '손광민',
-      'admin2': '정재학',
-      'admin3': '관리자 C',
-      'admin4': '관리자 D'
-    };
-    const el = document.getElementById('currentManagerName');
-    if (el) el.textContent = nameMap[user] || user;
-  }
-  showCurrentManager();
 
   // 인수인계 승인
   async function approveHandover() {
@@ -459,7 +454,7 @@
 
   <!-- 인수인계 확인 섹션 -->
   <div style="max-width:860px;margin:0 auto;padding:0 16px 80px;">
-    <div class="handover-section" id="handoverSection">
+    <div class="handover-section" id="handoverSection" style="display:none;">
       <div class="handover-title">✅ 인수인계 확인</div>
       <table class="overview-table" style="margin-bottom:16px;">
         <tr>
