@@ -361,7 +361,7 @@ app.get("/api/reports/:id", async (req, res) => {
         r.report_id, r.report_title, r.report_date, r.report_content,
         r.created_at, r.total_risk_events, r.resolved_count, r.unresolved_count,
         r.major_risk_case, r.max_risk_percent, r.avg_risk_percent,
-        r.approval_status, r.next_shift_note,
+        r.approval_status, r.next_shift_note, r.created_by,
         ms.shift_type, ms.start_time, ms.end_time, ms.camera_id,
         u.name AS created_by_name
       FROM reports r
