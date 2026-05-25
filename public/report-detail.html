@@ -91,6 +91,20 @@
     .criteria-table tr:last-child td { border-bottom:none; }
 
     .loading { text-align:center; padding:60px; color:#94a3b8; }
+
+    /* 사진 클릭 확대 */
+    .thumb-img { cursor:pointer; transition:opacity .2s; }
+    .thumb-img:hover { opacity:.8; }
+    #imgModal { display:none; position:fixed; inset:0; background:rgba(0,0,0,.85); z-index:9999; align-items:center; justify-content:center; cursor:pointer; }
+    #imgModal.show { display:flex; }
+    #imgModal img { max-width:90vw; max-height:90vh; border-radius:12px; }
+
+    /* 인수인계 섹션 */
+    .handover-section { background:#fff; border:2px solid #1e293b; border-radius:16px; padding:24px; margin-bottom:16px; }
+    .handover-title { font-size:16px; font-weight:800; color:#1e293b; margin-bottom:18px; padding-bottom:12px; border-bottom:1px solid #f1f5f9; display:flex; align-items:center; gap:10px; }
+    .handover-input { width:100%; padding:10px 14px; border:1px solid #e2e8f0; border-radius:10px; font-size:14px; font-family:inherit; margin-top:4px; }
+    .btn-handover { width:100%; padding:14px; border:none; border-radius:12px; background:linear-gradient(135deg,#1e293b,#0f172a); color:#fff; font-size:15px; font-weight:800; cursor:pointer; font-family:inherit; margin-top:16px; }
+    .handover-done { display:none; margin-top:12px; padding:12px; background:#f0fdf4; border:1px solid #bbf7d0; border-radius:10px; text-align:center; font-size:13px; color:#16a34a; font-weight:700; }
     .empty-msg { text-align:center; padding:30px; color:#94a3b8; font-size:13px; }
   </style>
 </head>
@@ -235,7 +249,7 @@
                 return `<tr>
                   <td style="white-space:nowrap;">${tTime}</td>
                   <td style="max-width:160px;font-size:11px;">${t.risk_case || '-'}</td>
-                  <td>${tImg && !tImg.includes('dummy') ? `<img class="thumb-img" src="${tImg}" alt="감지 사진">` : `<div class="thumb-none"><i class="ri-image-line"></i></div>`}</td>
+                  <td>${tImg && !tImg.includes('dummy') ? `<img class="thumb-img" src="${tImg}" alt="감지 사진" onclick="openImgModal('${tImg}')">` : `<div class="thumb-none"><i class="ri-image-line"></i></div>`}</td>
                   <td style="font-weight:700;">${parseFloat(t.risk_percent||0).toFixed(1)}%</td>
                   <td><span class="grade-badge ${tGrade}">${tGrade}</span></td>
                   <td><span class="action-badge ${tAction}">${tAction}</span></td>
@@ -355,6 +369,15 @@
   }
 
   loadReport();
+
+  function openImgModal(src) {
+    document.getElementById('imgModalSrc').src = src;
+    document.getElementById('imgModal').classList.add('show');
+  }
+
+  function closeImgModal() {
+    document.getElementById('imgModal').classList.remove('show');
+  }
 
   // 현재 관리자 이름 표시
   function showCurrentManager() {
