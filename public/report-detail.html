@@ -370,6 +370,25 @@
 
   loadReport();
 
+  // 현재 관리자 표시
+  function showCurrentManager() {
+    const user = localStorage.getItem('username') || 'admin1';
+    const nameMap = { 'admin1':'손광민', 'admin2':'정재학', 'admin3':'관리자 C', 'admin4':'관리자 D' };
+    const el = document.getElementById('currentManagerName');
+    if (el) el.textContent = nameMap[user] || user;
+  }
+  showCurrentManager();
+
+  // 사진 확대
+  function openImgModal(src) {
+    var modal = document.getElementById('imgModal');
+    document.getElementById('imgModalSrc').src = src;
+    modal.style.display = 'flex';
+  }
+  function closeImgModal() {
+    document.getElementById('imgModal').style.display = 'none';
+  }
+
   function openImgModal(src) {
     document.getElementById('imgModalSrc').src = src;
     document.getElementById('imgModal').classList.add('show');
@@ -437,5 +456,36 @@
     }
   }
 </script>
+
+  <!-- 인수인계 확인 섹션 -->
+  <div style="max-width:860px;margin:0 auto;padding:0 16px 80px;">
+    <div class="handover-section" id="handoverSection">
+      <div class="handover-title">✅ 인수인계 확인</div>
+      <table class="overview-table" style="margin-bottom:16px;">
+        <tr>
+          <td style="color:#94a3b8;font-weight:600;width:130px;">현재 관리자</td>
+          <td style="font-weight:700;color:#1e293b;" id="currentManagerName">-</td>
+        </tr>
+        <tr>
+          <td style="color:#94a3b8;font-weight:600;">다음 관리자</td>
+          <td>
+            <input type="text" id="nextManagerInput" class="handover-input" placeholder="다음 관리자 이름 입력" />
+          </td>
+        </tr>
+      </table>
+      <button class="btn-handover" id="btnHandoverApprove" onclick="approveHandover()">
+        ✅ 인수인계 승인
+      </button>
+      <div class="handover-done" id="handoverDone">
+        인수인계가 확인되었습니다! 현장 모니터링으로 이동합니다...
+      </div>
+    </div>
+  </div>
+
+  <!-- 사진 확대 모달 -->
+  <div id="imgModal" onclick="closeImgModal()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:9999;align-items:center;justify-content:center;cursor:pointer;">
+    <img id="imgModalSrc" src="" alt="감지 사진" style="max-width:90vw;max-height:90vh;border-radius:12px;" />
+  </div>
+
 </body>
 </html>
