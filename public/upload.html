@@ -533,6 +533,7 @@
             else drawAll(data.boxes || []);
             if (data.danger && !dangerDetected) {
               dangerDetected = true;
+              console.log('감지 데이터:', JSON.stringify(data));
               cameraSection.classList.add('camera-border-danger');
               cameraDot.classList.add('danger');
               safeSet('currentStatus', '🔴 위험 감지!');
