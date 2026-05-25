@@ -618,11 +618,16 @@ app.get("/api/session/current", async (req, res) => {
 
     if (!session) {
       // 세션 없으면 새로 생성
+      // 한국 시간 기준으로 start_time, end_time 계산
+      const koreaStart = koreaTime.toISOString().slice(0, 19).replace('T', ' ');
+      const endTime = new Date(koreaTime.getTime() + 8 * 60 * 60 * 1000);
+      const koreaEnd = endTime.toISOString().slice(0, 19).replace('T', ' ');
+
       const [result] = await db.query(`
         INSERT INTO monitoring_sessions
         (camera_id, monitored_area, shift_type, session_date, start_time, end_time, manager_id, analyzed_frames, normal_frames, risk_event_count, session_status, handover_status)
-        VALUES ('CAM-01', '현장 모니터링 구역', ?, ?, NOW(), DATE_ADD(NOW(), INTERVAL 8 HOUR), 1, 0, 0, 0, '정상', '대기')
-      `, [shiftType, today]);
+        VALUES ('CAM-01', '현장 모니터링 구역', ?, ?, ?, ?, 1, 0, 0, 0, '정상', '대기')
+      `, [shiftType, today, koreaStart, koreaEnd]);
       const [[newSession]] = await db.query('SELECT * FROM monitoring_sessions WHERE session_id = ?', [result.insertId]);
       return res.json({ success: true, session: newSession });
     }
