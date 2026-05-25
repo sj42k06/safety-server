@@ -751,10 +751,12 @@
         var sesData = await sesRes.json();
         if (sesData.session) {
           var sessionId = sesData.session.session_id;
+          var userIdMap = { 'admin1':1, 'admin2':2, 'admin3':3, 'admin4':4 };
+          var createdBy = userIdMap[user] || 1;
           await fetch(BASE_URL + '/api/reports/generate', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ session_id: sessionId, created_by: 1 })
+            body: JSON.stringify({ session_id: sessionId, created_by: createdBy })
           });
         }
       } catch(e) { console.error('보고서 생성 오류:', e); }
