@@ -343,9 +343,7 @@
     if (nameEl) nameEl.textContent = managerNames[currentUser] || currentUser;
     // 현재 관리자 이름 업데이트
     const user = localStorage.getItem('username') || 'admin1';
-    const nameMap = { 'admin1':'손광민', 'admin2':'정재학', 'admin3':'관리자 C', 'admin4':'관리자 D' };
-    const nameEl = document.getElementById('currentManagerName');
-    if (nameEl) nameEl.textContent = nameMap[user] || user;
+
 
     // 도넛 차트
     const ctx = document.getElementById('donutChart');
@@ -384,13 +382,7 @@
 
   // 현재 관리자 표시
   // 현재 관리자 이름 표시
-  function showCurrentManager() {
-    const user = localStorage.getItem('username') || 'admin1';
-    const nameMap = { 'admin1':'손광민', 'admin2':'정재학', 'admin3':'관리자 C', 'admin4':'관리자 D' };
-    const el = document.getElementById('currentManagerName');
-    if (el) el.textContent = nameMap[user] || user;
-  }
-  showCurrentManager();
+
 
   // 인수인계 섹션 - 보고서 생성자가 아닌 사람에게만 표시
   function checkHandoverSection(createdById) {

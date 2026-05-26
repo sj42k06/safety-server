@@ -600,7 +600,7 @@
     }
 
     function stopDetection() {
-      intervalId = null; isAnalyzing = false; dangerDetected = false;
+      intervalId = null; isAnalyzing = false; dangerDetected = false; lastDangerData = null; smsSent = false;
       detectBtn.style.display = 'flex'; detectBtn.disabled = false;
       stopBtn.style.display   = 'none';
       safeSet('currentStatus', '대기 중'); safeClass('currentStatus', 'status-value');
