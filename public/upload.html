@@ -360,6 +360,7 @@
     var currentSessionId = null;
     var lastDangerData   = null;
     var lastBboxes       = [];
+    var shownAlarms      = new Set(); // 이미 팝업 뜬 케이스 기록
     var safetyRules      = {};
 
     var COLOR_MAP = {
@@ -558,10 +559,15 @@
               var personCount = boxes.filter(function(b) { return b.label === 'person'; }).length;
               if (personCount >= 5) dangerTypes.push('작업자 밀집');
               var dangerMsg = dangerTypes.join(' + ') || '위험 감지';
-              showAlarmPopup(data.boxes || [], dangerMsg);
+              // DB 저장 + 목록 추가는 항상
               saveAlarmToDB(dangerMsg, data.boxes || []);
-              sendDangerSms(dangerMsg);
               addAlarmToList(dangerMsg, data.boxes || []);
+              // 팝업 + SMS는 새 케이스일 때만
+              if (!shownAlarms.has(dangerMsg)) {
+                shownAlarms.add(dangerMsg);
+                showAlarmPopup(data.boxes || [], dangerMsg);
+                sendDangerSms(dangerMsg);
+              }
             } else if (!data.danger) {
               cameraSection.classList.remove('camera-border-danger');
               cameraDot.classList.remove('danger');
@@ -588,6 +594,7 @@
       cameraSection.classList.remove('camera-border-danger');
       cameraDot.classList.remove('danger');
       if (!slideMode) drawFence();
+      shownAlarms.clear();
       intervalId = true;
       // 슬라이드 수동 조작
       loopAnalyze();
@@ -853,6 +860,7 @@
       document.querySelectorAll('.slide-case-btn').forEach(function(b) { b.classList.remove('active'); });
       btn.classList.add('active');
       currentCase = btn.dataset.case; slideIndex = 0;
+      shownAlarms.clear(); // 새 케이스로 바꾸면 초기화
       showSlide();
     }
 
