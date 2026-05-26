@@ -189,7 +189,7 @@
 
     function goToReport() {
       const reportId = localStorage.getItem('pendingReportId');
-      window.location.href = '/reports/' + reportId;
+      window.location.href = '/reports/' + reportId + '?handover=true';
     }
   </script>
 

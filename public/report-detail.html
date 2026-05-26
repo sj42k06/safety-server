@@ -337,10 +337,7 @@
 
     // 인수인계 섹션 표시 여부 결정
     checkHandoverSection(r.created_by || 0);
-    const currentUser = localStorage.getItem('username') || 'admin1';
-    const managerNames = { 'admin1':'손광민', 'admin2':'정재학', 'admin3':'관리자 C', 'admin4':'관리자 D' };
-    const nameEl = document.getElementById('currentManagerName');
-    if (nameEl) nameEl.textContent = managerNames[currentUser] || currentUser;
+
     // 현재 관리자 이름 업데이트
     const user = localStorage.getItem('username') || 'admin1';
 
@@ -386,13 +383,12 @@
 
   // 인수인계 섹션 - 보고서 생성자가 아닌 사람에게만 표시
   function checkHandoverSection(createdById) {
-    const user = localStorage.getItem('username') || 'admin1';
-    const userIdMap = { 'admin1':1, 'admin2':2, 'admin3':3, 'admin4':4 };
-    const currentUserId = userIdMap[user] || 1;
     const section = document.getElementById('handoverSection');
     if (!section) return;
-    // 보고서 생성자와 현재 로그인 사람이 다를 때만 표시
-    if (currentUserId !== createdById) {
+    // URL에 handover=true 파라미터가 있을 때만 표시
+    const params = new URLSearchParams(window.location.search);
+    const isHandover = params.get('handover') === 'true';
+    if (isHandover) {
       section.style.display = 'block';
     } else {
       section.style.display = 'none';
@@ -410,11 +406,24 @@
 
   // 인수인계 승인
   async function approveHandover() {
-    const nextManager = document.getElementById('nextManagerInput').value.trim();
-    if (!nextManager) {
-      alert('다음 관리자 이름을 입력해주세요.');
+    const inputName = document.getElementById('nextManagerInput').value.trim();
+    const user = localStorage.getItem('username') || 'admin1';
+    const nameMap = { 'admin1':'손광민', 'admin2':'정재학', 'admin3':'관리자 C', 'admin4':'관리자 D' };
+    const myName = nameMap[user] || user;
+    const errorEl = document.getElementById('nameError');
+
+    if (!inputName) {
+      errorEl.style.display = 'block';
+      errorEl.textContent = '본인 이름을 입력해주세요.';
       return;
     }
+    if (inputName !== myName) {
+      errorEl.style.display = 'block';
+      errorEl.textContent = '본인 이름을 정확히 입력해주세요.';
+      return;
+    }
+    errorEl.style.display = 'none';
+    const nextManager = inputName;
 
     const btn = document.getElementById('btnHandoverApprove');
     btn.disabled = true;
@@ -457,18 +466,14 @@
   <div style="max-width:860px;margin:0 auto;padding:0 16px 80px;">
     <div class="handover-section" id="handoverSection" style="display:none;">
       <div class="handover-title">✅ 인수인계 확인</div>
-      <table class="overview-table" style="margin-bottom:16px;">
-        <tr>
-          <td style="color:#94a3b8;font-weight:600;width:130px;">현재 관리자</td>
-          <td style="font-weight:700;color:#1e293b;" id="currentManagerName">-</td>
-        </tr>
-        <tr>
-          <td style="color:#94a3b8;font-weight:600;">다음 관리자</td>
-          <td>
-            <input type="text" id="nextManagerInput" class="handover-input" placeholder="다음 관리자 이름 입력" />
-          </td>
-        </tr>
-      </table>
+      <p style="font-size:13px;color:#64748b;margin-bottom:16px;">
+        본인 이름을 입력하여 보고서 내용을 확인하고 인수인계를 완료해주세요.
+      </p>
+      <div style="margin-bottom:16px;">
+        <div class="field-label">본인 이름 입력</div>
+        <input type="text" id="nextManagerInput" class="handover-input" placeholder="본인 이름 입력" />
+        <div id="nameError" style="display:none;color:#dc2626;font-size:12px;margin-top:6px;">본인 이름을 정확히 입력해주세요.</div>
+      </div>
       <button class="btn-handover" id="btnHandoverApprove" onclick="approveHandover()">
         ✅ 인수인계 승인
       </button>
