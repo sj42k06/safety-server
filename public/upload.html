@@ -558,6 +558,12 @@
               // 작업자 밀집
               var personCount = boxes.filter(function(b) { return b.label === 'person'; }).length;
               if (personCount >= 5) dangerTypes.push('작업자 밀집');
+              // dangerTypes 비어있으면 boxes에서 직접 파악
+              if (dangerTypes.length === 0) {
+                if (hasHeavy && has_person) dangerTypes.push('중장비 접근');
+                if (person_count >= 3) dangerTypes.push('작업자 밀집');
+                if (hasMaterial) dangerTypes.push('자재물 적치');
+              }
               var dangerMsg = dangerTypes.join(' + ') || '위험 감지';
               // DB 저장 + 목록 추가는 항상
               saveAlarmToDB(dangerMsg, data.boxes || []);
@@ -881,6 +887,8 @@
     }
 
     function clearSlideCanvas() {
+      // 감지 일시정지
+      isAnalyzing = true;
       // 캔버스 초기화 (이전 바운딩박스 제거)
       var canvas = document.getElementById('bboxCanvas');
       var ctx = canvas.getContext('2d');
@@ -890,6 +898,8 @@
       currentSlideImg = null;
       dangerDetected = false;
       shownAlarms.clear();
+      // 1.5초 후 감지 재개 (새 사진 로드 시간)
+      setTimeout(function() { isAnalyzing = false; }, 1500);
     }
 
     function startSlideTimer() {
