@@ -860,7 +860,7 @@
       document.querySelectorAll('.slide-case-btn').forEach(function(b) { b.classList.remove('active'); });
       btn.classList.add('active');
       currentCase = btn.dataset.case; slideIndex = 0;
-      shownAlarms.clear(); // 새 케이스로 바꾸면 초기화
+      clearSlideCanvas();
       showSlide();
     }
 
@@ -868,6 +868,7 @@
       var imgs = (slideImages && slideImages[currentCase]) || [];
       if (imgs.length === 0) return;
       slideIndex = (slideIndex - 1 + imgs.length) % imgs.length;
+      clearSlideCanvas();
       showSlide();
     }
 
@@ -875,7 +876,20 @@
       var imgs = (slideImages && slideImages[currentCase]) || [];
       if (imgs.length === 0) return;
       slideIndex = (slideIndex + 1) % imgs.length;
+      clearSlideCanvas();
       showSlide();
+    }
+
+    function clearSlideCanvas() {
+      // 캔버스 초기화 (이전 바운딩박스 제거)
+      var canvas = document.getElementById('bboxCanvas');
+      var ctx = canvas.getContext('2d');
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      // 이전 감지 데이터 초기화
+      lastBboxes = [];
+      currentSlideImg = null;
+      dangerDetected = false;
+      shownAlarms.clear();
     }
 
     function startSlideTimer() {
