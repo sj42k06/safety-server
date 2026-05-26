@@ -336,7 +336,12 @@ app.get("/api/reports", async (req, res) => {
         ms.shift_type,
         ms.start_time,
         ms.end_time,
-        u.name AS created_by_name
+        u.name AS created_by_name,
+        (SELECT re.bbox_image_path FROM risk_events re
+         WHERE re.session_id = r.session_id
+         AND re.bbox_image_path IS NOT NULL
+         AND re.bbox_image_path != ''
+         ORDER BY re.detected_time ASC LIMIT 1) AS image_path
       FROM reports r
       LEFT JOIN monitoring_sessions ms ON r.session_id = ms.session_id
       LEFT JOIN users u ON r.created_by = u.user_id
