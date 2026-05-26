@@ -27,6 +27,9 @@ def detect_quick(image_path):
     boxes = []
     danger_detected = False
     ppe_violation   = False
+    has_heavy       = False
+    has_person      = False
+    person_count    = 0
 
     for r in results:
         for box in r.boxes:
@@ -55,6 +58,15 @@ def detect_quick(image_path):
                 ppe_violation   = True
                 danger_detected = True
 
+            # 중장비 감지
+            if label in ['machinery', 'forklift', 'excavator', 'vehicle']:
+                has_heavy = True
+
+            # 사람 감지
+            if label == 'person':
+                has_person = True
+                person_count += 1
+
             boxes.append({
                 "label":      label,
                 "confidence": round(conf, 2),
@@ -64,6 +76,14 @@ def detect_quick(image_path):
                 "h": round(nh, 4),
                 "in_danger_zone": in_danger_zone
             })
+
+    # 중장비 + 사람 있으면 위험
+    if has_heavy and has_person:
+        danger_detected = True
+
+    # 사람 3명 이상이면 밀집 위험
+    if person_count >= 3:
+        danger_detected = True
 
     print(json.dumps({
         "boxes":         boxes,
