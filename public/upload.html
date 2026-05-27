@@ -296,15 +296,7 @@
         </div>
 
 
-        <!-- 감지 시작/중지 버튼 -->
-        <div class="btn-area">
-          <button class="detect-btn" id="detectBtn" onclick="startDetection()" disabled>
-            <i class="ri-shield-flash-line"></i> 감지 시작
-          </button>
-          <button class="detect-btn stop" id="stopBtn" onclick="stopDetection()" style="display:none;">
-            <i class="ri-stop-circle-line"></i> 감지 중지
-          </button>
-        </div>
+
       </div>
     </div>
   </main>
@@ -362,8 +354,8 @@
     var bboxCtx       = bboxCanvas.getContext('2d');
     var cameraDot     = document.getElementById('cameraDot');
     var cameraStatus  = document.getElementById('cameraStatus');
-    var detectBtn     = document.getElementById('detectBtn');
-    var stopBtn       = document.getElementById('stopBtn');
+    var detectBtn     = document.getElementById('detectBtnTop');
+    var stopBtn       = document.getElementById('stopBtnTop');
 
     document.getElementById('sidebarUser').textContent = user === 'admin2' ? '정재학 (admin2)' : user === 'admin1' ? '손광민 (admin1)' : user;
 
@@ -431,6 +423,10 @@
           cameraDot.style.background = '#ef4444';
           detectBtn.disabled = false;
           var dbt = document.getElementById('detectBtnTop'); if(dbt) dbt.disabled = false;
+          // 카메라 없어도 기본 펜스 그리기
+          bboxCanvas.width = cameraSection.offsetWidth;
+          bboxCanvas.height = cameraSection.offsetHeight;
+          drawFence();
         });
     }
 
@@ -611,8 +607,7 @@
     function startDetection() {
       detectBtn.style.display = 'none';
       stopBtn.style.display   = 'flex';
-      var dbt = document.getElementById('detectBtnTop'); if(dbt) dbt.style.display = 'none';
-      var sbt = document.getElementById('stopBtnTop'); if(sbt) sbt.style.display = 'flex';
+
       dangerDetected = false; smsSent = false; isCreatingReport = false;
       var ni = document.getElementById('noteImmediate'); if(ni) ni.value='';
       var nd = document.getElementById('noteDeferred'); if(nd) nd.value='';
@@ -639,8 +634,7 @@
       intervalId = null; isAnalyzing = false; dangerDetected = false; lastDangerData = null; smsSent = false;
       detectBtn.style.display = 'flex'; detectBtn.disabled = false;
       stopBtn.style.display   = 'none';
-      var dbt = document.getElementById('detectBtnTop'); if(dbt) { dbt.style.display = 'flex'; dbt.disabled = false; }
-      var sbt = document.getElementById('stopBtnTop'); if(sbt) sbt.style.display = 'none';
+
       safeSet('currentStatus', '대기 중'); safeClass('currentStatus', 'status-value');
       cameraSection.classList.remove('camera-border-danger');
       cameraDot.classList.remove('danger');
@@ -1047,6 +1041,8 @@
 
     initCamera();
     loadSafetyRules();
+    // 페이지 로드 시 가상 펜스 그리기
+    setTimeout(function() { drawFence(); }, 500);
     detectBtn.disabled = false;
   </script>
 </body>
