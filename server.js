@@ -951,7 +951,7 @@ app.get('/api/handover/pending', async (req, res) => {
 // ────────────────────────────────────────
 app.post('/api/handover/confirm', async (req, res) => {
   try {
-    const { report_id, next_manager } = req.body;
+    const { report_id, user } = req.body;
 
     // handover_logs 상태 업데이트
     await db.query(`
@@ -970,6 +970,18 @@ app.post('/api/handover/confirm', async (req, res) => {
           approved_at = NOW()
       WHERE report_id = ?
     `, [report_id]);
+
+    // 미조치 건수 조회
+    const [[stats]] = await db.query(`
+      SELECT COUNT(*) AS unresolved FROM action_logs al
+      JOIN risk_events re ON al.risk_id = re.risk_id
+      JOIN reports r ON re.session_id = r.session_id
+      WHERE r.report_id = ? AND al.action_status = '미조치'
+    `, [report_id]);
+
+    // SMS 발송
+    const approvedBy = user || 'admin2';
+    await sendHandoverSms(approvedBy, stats.unresolved || 0, 0);
 
     res.json({ success: true });
   } catch(err) {
