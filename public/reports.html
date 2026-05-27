@@ -123,8 +123,9 @@
     .card-thumb img { width: 100%; height: 100%; object-fit: cover; }
     .card-thumb .no-thumb { color: #cbd5e1; font-size: 32px; }
     .card-grade-badge { position: absolute; top: 10px; left: 10px; font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 12px; }
-    .badge-RISK   { background: #fee2e2; color: #dc2626; }
-    .badge-NORMAL { background: #dcfce7; color: #16a34a; }
+    .badge-EMERGENCY { background: #fee2e2; color: #dc2626; }
+    .badge-WARNING   { background: #fef3c7; color: #d97706; }
+    .badge-NORMAL    { background: #dcfce7; color: #16a34a; }
     .action-badge { display: inline-block; font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 10px; margin-top: 5px; }
     .action-badge.미조치  { background: #fee2e2; color: #dc2626; }
     .action-badge.조치완료 { background: #dcfce7; color: #16a34a; }
@@ -210,10 +211,7 @@
         <button class="btn-delete-all" id="btnSelectMode" onclick="enterSelectMode()" style="background:#f1f5f9;color:#475569;border:1px solid #e2e8f0;">
           <i class="ri-checkbox-multiple-line"></i> 선택
         </button>
-        <!-- 전체 삭제 버튼 -->
-        <button class="btn-delete-all" id="btnDeleteAll" onclick="showDeleteAllModal()">
-          <i class="ri-delete-bin-2-line"></i> 전체 삭제
-        </button>
+
         <a href="/upload" class="btn-new"><i class="ri-camera-line"></i> 현장 모니터링</a>
       </div>
     </div>
@@ -237,10 +235,11 @@
     </div>
 
     <div class="filter-tabs">
-      <div class="filter-tab active" onclick="filterReports('전체')"  id="tab-전체">전체 <span id="count-전체">0</span></div>
-      <div class="filter-tab" onclick="filterReports('위험')"   id="tab-위험">위험 <span id="count-위험">0</span></div>
-      <div class="filter-tab" onclick="filterReports('정상')"   id="tab-정상">정상 <span id="count-정상">0</span></div>
-      <div class="filter-tab" onclick="filterReports('미조치')" id="tab-미조치">미조치 <span id="count-미조치">0</span></div>
+      <div class="filter-tab active" onclick="filterReports('전체')"    id="tab-전체">전체 <span id="count-전체">0</span></div>
+      <div class="filter-tab" onclick="filterReports('즉각조치')" id="tab-즉각조치">🔴 즉각조치 <span id="count-즉각조치">0</span></div>
+      <div class="filter-tab" onclick="filterReports('위험')"     id="tab-위험">🟡 위험 <span id="count-위험">0</span></div>
+      <div class="filter-tab" onclick="filterReports('주의')"     id="tab-주의">🟢 주의 <span id="count-주의">0</span></div>
+      <div class="filter-tab" onclick="filterReports('미조치')"   id="tab-미조치">미조치 <span id="count-미조치">0</span></div>
     </div>
 
     <div id="emptyState" class="empty-state" style="display:none">
@@ -311,7 +310,7 @@
 
     async function loadReports() {
       try {
-        const res  = await fetch(BASE_URL + '/api/reports');
+        const res  = await fetch(BASE_URL + '/api/reports?from=2026-05-20&to=2026-05-27');
         const data = await res.json();
         allReports = (data.reports || []).sort((a,b) => new Date(b.created_at) - new Date(a.created_at));
         document.getElementById('totalCount').textContent = allReports.length;
@@ -332,15 +331,16 @@
     function getViewReports() {
       if (currentView === 'today')
         return allReports.filter(r => (r.report_date && r.report_date.slice(0,10) === todayStr) || (r.created_at && r.created_at.slice(0,10) === todayStr));
-      return allReports;
+      return allReports; // 이미 20~27일 범위로 API 호출
     }
 
     function updateFilterCounts() {
       const vr = getViewReports();
-      document.getElementById('count-전체').textContent   = vr.length;
-      document.getElementById('count-위험').textContent   = vr.filter(r => parseFloat(r.max_risk_percent||0) >= 60).length;
-      document.getElementById('count-정상').textContent   = vr.filter(r => parseFloat(r.max_risk_percent||0) < 31).length;
-      document.getElementById('count-미조치').textContent = vr.filter(r => (r.unresolved_count||0) > 0).length;
+      document.getElementById('count-전체').textContent    = vr.length;
+      document.getElementById('count-즉각조치').textContent = vr.filter(r => parseFloat(r.max_risk_percent||0) >= 60).length;
+      document.getElementById('count-위험').textContent    = vr.filter(r => parseFloat(r.max_risk_percent||0) >= 31 && parseFloat(r.max_risk_percent||0) < 60).length;
+      document.getElementById('count-주의').textContent    = vr.filter(r => parseFloat(r.max_risk_percent||0) < 31).length;
+      document.getElementById('count-미조치').textContent  = vr.filter(r => (r.unresolved_count||0) > 0).length;
 
       const todayCount = allReports.filter(r => (r.report_date && r.report_date.slice(0,10) === todayStr) || (r.created_at && r.created_at.slice(0,10) === todayStr)).length;
       const badge = document.getElementById('todayCountBadge');
@@ -354,9 +354,10 @@
       let viewReports = getViewReports();
 
       let filtered = viewReports;
-      if (currentFilter === '위험')   filtered = viewReports.filter(r => parseFloat(r.max_risk_percent||0) >= 60);
-      if (currentFilter === '정상')   filtered = viewReports.filter(r => parseFloat(r.max_risk_percent||0) < 31);
-      if (currentFilter === '미조치') filtered = viewReports.filter(r => (r.unresolved_count||0) > 0);
+      if (currentFilter === '즉각조치') filtered = viewReports.filter(r => parseFloat(r.max_risk_percent||0) >= 60);
+      if (currentFilter === '위험')    filtered = viewReports.filter(r => parseFloat(r.max_risk_percent||0) >= 31 && parseFloat(r.max_risk_percent||0) < 60);
+      if (currentFilter === '주의')    filtered = viewReports.filter(r => parseFloat(r.max_risk_percent||0) < 31);
+      if (currentFilter === '미조치')  filtered = viewReports.filter(r => (r.unresolved_count||0) > 0);
 
       if (filtered.length === 0) {
         empty.style.display = 'flex';
@@ -371,8 +372,8 @@
 
       grid.innerHTML = filtered.map((r, idx) => {
         const maxPct = parseFloat(r.max_risk_percent || 0);
-        const grade  = maxPct >= 60 ? '즉각조치' : maxPct >= 31 ? '위험' : '주의';
-        const gradeClass = maxPct >= 60 ? 'RISK' : maxPct >= 31 ? 'WARNING' : 'NORMAL';
+        const grade  = maxPct >= 60 ? '🔴 즉각조치' : maxPct >= 31 ? '🟡 위험' : '🟢 주의';
+        const gradeClass = maxPct >= 60 ? 'EMERGENCY' : maxPct >= 31 ? 'WARNING' : 'NORMAL';
         const hasUnresolved = (r.unresolved_count || 0) > 0;
         const action = hasUnresolved ? '미조치 ' + r.unresolved_count + '건' : '조치완료';
         const actionClass = hasUnresolved ? '미조치' : '조치완료';
