@@ -441,7 +441,8 @@
         },
         body: JSON.stringify({
           report_id: reportId,
-          next_manager: nextManager
+          next_manager: nextManager,
+          user: localStorage.getItem('username') || 'admin2'
         })
       });
 
