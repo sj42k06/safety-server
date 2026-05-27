@@ -106,6 +106,41 @@
     .chart-title{font-size:14px;font-weight:700;color:#1e293b;margin-bottom:16px;display:flex;align-items:center;gap:7px;}
     .chart-wrap{position:relative;height:200px;}
     .chart-wrap-tall{position:relative;height:240px;}
+  
+    /* ? 플로팅 버튼 */
+    #helpBtn {
+      position:fixed; bottom:24px; right:24px; z-index:8000;
+      width:44px; height:44px; border-radius:50%;
+      background:#1e293b; color:#fff;
+      border:none; font-size:18px; font-weight:700;
+      cursor:pointer; font-family:inherit;
+      box-shadow:0 4px 16px rgba(0,0,0,.25);
+      display:flex; align-items:center; justify-content:center;
+      transition:background .2s, transform .2s;
+    }
+    #helpBtn:hover { background:#334155; transform:scale(1.08); }
+    #helpModal {
+      display:none; position:fixed; inset:0;
+      background:rgba(0,0,0,.55); z-index:9999;
+      align-items:center; justify-content:center;
+    }
+    #helpModal.show { display:flex; }
+    .help-box {
+      background:#fff; border-radius:16px; padding:24px;
+      width:90%; max-width:480px;
+      box-shadow:0 20px 60px rgba(0,0,0,.25);
+      max-height:85vh; overflow-y:auto;
+    }
+    .help-formula {
+      background:#f8fafc; border:1px solid #e2e8f0;
+      border-radius:10px; padding:12px 14px;
+      font-size:13px; font-weight:600; color:#334155;
+      line-height:1.7; margin-bottom:14px; margin-top:12px;
+    }
+    .help-table { width:100%; border-collapse:collapse; font-size:12px; margin-bottom:12px; }
+    .help-table th { background:#f1f5f9; color:#475569; font-weight:700; padding:8px 10px; text-align:left; font-size:11px; }
+    .help-table td { padding:8px 10px; border-bottom:1px solid #f1f5f9; color:#334155; }
+    .help-table tr:last-child td { border-bottom:none; }
   </style>
 </head>
 <body>
@@ -610,6 +645,48 @@
 
     loadData();
     setInterval(loadData, 30000);
+  </script>
+  <!-- ? 플로팅 버튼 -->
+  <button id="helpBtn" onclick="toggleHelp()">?</button>
+
+  <!-- Help 모달 -->
+  <div id="helpModal" style="display:none;" onclick="if(event.target===this)toggleHelp()">
+    <div class="help-box">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+        <div style="font-size:16px;font-weight:800;color:#1e293b;">⚠️ 위험도 기준표</div>
+        <button onclick="toggleHelp()" style="background:none;border:none;font-size:20px;cursor:pointer;">✕</button>
+      </div>
+      <div class="help-formula">
+        📐 위험도 = 가능성 × 중대성 ÷ 25 × 100<br>
+        <span style="font-size:11px;color:#94a3b8;">근거: 고용노동부 고시 제2024-76호</span>
+      </div>
+      <table class="help-table">
+        <thead><tr><th>등급</th><th>범위</th><th>조치사항</th></tr></thead>
+        <tbody>
+          <tr><td>🔴 즉각조치</td><td>60~100%</td><td>즉각 작업 중지</td></tr>
+          <tr><td>🟡 위험</td><td>31~59%</td><td>주의 및 모니터링</td></tr>
+          <tr><td>🟢 주의</td><td>0~30%</td><td>지속 관찰</td></tr>
+        </tbody>
+      </table>
+      <table class="help-table">
+        <thead><tr><th>케이스</th><th>가능성</th><th>중대성</th><th>위험도</th><th>등급</th></tr></thead>
+        <tbody>
+          <tr><td>위험구역 출입</td><td>3점</td><td>5점</td><td>60%</td><td>🔴 즉각조치</td></tr>
+          <tr><td>중장비 접근</td><td>3점</td><td>5점</td><td>60%</td><td>🔴 즉각조치</td></tr>
+          <tr><td>안전복 미착용</td><td>4점</td><td>3점</td><td>48%</td><td>🟡 위험</td></tr>
+          <tr><td>자재물 적치</td><td>4점</td><td>2점</td><td>32%</td><td>🟡 위험</td></tr>
+          <tr><td>작업자 밀집</td><td>3점</td><td>2점</td><td>24%</td><td>🟢 주의</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <script>
+  function toggleHelp() {
+    var modal = document.getElementById('helpModal');
+    if (modal.style.display === 'none' || modal.style.display === '') modal.style.display = 'flex';
+    else modal.style.display = 'none';
+  }
   </script>
 </body>
 </html>

@@ -7,7 +7,9 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/remixicon/4.2.0/remixicon.min.css" />
   <link rel="stylesheet" href="upload.css" />
   <style>
-    .monitoring-wrap { display:flex; flex-direction:column; gap:14px; }
+    .monitoring-wrap { display:flex; flex-direction:row; gap:20px; align-items:flex-start; }
+    .monitoring-left { flex:1; min-width:0; display:flex; flex-direction:column; gap:14px; }
+    .monitoring-right { width:320px; flex-shrink:0; display:flex; flex-direction:column; gap:12px; position:sticky; top:20px; }
     .camera-section {
       background:#000; border-radius:16px; overflow:hidden;
       position:relative; width:100%; height:75vh;
@@ -209,7 +211,7 @@
           <button class="slide-btn" id="webcamBtn" onclick="switchToWebcam()">📷 웹캠</button>
           <button class="slide-btn" id="slideBtn" onclick="switchToSlide()">🏗️ 슬라이드</button>
           <span style="font-size:12px;color:#94a3b8;" id="slideModeStatus"></span>
-          <button onclick="endShift()" style="margin-left:auto;padding:6px 14px;background:#1e293b;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">🔚 근무 종료</button>
+
         </div>
 
         <!-- 슬라이드 케이스 선택 + 이전/다음 -->
@@ -227,6 +229,24 @@
           </div>
         </div>
 
+        </div><!-- monitoring-left 끝 -->
+
+        <!-- 오른쪽: 버튼 + 알람 목록 -->
+        <div class="monitoring-right">
+
+        <!-- 감지 시작/중지 + 근무 종료 버튼 -->
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <button class="detect-btn" id="detectBtn" onclick="startDetection()" disabled>
+            <i class="ri-shield-flash-line"></i> 감지 시작
+          </button>
+          <button class="detect-btn stop" id="stopBtn" onclick="stopDetection()" style="display:none;">
+            <i class="ri-stop-circle-line"></i> 감지 중지
+          </button>
+          <button onclick="endShift()" style="width:100%;padding:13px;background:#475569;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:8px;">
+            🔚 근무 종료
+          </button>
+        </div>
+
         <!-- 알람 목록 패널 -->
         <div class="alarm-panel">
           <div class="alarm-panel-title">
@@ -239,6 +259,8 @@
           </div>
           <div id="alarmList"><div class="alarm-empty">감지된 알람이 없습니다</div></div>
         </div>
+
+        </div><!-- monitoring-right 끝 -->
 
         <!-- 줌 슬라이더 -->
         <div id="zoomWrap" style="display:none;align-items:center;gap:10px;background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:10px 16px;">
@@ -280,15 +302,7 @@
           </div>
         </div>
 
-        <!-- 감지 시작/중지 버튼 -->
-        <div class="btn-area">
-          <button class="detect-btn" id="detectBtn" onclick="startDetection()" disabled>
-            <i class="ri-shield-flash-line"></i> 감지 시작
-          </button>
-          <button class="detect-btn stop" id="stopBtn" onclick="stopDetection()" style="display:none;">
-            <i class="ri-stop-circle-line"></i> 감지 중지
-          </button>
-        </div>
+
       </div>
     </div>
   </main>
@@ -361,6 +375,7 @@
     var lastDangerData   = null;
     var lastBboxes       = [];
     var shownAlarms      = new Set(); // 이미 팝업 뜬 케이스 기록
+    var slideDetected    = false; // 슬라이드 사진당 감지 완료 여부
     var safetyRules      = {};
 
     var COLOR_MAP = {
@@ -503,6 +518,8 @@
     // ── 분석
     function analyzeQuick() {
       if (isAnalyzing) return;
+      // 슬라이드 모드에서 이미 감지됐으면 스킵
+      if (slideMode && slideDetected) return;
       isAnalyzing = true;
       var canvas = document.createElement('canvas');
       if (slideMode) {
@@ -534,6 +551,7 @@
             else drawAll(data.boxes || []);
             if (data.danger) {
               dangerDetected = true;
+              if (slideMode) slideDetected = true; // 슬라이드 사진 감지 완료
               cameraSection.classList.add('camera-border-danger');
               cameraDot.classList.add('danger');
               safeSet('currentStatus', '🔴 위험 감지!');
@@ -565,12 +583,11 @@
                 if (hasMaterial) dangerTypes.push('자재물 적치');
               }
               var dangerMsg = dangerTypes.join(' + ') || '위험 감지';
-              // DB 저장 + 목록 추가는 항상
-              saveAlarmToDB(dangerMsg, data.boxes || []);
-              addAlarmToList(dangerMsg, data.boxes || []);
-              // 팝업 + SMS는 새 케이스일 때만
+              // 처음 감지된 케이스만 저장/팝업/SMS
               if (!shownAlarms.has(dangerMsg)) {
                 shownAlarms.add(dangerMsg);
+                saveAlarmToDB(dangerMsg, data.boxes || []);
+                addAlarmToList(dangerMsg, data.boxes || []);
                 showAlarmPopup(data.boxes || [], dangerMsg);
                 sendDangerSms(dangerMsg);
               }
@@ -716,7 +733,24 @@
         }
         var bboxImageUrl = '';
         try {
-          var canvas = document.getElementById('bboxCanvas');
+          // 비디오 + 바운딩박스 합성
+          var bboxCanvas = document.getElementById('bboxCanvas');
+          var mergedCanvas = document.createElement('canvas');
+          mergedCanvas.width = bboxCanvas.width || 640;
+          mergedCanvas.height = bboxCanvas.height || 480;
+          var mctx = mergedCanvas.getContext('2d');
+          // 슬라이드 모드면 슬라이드 이미지, 웹캠이면 비디오
+          if (slideMode && currentSlideImg) {
+            mctx.drawImage(currentSlideImg, 0, 0, mergedCanvas.width, mergedCanvas.height);
+          } else {
+            var video = document.getElementById('cameraVideo');
+            if (video && video.readyState >= 2) {
+              mctx.drawImage(video, 0, 0, mergedCanvas.width, mergedCanvas.height);
+            }
+          }
+          // 바운딩박스 합성
+          mctx.drawImage(bboxCanvas, 0, 0);
+          var canvas = mergedCanvas;
           var imageData = canvas.toDataURL('image/jpeg', 0.8);
           var uploadRes = await fetch(BASE_URL + '/api/upload-bbox', {
             method:'POST', headers:{'Content-Type':'application/json'},
@@ -897,6 +931,7 @@
       lastBboxes = [];
       currentSlideImg = null;
       dangerDetected = false;
+      slideDetected = false;
       shownAlarms.clear();
       // 1.5초 후 감지 재개 (새 사진 로드 시간)
       setTimeout(function() { isAnalyzing = false; }, 1500);
@@ -909,7 +944,7 @@
       slideTimer = setInterval(function() {
         slideIndex = (slideIndex + 1) % imgs.length;
         showSlide();
-      }, 10000);
+      }, 3000);
     }
 
     function showSlide() {
