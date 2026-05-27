@@ -59,14 +59,15 @@ const db = mysql.createPool({
 
 // ── 수신 번호 매핑 ──────────────────────
 const PHONE_MAP = {
-  admin:  process.env.ADMIN_PHONE,
+  admin1: process.env.ADMIN_PHONE,
   admin2: process.env.ADMIN2_PHONE,
+  worker1: process.env.WORKER_PHONE,
 };
 
 // ── SMS 발송 ─────────────────────────────
 async function sendHandoverSms(approvedBy, unresolvedCount, todayCount) {
   try {
-    const toUser  = approvedBy === 'admin1' ? 'admin2' : 'admin';
+    const toUser  = approvedBy === 'admin1' ? 'admin2' : 'admin1';
     const toPhone = PHONE_MAP[toUser];
     const from    = process.env.COOLSMS_FROM;
     const apiKey    = process.env.COOLSMS_API_KEY;
@@ -78,7 +79,9 @@ async function sendHandoverSms(approvedBy, unresolvedCount, todayCount) {
     }
 
     const now  = new Date().toLocaleString('ko-KR');
-    const text = `[안전관리시스템] 인수인계 완료\n승인자: ${approvedBy}\n시각: ${now}\n미조치: ${unresolvedCount}건 / 당일보고서: ${todayCount}건`;
+    const nameMap = { 'admin1': '손광민', 'admin2': '정재학' };
+    const approverName = nameMap[approvedBy] || approvedBy;
+    const text = `[안전관리시스템] 인수인계 완료\n${approverName}님이 보고서를 확인하여 인수인계를 완료하였습니다\n시각: ${now}\n미조치: ${unresolvedCount}건`;
 
     await solapiSend(apiKey, apiSecret, from, toPhone, text);
 
@@ -107,9 +110,9 @@ async function sendDangerSms(dangerType, riskPercent, action, detectedTime) {
 
     // 수신자: 손광민 + 정재학 + 수연
     const phones = [
-      process.env.ADMIN_PHONE,       // 손광민 (테스트용 1명만)
-      // process.env.ADMIN2_PHONE,   // 정재학 (전시회 때 주석 해제)
-      // process.env.WORKER_PHONE,   // 수연 (전시회 때 주석 해제)
+      process.env.ADMIN_PHONE,       // 손광민
+      process.env.ADMIN2_PHONE,      // 정재학
+      process.env.WORKER_PHONE,      // 수연
     ].filter(Boolean);
 
     for (const toPhone of phones) {
