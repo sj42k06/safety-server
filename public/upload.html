@@ -7,9 +7,7 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/remixicon/4.2.0/remixicon.min.css" />
   <link rel="stylesheet" href="upload.css" />
   <style>
-    .monitoring-wrap { display:flex; flex-direction:row; gap:20px; align-items:flex-start; }
-    .monitoring-left { flex:1; min-width:0; display:flex; flex-direction:column; gap:14px; }
-    .monitoring-right { width:320px; flex-shrink:0; display:flex; flex-direction:column; gap:12px; position:sticky; top:20px; }
+    .monitoring-wrap { display:flex; flex-direction:column; gap:14px; }
     .camera-section {
       background:#000; border-radius:16px; overflow:hidden;
       position:relative; width:100%; height:75vh;
@@ -183,12 +181,27 @@
 
   <main>
     <div class="inner" style="max-width:100%;padding:0 12px;">
-      <div class="page-tag"><i class="ri-camera-line"></i><span>현장 실시간 모니터링</span></div>
-      <h2>현장 모니터링</h2>
-      <p class="page-desc">
-        웹캠으로 현장을 실시간 모니터링합니다. 화면 왼쪽은 🟢정상구역, 오른쪽은 🔴위험구역입니다.<br/>
-        위험 감지 시 즉시 알람 팝업이 표시됩니다. 감지된 알람은 오른쪽 패널에서 확인할 수 있습니다.
-      </p>
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+        <div>
+          <div class="page-tag"><i class="ri-camera-line"></i><span>현장 실시간 모니터링</span></div>
+          <h2>현장 모니터링</h2>
+          <p class="page-desc">
+            웹캠으로 현장을 실시간 모니터링합니다. 화면 왼쪽은 🟢정상구역, 오른쪽은 🔴위험구역입니다.<br/>
+            위험 감지 시 즉시 알람 팝업이 표시됩니다. 감지된 알람은 오른쪽 패널에서 확인할 수 있습니다.
+          </p>
+        </div>
+        <div style="display:flex;gap:8px;flex-shrink:0;margin-top:4px;">
+          <button class="detect-btn" id="detectBtnTop" onclick="startDetection()" disabled style="padding:10px 18px;font-size:13px;">
+            <i class="ri-shield-flash-line"></i> 감지 시작
+          </button>
+          <button class="detect-btn stop" id="stopBtnTop" onclick="stopDetection()" style="display:none;padding:10px 18px;font-size:13px;">
+            <i class="ri-stop-circle-line"></i> 감지 중지
+          </button>
+          <button onclick="endShift()" style="padding:10px 18px;background:#475569;color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:6px;">
+            🔚 근무 종료
+          </button>
+        </div>
+      </div>
       <div class="monitoring-wrap">
         <!-- 카메라 화면 -->
         <div class="camera-section" id="cameraSection">
@@ -229,24 +242,6 @@
           </div>
         </div>
 
-        </div><!-- monitoring-left 끝 -->
-
-        <!-- 오른쪽: 버튼 + 알람 목록 -->
-        <div class="monitoring-right">
-
-        <!-- 감지 시작/중지 + 근무 종료 버튼 -->
-        <div style="display:flex;flex-direction:column;gap:8px;">
-          <button class="detect-btn" id="detectBtn" onclick="startDetection()" disabled>
-            <i class="ri-shield-flash-line"></i> 감지 시작
-          </button>
-          <button class="detect-btn stop" id="stopBtn" onclick="stopDetection()" style="display:none;">
-            <i class="ri-stop-circle-line"></i> 감지 중지
-          </button>
-          <button onclick="endShift()" style="width:100%;padding:13px;background:#475569;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:8px;">
-            🔚 근무 종료
-          </button>
-        </div>
-
         <!-- 알람 목록 패널 -->
         <div class="alarm-panel">
           <div class="alarm-panel-title">
@@ -259,8 +254,6 @@
           </div>
           <div id="alarmList"><div class="alarm-empty">감지된 알람이 없습니다</div></div>
         </div>
-
-        </div><!-- monitoring-right 끝 -->
 
         <!-- 줌 슬라이더 -->
         <div id="zoomWrap" style="display:none;align-items:center;gap:10px;background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:10px 16px;">
@@ -303,6 +296,15 @@
         </div>
 
 
+        <!-- 감지 시작/중지 버튼 -->
+        <div class="btn-area">
+          <button class="detect-btn" id="detectBtn" onclick="startDetection()" disabled>
+            <i class="ri-shield-flash-line"></i> 감지 시작
+          </button>
+          <button class="detect-btn stop" id="stopBtn" onclick="stopDetection()" style="display:none;">
+            <i class="ri-stop-circle-line"></i> 감지 중지
+          </button>
+        </div>
       </div>
     </div>
   </main>
@@ -410,6 +412,7 @@
           cameraDot.className      = 'camera-dot';
           cameraStatus.textContent = 'LIVE';
           detectBtn.disabled       = false;
+          var dbt = document.getElementById('detectBtnTop'); if(dbt) dbt.disabled = false;
           var track = stream.getVideoTracks()[0];
           var caps  = track.getCapabilities();
           if (caps.zoom) {
@@ -427,6 +430,7 @@
           cameraStatus.textContent = '카메라 연결 실패';
           cameraDot.style.background = '#ef4444';
           detectBtn.disabled = false;
+          var dbt = document.getElementById('detectBtnTop'); if(dbt) dbt.disabled = false;
         });
     }
 
@@ -607,6 +611,8 @@
     function startDetection() {
       detectBtn.style.display = 'none';
       stopBtn.style.display   = 'flex';
+      var dbt = document.getElementById('detectBtnTop'); if(dbt) dbt.style.display = 'none';
+      var sbt = document.getElementById('stopBtnTop'); if(sbt) sbt.style.display = 'flex';
       dangerDetected = false; smsSent = false; isCreatingReport = false;
       var ni = document.getElementById('noteImmediate'); if(ni) ni.value='';
       var nd = document.getElementById('noteDeferred'); if(nd) nd.value='';
@@ -633,6 +639,8 @@
       intervalId = null; isAnalyzing = false; dangerDetected = false; lastDangerData = null; smsSent = false;
       detectBtn.style.display = 'flex'; detectBtn.disabled = false;
       stopBtn.style.display   = 'none';
+      var dbt = document.getElementById('detectBtnTop'); if(dbt) { dbt.style.display = 'flex'; dbt.disabled = false; }
+      var sbt = document.getElementById('stopBtnTop'); if(sbt) sbt.style.display = 'none';
       safeSet('currentStatus', '대기 중'); safeClass('currentStatus', 'status-value');
       cameraSection.classList.remove('camera-border-danger');
       cameraDot.classList.remove('danger');
