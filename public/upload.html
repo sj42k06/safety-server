@@ -639,7 +639,17 @@
       cameraSection.classList.remove('camera-border-danger');
       cameraDot.classList.remove('danger');
       if (slideTimer) { clearInterval(slideTimer); slideTimer = null; }
-      drawFence();
+      // 슬라이드 모드면 현재 슬라이드 이미지 다시 그리기
+      if (slideMode && currentSlideImg) {
+        var canvas = document.getElementById('bboxCanvas');
+        var ctx = canvas.getContext('2d');
+        var section = document.getElementById('cameraSection');
+        canvas.width = section.offsetWidth || 640;
+        canvas.height = section.offsetHeight || 480;
+        ctx.drawImage(currentSlideImg, 0, 0, canvas.width, canvas.height);
+      } else {
+        drawFence();
+      }
     }
 
     // ── 알람 팝업
