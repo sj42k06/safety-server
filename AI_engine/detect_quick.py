@@ -81,8 +81,8 @@ def detect_quick(image_path):
     if has_heavy and has_person:
         danger_detected = True
 
-    # 사람 3명 이상이면 밀집 위험
-    if person_count >= 3:
+    # 사람 5명 이상이면 밀집 위험
+    if person_count >= 5:
         danger_detected = True
 
     print(json.dumps({
