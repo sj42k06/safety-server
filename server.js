@@ -873,7 +873,7 @@ app.post("/api/reports/generate", async (req, res) => {
     }
 
     // 인수인계 로그 생성
-    const nextManagerId = created_by >= 4 ? 1 : created_by + 1;
+    const nextManagerId = created_by === 1 ? 2 : 1; // admin1↔admin2 순환
     await db.query(`
       INSERT INTO handover_logs
       (report_id, from_user_id, to_user_id, handover_date, handover_status, created_at)
