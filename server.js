@@ -634,9 +634,21 @@ app.get("/api/session/current", async (req, res) => {
       // 한국 시간 기준으로 start_time, end_time 계산
       // 한국 시간 직접 포맷 (toISOString은 UTC로 변환되므로 사용 안 함)
       const pad = n => String(n).padStart(2, '0');
-      const koreaStart = `${koreaTime.getUTCFullYear()}-${pad(koreaTime.getUTCMonth()+1)}-${pad(koreaTime.getUTCDate())} ${pad(koreaTime.getUTCHours())}:${pad(koreaTime.getUTCMinutes())}:${pad(koreaTime.getUTCSeconds())}`;
-      const endTime = new Date(koreaTime.getTime() + 8 * 60 * 60 * 1000);
-      const koreaEnd = `${endTime.getUTCFullYear()}-${pad(endTime.getUTCMonth()+1)}-${pad(endTime.getUTCDate())} ${pad(endTime.getUTCHours())}:${pad(endTime.getUTCMinutes())}:${pad(endTime.getUTCSeconds())}`;
+      const dateStr = `${koreaTime.getUTCFullYear()}-${pad(koreaTime.getUTCMonth()+1)}-${pad(koreaTime.getUTCDate())}`;
+      let koreaStart, koreaEnd;
+      if (shiftType === '오전') {
+        koreaStart = `${dateStr} 06:00:00`;
+        koreaEnd   = `${dateStr} 14:00:00`;
+      } else if (shiftType === '오후') {
+        koreaStart = `${dateStr} 14:00:00`;
+        koreaEnd   = `${dateStr} 22:00:00`;
+      } else {
+        // 야간: 22:00 ~ 다음날 06:00
+        const nextDate = new Date(koreaTime.getTime() + 24 * 60 * 60 * 1000);
+        const nextDateStr = `${nextDate.getUTCFullYear()}-${pad(nextDate.getUTCMonth()+1)}-${pad(nextDate.getUTCDate())}`;
+        koreaStart = `${dateStr} 22:00:00`;
+        koreaEnd   = `${nextDateStr} 06:00:00`;
+      }
 
       const [result] = await db.query(`
         INSERT INTO monitoring_sessions
