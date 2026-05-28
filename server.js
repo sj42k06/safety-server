@@ -67,13 +67,11 @@ const PHONE_MAP = {
 // ── SMS 발송 ─────────────────────────────
 async function sendHandoverSms(approvedBy, unresolvedCount, todayCount) {
   try {
-    const toUser  = approvedBy === 'admin1' ? 'admin2' : 'admin1';
-    const toPhone = PHONE_MAP[toUser];
     const from    = process.env.COOLSMS_FROM;
     const apiKey    = process.env.COOLSMS_API_KEY;
     const apiSecret = process.env.COOLSMS_API_SECRET;
 
-    if (!toPhone || !from || !apiKey || !apiSecret) {
+    if (!from || !apiKey || !apiSecret) {
       console.warn('⚠️  SMS 설정 누락 - 발송 스킵');
       return false;
     }
@@ -83,9 +81,16 @@ async function sendHandoverSms(approvedBy, unresolvedCount, todayCount) {
     const approverName = nameMap[approvedBy] || approvedBy;
     const text = `[안전관리시스템] 인수인계 완료\n${approverName}님이 보고서를 확인하여 인수인계를 완료하였습니다\n시각: ${now}\n미조치: ${unresolvedCount}건`;
 
-    await solapiSend(apiKey, apiSecret, from, toPhone, text);
+    // 손광민 + 정재학 둘 다 발송
+    const phones = [
+      process.env.ADMIN_PHONE,
+      process.env.ADMIN2_PHONE
+    ].filter(Boolean);
 
-    console.log(`✅ SMS 발송 완료 → ${toUser}(${toPhone})`);
+    for (const toPhone of phones) {
+      await solapiSend(apiKey, apiSecret, from, toPhone, text);
+      console.log(`✅ 인수인계 SMS 발송 → ${toPhone}`);
+    }
     return true;
   } catch (err) {
     console.error('❌ SMS 발송 오류:', err.response?.data || err.message);
