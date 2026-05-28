@@ -632,9 +632,11 @@ app.get("/api/session/current", async (req, res) => {
     if (!session) {
       // 세션 없으면 새로 생성
       // 한국 시간 기준으로 start_time, end_time 계산
-      const koreaStart = koreaTime.toISOString().slice(0, 19).replace('T', ' ');
+      // 한국 시간 직접 포맷 (toISOString은 UTC로 변환되므로 사용 안 함)
+      const pad = n => String(n).padStart(2, '0');
+      const koreaStart = `${koreaTime.getUTCFullYear()}-${pad(koreaTime.getUTCMonth()+1)}-${pad(koreaTime.getUTCDate())} ${pad(koreaTime.getUTCHours())}:${pad(koreaTime.getUTCMinutes())}:${pad(koreaTime.getUTCSeconds())}`;
       const endTime = new Date(koreaTime.getTime() + 8 * 60 * 60 * 1000);
-      const koreaEnd = endTime.toISOString().slice(0, 19).replace('T', ' ');
+      const koreaEnd = `${endTime.getUTCFullYear()}-${pad(endTime.getUTCMonth()+1)}-${pad(endTime.getUTCDate())} ${pad(endTime.getUTCHours())}:${pad(endTime.getUTCMinutes())}:${pad(endTime.getUTCSeconds())}`;
 
       const [result] = await db.query(`
         INSERT INTO monitoring_sessions
@@ -790,6 +792,12 @@ app.post("/api/reports/generate", async (req, res) => {
     const [[session]] = await db.query('SELECT * FROM monitoring_sessions WHERE session_id = ?', [session_id]);
     if (!session) return res.status(404).json({ error: '세션을 찾을 수 없습니다.' });
 
+    // 이미 해당 세션 보고서 있으면 업데이트
+    const [[existing]] = await db.query(
+      'SELECT report_id FROM reports WHERE session_id = ? ORDER BY created_at ASC LIMIT 1',
+      [session_id]
+    );
+
     // 위험 이벤트 통계
     const [[stats]] = await db.query(`
       SELECT
@@ -810,26 +818,47 @@ app.post("/api/reports/generate", async (req, res) => {
     `, [session_id]);
 
     // 보고서 생성
-    // session_date를 한국 날짜 문자열로 변환
     const sessionDateStr = session.session_date instanceof Date
       ? session.session_date.toISOString().slice(0, 10)
       : String(session.session_date).slice(0, 10);
     const reportTitle = `${sessionDateStr} ${session.shift_type} 안전 인수인계 보고서`;
-    const [result] = await db.query(`
-      INSERT INTO reports
-      (session_id, report_title, report_date, created_by, total_analyzed_frames,
-       total_normal_frames, total_risk_events, resolved_count, unresolved_count,
-       major_risk_case, max_risk_percent, avg_risk_percent, approval_status, created_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, '승인대기', NOW())
-    `, [
-      session_id, reportTitle, session.session_date, created_by,
-      session.analyzed_frames, session.normal_frames,
-      stats.total_risk || 0, stats.resolved || 0, stats.unresolved || 0,
-      majorCase?.risk_case || '해당없음',
-      stats.max_percent || 0, stats.avg_percent || 0
-    ]);
 
-    const report_id = result.insertId;
+    let report_id;
+
+    if (existing) {
+      // 기존 보고서 업데이트
+      report_id = existing.report_id;
+      await db.query(`
+        UPDATE reports SET
+          total_analyzed_frames = ?, total_normal_frames = ?,
+          total_risk_events = ?, resolved_count = ?, unresolved_count = ?,
+          major_risk_case = ?, max_risk_percent = ?, avg_risk_percent = ?,
+          approval_status = '승인대기'
+        WHERE report_id = ?
+      `, [
+        session.analyzed_frames, session.normal_frames,
+        stats.total_risk || 0, stats.resolved || 0, stats.unresolved || 0,
+        majorCase?.risk_case || '해당없음',
+        stats.max_percent || 0, stats.avg_percent || 0,
+        report_id
+      ]);
+    } else {
+      // 새 보고서 생성
+      const [result] = await db.query(`
+        INSERT INTO reports
+        (session_id, report_title, report_date, created_by, total_analyzed_frames,
+         total_normal_frames, total_risk_events, resolved_count, unresolved_count,
+         major_risk_case, max_risk_percent, avg_risk_percent, approval_status, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, '승인대기', NOW())
+      `, [
+        session_id, reportTitle, session.session_date, created_by,
+        session.analyzed_frames, session.normal_frames,
+        stats.total_risk || 0, stats.resolved || 0, stats.unresolved || 0,
+        majorCase?.risk_case || '해당없음',
+        stats.max_percent || 0, stats.avg_percent || 0
+      ]);
+      report_id = result.insertId;
+    }
 
     // 인수인계 로그 생성
     const nextManagerId = created_by >= 4 ? 1 : created_by + 1;
