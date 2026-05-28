@@ -106,6 +106,13 @@
     .btn-handover { width:100%; padding:14px; border:none; border-radius:12px; background:linear-gradient(135deg,#1e293b,#0f172a); color:#fff; font-size:15px; font-weight:800; cursor:pointer; font-family:inherit; margin-top:16px; }
     .handover-done { display:none; margin-top:12px; padding:12px; background:#f0fdf4; border:1px solid #bbf7d0; border-radius:10px; text-align:center; font-size:13px; color:#16a34a; font-weight:700; }
     .empty-msg { text-align:center; padding:30px; color:#94a3b8; font-size:13px; }
+  
+  @media print {
+    img { display: block !important; max-width: 120px !important; }
+    .thumb-img { display: block !important; max-width: 120px !important; }
+    .thumb-none { display: block !important; }
+    nav, .nav-sidebar, .page-header button, #helpBtn, .btn-handover { display: none !important; }
+  }
   </style>
 </head>
 <body>
@@ -387,13 +394,28 @@
     }
   }
 
-  function downloadPdf() {
+  async function downloadPdf() {
+    // Cloudinary 이미지 base64 변환
+    const imgs = document.querySelectorAll('#reportWrap img');
+    for (const img of imgs) {
+      try {
+        const res = await fetch(img.src);
+        const blob = await res.blob();
+        const base64 = await new Promise(resolve => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result);
+          reader.readAsDataURL(blob);
+        });
+        img.src = base64;
+      } catch(e) {}
+    }
+
     const el = document.getElementById('reportWrap');
     const opt = {
       margin: 8,
       filename: `안전보고서_${reportId}.pdf`,
       image: { type: 'jpeg', quality: 0.95 },
-      html2canvas: { scale: 2 },
+      html2canvas: { scale: 2, useCORS: true, allowTaint: true },
       jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
     };
     html2pdf().set(opt).from(el).save();
