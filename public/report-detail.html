@@ -216,7 +216,7 @@
         <table class="overview-table">
           <tr><td>보고서 제목</td><td>${r.report_title || '-'}</td></tr>
           <tr><td>보고 일자</td><td>${r.report_date ? r.report_date.slice(0,10) : '-'}</td></tr>
-          <tr><td>근무 세션</td><td>${r.shift_type || '-'} (${r.start_time ? new Date(r.start_time).toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'}) : '-'} ~ ${r.end_time ? new Date(r.end_time).toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'}) : '-'})</td></tr>
+          <tr><td>근무 세션</td><td>${r.shift_type || '-'} (${r.start_time ? r.start_time.slice(11,16) : '-'} ~ ${r.end_time ? r.end_time.slice(11,16) : '-'})</td></tr>
           <tr><td>담당자</td><td>${r.created_by_name || '-'}</td></tr>
           <tr><td>분석 방식</td><td>YOLO AI 기반 실시간 영상 분석</td></tr>
           <tr><td>주요 사고유형</td><td>${r.major_risk_case || '-'}</td></tr>
