@@ -241,7 +241,7 @@
               </tr>
             </thead>
             <tbody>
-              ${timeline.map(t => {
+              ${timeline.slice(0, 5).map(t => {
                 const tGrade = getGrade(t.risk_percent);
                 const tTime = t.detected_time ? new Date(t.detected_time).toLocaleString('ko-KR',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}) : '-';
                 const tAction = t.action_status || '미조치';
@@ -256,8 +256,32 @@
                   <td style="font-size:11px;color:#64748b;">${t.action_time ? '조치 완료' : '-'}</td>
                 </tr>`;
               }).join('')}
+              ${timeline.length > 5 ? `
+              <tr id="moreTimelineRows" style="display:none;">
+                ${timeline.slice(5).map(t => {
+                  const tGrade = getGrade(t.risk_percent);
+                  const tTime = t.detected_time ? new Date(t.detected_time).toLocaleString('ko-KR',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}) : '-';
+                  const tAction = t.action_status || '미조치';
+                  const tImg = t.bbox_image_path;
+                  return `<tr>
+                    <td style="white-space:nowrap;">${tTime}</td>
+                    <td style="max-width:160px;font-size:11px;">${t.risk_case || '-'}</td>
+                    <td>${tImg && !tImg.includes('dummy') ? `<img class="thumb-img" src="${tImg}" alt="감지 사진" onclick="openImgModal('${tImg}')">` : `<div class="thumb-none"><i class="ri-image-line"></i></div>`}</td>
+                    <td style="font-weight:700;">${parseFloat(t.risk_percent||0).toFixed(1)}%</td>
+                    <td><span class="grade-badge ${tGrade}">${tGrade}</span></td>
+                    <td><span class="action-badge ${tAction}">${tAction}</span></td>
+                    <td style="font-size:11px;color:#64748b;">${t.action_time ? '조치 완료' : '-'}</td>
+                  </tr>`;
+                }).join('')}
+              </tr>` : ''}
             </tbody>
           </table>
+          ${timeline.length > 5 ? `
+          <div style="text-align:center;margin-top:12px;">
+            <button onclick="toggleTimeline(this)" style="padding:8px 20px;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;cursor:pointer;font-family:inherit;color:#475569;font-weight:600;">
+              🔽 더보기 (${timeline.length - 5}건)
+            </button>
+          </div>` : ''}
         </div>`}
       </div>
 
@@ -382,6 +406,18 @@
 
 
   // 인수인계 섹션 - 보고서 생성자가 아닌 사람에게만 표시
+  function toggleTimeline(btn) {
+    var rows = document.getElementById('moreTimelineRows');
+    if (!rows) return;
+    if (rows.style.display === 'none') {
+      rows.style.display = '';
+      btn.textContent = '🔼 접기';
+    } else {
+      rows.style.display = 'none';
+      btn.innerHTML = btn.innerHTML.replace('🔼 접기', '🔽 더보기');
+    }
+  }
+
   function checkHandoverSection(createdById) {
     const section = document.getElementById('handoverSection');
     if (!section) return;
