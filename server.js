@@ -872,8 +872,13 @@ app.post("/api/reports/generate", async (req, res) => {
       report_id = result.insertId;
     }
 
-    // 인수인계 로그 생성
+    // 인수인계 로그 생성 (항상 새로 생성)
     const nextManagerId = created_by === 1 ? 2 : 1; // admin1↔admin2 순환
+    // 기존 대기 상태 인수인계 완료 처리 후 새로 생성
+    await db.query(`
+      UPDATE handover_logs SET handover_status = '확인완료' 
+      WHERE report_id = ? AND handover_status = '대기'
+    `, [report_id]);
     await db.query(`
       INSERT INTO handover_logs
       (report_id, from_user_id, to_user_id, handover_date, handover_status, created_at)
