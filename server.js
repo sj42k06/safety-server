@@ -76,7 +76,7 @@ async function sendHandoverSms(approvedBy, unresolvedCount, todayCount) {
       return false;
     }
 
-    const now  = new Date().toLocaleString('ko-KR');
+    const now  = new Date().toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' });
     const nameMap = { 'admin1': '손광민', 'admin2': '정재학' };
     const approverName = nameMap[approvedBy] || approvedBy;
     const text = `[안전관리시스템] 인수인계 완료\n${approverName}님이 보고서를 확인하여 인수인계를 완료하였습니다\n시각: ${now}\n미조치: ${unresolvedCount}건`;
