@@ -648,6 +648,10 @@
         canvas.height = section.offsetHeight || 480;
         ctx.drawImage(currentSlideImg, 0, 0, canvas.width, canvas.height);
       } else {
+        // 웹캠 모드 - 캔버스 초기화 후 펜스선만
+        var canvas = document.getElementById('bboxCanvas');
+        var ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
         drawFence();
       }
     }
